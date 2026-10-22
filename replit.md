@@ -1,6 +1,6 @@
-# [Project name]
+# AutoHost Android Workspace
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Implementation workspace for AutoHost, an Android-native platform for user-written phone automations. Product requirements, architecture, schemas, and progress tracker are in `plan/`.
 
 ## Run & Operate
 
@@ -10,6 +10,7 @@ _Replace the heading above with the project's name, and this line with one sente
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
+- `scripts/push-to-github.sh https://github.com/OWNER/REPO.git [branch]` — push the current commit using the `GITHUB_PERSONAL_ACCESS_TOKEN` Replit Secret
 
 ## Stack
 
@@ -22,7 +23,11 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `plan/AGENTS.md` and `plan/README.md` — implementation instructions and reading order
+- `plan/plan.md` and `plan/docs/` — product plan, architecture, UI, API, and verification requirements
+- `plan/docs/PROGRESS.md` — current phase and next unfinished task
+- `plan/schemas/`, `plan/samples/`, `plan/sdk-python/` — starter contracts and examples
+- `scripts/push-to-github.sh` — HTTPS push helper; does not store a remote or credential
 
 ## Architecture decisions
 
@@ -30,11 +35,12 @@ _Populate as you build — non-obvious choices a reader couldn't infer from the 
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+AutoHost hosts user-written Python automations and declarative flows on Android, with permissioned device capabilities, task profiles, triggers, schedules, run history, and recovery. The attached plan is the source of truth for implementation scope.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- GitHub pushes must use HTTPS and a PAT stored in Replit Secrets; do not use OAuth, SSH, or embed credentials in source, commands, or remotes.
+- The GitHub repository will be specified later.
 
 ## Gotchas
 

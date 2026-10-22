@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "id": "app.autohost.sample.press-button-flow",
+  "name": "Press Button (flow)",
+  "version": "1.0.0",
+  "description": "Same job as press-button, written as a declarative flow. Runs without a Python worker process.",
+  "host_api": ">=1 <2",
+  "runtime": { "type": "flow", "entry": "flow.yaml" },
+  "needs": {
+    "capabilities": [
+      { "id": "device.app.launch", "scope": { "packages": ["${config.target_package}"] } },
+      { "id": "device.ui.observe", "scope": { "packages": ["${config.target_package}"] } },
+      { "id": "device.ui.act", "scope": { "packages": ["${config.target_package}"] } }
+    ],
+    "optional": [],
+    "apps": [ { "package": "${config.target_package}" } ]
+  },
+  "config_schema": {
+    "type": "object",
+    "required": ["target_package", "button_label"],
+    "properties": {
+      "target_package": { "type": "string", "title": "App", "x-ui": { "widget": "app-picker" } },
+      "button_label": { "type": "string", "title": "Button text", "default": "Continue" }
+    }
+  },
+  "profile_schema": { "type": "object", "properties": { "label": { "type": "string", "title": "Profile name" } } },
+  "triggers": { "manual": true, "schedule": { "allowed": true, "default": { "type": "interval", "every_minutes": 30 } }, "events": [] },
+  "execution": { "ui_exclusive": true, "needs_unlocked_screen": true, "pausable": true, "timeout_minutes": 5, "idle_timeout_seconds": 120, "max_attempts": 2, "verification": "final" },
+  "ui": { "mode": "auto" }
+}

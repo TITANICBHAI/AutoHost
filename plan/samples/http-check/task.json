@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "id": "app.autohost.sample.http-check",
+  "name": "HTTP Check",
+  "version": "1.0.0",
+  "description": "Background utility: checks a URL, notifies on failure, asks for an earlier retry. Runs with the screen off. (Archetype B reference.)",
+  "host_api": ">=1 <2",
+  "runtime": { "type": "python", "entry": "main.py" },
+  "needs": {
+    "capabilities": [ { "id": "net.http", "scope": { "domains": ["${config.domain}"] } } ],
+    "optional": [ { "id": "notify.post" } ],
+    "apps": []
+  },
+  "config_schema": {
+    "type": "object",
+    "required": ["domain"],
+    "properties": {
+      "domain": { "type": "string", "title": "Domain (host only)", "default": "example.com" },
+      "path": { "type": "string", "title": "Path", "default": "/" },
+      "expect_status": { "type": "integer", "title": "Expected HTTP status", "default": 200 },
+      "retry_minutes": { "type": "integer", "title": "Retry after failure (min)", "default": 5, "minimum": 1 }
+    }
+  },
+  "profile_schema": { "type": "object", "properties": { "label": { "type": "string", "title": "Profile name" } } },
+  "triggers": { "manual": true, "schedule": { "allowed": true, "default": { "type": "interval", "every_minutes": 15 } }, "events": [] },
+  "execution": { "ui_exclusive": false, "needs_unlocked_screen": false, "pausable": false, "timeout_minutes": 2, "idle_timeout_seconds": 60, "max_attempts": 1, "verification": "off", "min_interval_minutes": 1 },
+  "ui": { "mode": "auto" }
+}

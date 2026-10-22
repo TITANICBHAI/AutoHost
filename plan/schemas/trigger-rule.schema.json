@@ -1,0 +1,295 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autohost.app/schemas/trigger-rule.schema.json",
+  "title": "AutoHost trigger rule",
+  "type": "object",
+  "required": [
+    "source",
+    "task"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "task": {
+      "type": "string"
+    },
+    "profile": {
+      "type": "string"
+    },
+    "source": {
+      "enum": [
+        "time.delay",
+        "time.absolute",
+        "time.daily",
+        "time.weekly",
+        "notification.posted",
+        "notification.removed",
+        "app.entered",
+        "app.exited",
+        "battery.low",
+        "battery.okay",
+        "battery.level",
+        "power.connected",
+        "power.disconnected",
+        "screen.on",
+        "screen.off",
+        "user.present",
+        "network.connected",
+        "network.type_changed",
+        "network.wifi_ssid",
+        "sms.received",
+        "toast.shown",
+        "external",
+        "task.chain"
+      ]
+    },
+    "params": {
+      "type": "object"
+    },
+    "cooldown_seconds": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0
+    },
+    "max_launch_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "debounce_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0
+    },
+    "busy_policy": {
+      "enum": [
+        "queue",
+        "drop",
+        "replace"
+      ],
+      "default": "drop"
+    },
+    "queue_max": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 5
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "time.delay"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "params"
+        ],
+        "properties": {
+          "params": {
+            "required": [
+              "seconds"
+            ],
+            "properties": {
+              "seconds": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "time.absolute"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "params"
+        ],
+        "properties": {
+          "params": {
+            "required": [
+              "at"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "time.daily"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "params"
+        ],
+        "properties": {
+          "params": {
+            "required": [
+              "time"
+            ],
+            "properties": {
+              "time": {
+                "type": "string",
+                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "time.weekly"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "params"
+        ],
+        "properties": {
+          "params": {
+            "required": [
+              "days",
+              "time"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "enum": [
+              "app.entered",
+              "app.exited"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "params"
+        ],
+        "properties": {
+          "params": {
+            "required": [
+              "package"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "battery.level"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "params"
+        ],
+        "properties": {
+          "params": {
+            "required": [
+              "op",
+              "percent"
+            ],
+            "properties": {
+              "op": {
+                "enum": [
+                  "lt",
+                  "lte",
+                  "gt",
+                  "gte",
+                  "eq"
+                ]
+              },
+              "percent": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "task.chain"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "params"
+        ],
+        "properties": {
+          "params": {
+            "required": [
+              "task"
+            ],
+            "properties": {
+              "on": {
+                "enum": [
+                  "succeeded",
+                  "failed",
+                  "any"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "external"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "params"
+        ],
+        "properties": {
+          "params": {
+            "required": [
+              "name"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

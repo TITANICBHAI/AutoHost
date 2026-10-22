@@ -1,0 +1,400 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autohost.app/schemas/broker.schema.json",
+  "title": "Broker envelope, RunSpec and events",
+  "$defs": {
+    "Envelope": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "ok",
+            "result"
+          ],
+          "properties": {
+            "ok": {
+              "const": true
+            },
+            "result": {},
+            "meta": {
+              "$ref": "#/$defs/Meta"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "ok",
+            "error"
+          ],
+          "properties": {
+            "ok": {
+              "const": false
+            },
+            "error": {
+              "$ref": "#/$defs/Error"
+            },
+            "meta": {
+              "$ref": "#/$defs/Meta"
+            }
+          }
+        }
+      ]
+    },
+    "Meta": {
+      "type": "object",
+      "properties": {
+        "degraded": {
+          "type": "boolean"
+        },
+        "degradedReason": {
+          "type": "string"
+        },
+        "snapshotAgeMs": {
+          "type": "integer"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "durationMs": {
+          "type": "integer"
+        },
+        "unverified": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Error": {
+      "type": "object",
+      "required": [
+        "code",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "fixAction": {
+          "type": "string"
+        },
+        "details": {
+          "type": "object"
+        }
+      }
+    },
+    "RunSpec": {
+      "type": "object",
+      "required": [
+        "runId",
+        "taskId",
+        "runtime",
+        "entry",
+        "taskPath",
+        "runToken",
+        "attempt"
+      ],
+      "properties": {
+        "runId": {
+          "type": "string"
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "taskVersion": {
+          "type": "string"
+        },
+        "runtime": {
+          "enum": [
+            "python",
+            "flow",
+            "javascript"
+          ]
+        },
+        "entry": {
+          "type": "string"
+        },
+        "taskPath": {
+          "type": "string"
+        },
+        "runToken": {
+          "type": "string"
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "profileId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "config": {
+          "type": "object"
+        },
+        "profile": {
+          "type": "object",
+          "description": "non-secret fields only"
+        },
+        "checkpoint": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "trigger": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "payload": {
+              "type": "object"
+            }
+          }
+        },
+        "grants": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "timeoutMinutes": {
+              "type": "integer"
+            },
+            "idleTimeoutSeconds": {
+              "type": "integer"
+            }
+          }
+        },
+        "paths": {
+          "type": "object",
+          "properties": {
+            "runDir": {
+              "type": "string"
+            },
+            "evidenceDir": {
+              "type": "string"
+            },
+            "tmpDir": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "Event": {
+      "type": "object",
+      "required": [
+        "type",
+        "ts"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "log",
+            "progress",
+            "stage_begin",
+            "stage_end",
+            "evidence",
+            "result",
+            "next_run",
+            "heartbeat",
+            "state",
+            "incident"
+          ]
+        },
+        "ts": {
+          "type": "integer"
+        },
+        "level": {
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "stage": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object"
+        }
+      }
+    },
+    "Selector": {
+      "type": "object",
+      "properties": {
+        "op": {
+          "enum": [
+            "and",
+            "or"
+          ],
+          "default": "and"
+        },
+        "terms": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SelectorTerm"
+          }
+        },
+        "within": {
+          "$ref": "#/$defs/Selector"
+        },
+        "nth": {
+          "type": "integer"
+        },
+        "algorithm": {
+          "enum": [
+            "dfs",
+            "bfs"
+          ]
+        }
+      },
+      "required": [
+        "terms"
+      ]
+    },
+    "SelectorTerm": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "text": {
+          "$ref": "#/$defs/Match"
+        },
+        "desc": {
+          "$ref": "#/$defs/Match"
+        },
+        "id": {
+          "$ref": "#/$defs/Match"
+        },
+        "class": {
+          "$ref": "#/$defs/Match"
+        },
+        "pkg": {
+          "$ref": "#/$defs/Match"
+        },
+        "state": {
+          "type": "object"
+        },
+        "bounds": {
+          "type": "object"
+        },
+        "depth": {
+          "type": "integer"
+        },
+        "index_in_parent": {
+          "type": "integer"
+        },
+        "relation": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "enum": [
+                "below",
+                "above",
+                "left_of",
+                "right_of",
+                "child_of",
+                "contains_child",
+                "contains_descendants"
+              ]
+            },
+            "selector": {
+              "$ref": "#/$defs/Selector"
+            }
+          }
+        },
+        "sel": {
+          "$ref": "#/$defs/Selector"
+        }
+      }
+    },
+    "Match": {
+      "type": "object",
+      "required": [
+        "labels"
+      ],
+      "properties": {
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "mode": {
+          "enum": [
+            "eq",
+            "contains",
+            "starts_with",
+            "ends_with",
+            "regex"
+          ],
+          "default": "contains"
+        },
+        "case_sensitive": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "NodeSummary": {
+      "type": "object",
+      "properties": {
+        "ref": {
+          "type": "string"
+        },
+        "pkg": {
+          "type": "string"
+        },
+        "class": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "desc": {
+          "type": "string"
+        },
+        "bounds": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "index": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,611 @@
+{
+  "version": 1,
+  "note": "Source of truth for broker error codes, reason codes, fix actions and user copy. Kotlin (ReasonCopy), Python SDK exceptions and the Dev API all derive from this file.",
+  "brokerErrors": [
+    {
+      "code": "PERMISSION_DENIED",
+      "retryable": false,
+      "sdkException": "PermissionDenied",
+      "summary": "The task was not granted this capability."
+    },
+    {
+      "code": "SCOPE_VIOLATION",
+      "retryable": false,
+      "sdkException": "ScopeViolation",
+      "summary": "The call targets a package/domain outside the granted scope."
+    },
+    {
+      "code": "CAPABILITY_UNAVAILABLE",
+      "retryable": false,
+      "sdkException": "CapabilityUnavailable",
+      "summary": "No provider is available for this capability on this device."
+    },
+    {
+      "code": "NEEDS_SETUP",
+      "retryable": false,
+      "sdkException": "CapabilityUnavailable",
+      "summary": "A setup step is required before this works."
+    },
+    {
+      "code": "INSECURE_FEATURE_DISABLED",
+      "retryable": false,
+      "sdkException": "PermissionDenied",
+      "summary": "A global developer/security switch is off."
+    },
+    {
+      "code": "TIMEOUT",
+      "retryable": true,
+      "sdkException": "Timeout",
+      "summary": "The operation did not finish in time."
+    },
+    {
+      "code": "NOT_FOUND",
+      "retryable": false,
+      "sdkException": "NotFound",
+      "summary": "No element/app/resource matched."
+    },
+    {
+      "code": "STALE_NODE",
+      "retryable": true,
+      "sdkException": "StaleNode",
+      "summary": "The node changed or disappeared before the action."
+    },
+    {
+      "code": "OBSCURED_BY_WINDOW",
+      "retryable": true,
+      "sdkException": "ObscuredByWindow",
+      "summary": "A higher window (dialog/system UI) covers the target."
+    },
+    {
+      "code": "NO_ACTIVE_WINDOW",
+      "retryable": true,
+      "sdkException": "NoActiveWindow",
+      "summary": "There is no active window to read."
+    },
+    {
+      "code": "SCREENSHOT_BLOCKED",
+      "retryable": false,
+      "sdkException": "ScreenshotBlocked",
+      "summary": "The window forbids screenshots (secure)."
+    },
+    {
+      "code": "PROJECTION_NOT_GRANTED",
+      "retryable": true,
+      "sdkException": "CapabilityUnavailable",
+      "summary": "Screen-capture consent is missing."
+    },
+    {
+      "code": "TEXT_INPUT_REJECTED",
+      "retryable": true,
+      "sdkException": "TextInputRejected",
+      "summary": "The field rejected the text."
+    },
+    {
+      "code": "TEXT_INPUT_UNVERIFIED",
+      "retryable": false,
+      "sdkException": "TextInputUnverified",
+      "summary": "The text was sent but could not be verified."
+    },
+    {
+      "code": "INVALID_ARGS",
+      "retryable": false,
+      "sdkException": "InvalidArgs",
+      "summary": "Arguments failed validation."
+    },
+    {
+      "code": "RATE_LIMITED",
+      "retryable": true,
+      "sdkException": "RateLimited",
+      "summary": "Too many calls; slow down."
+    },
+    {
+      "code": "CANCELLED",
+      "retryable": false,
+      "sdkException": "Cancelled",
+      "summary": "The run was cancelled."
+    },
+    {
+      "code": "IDLE_TIMEOUT",
+      "retryable": false,
+      "sdkException": "Fatal",
+      "summary": "The run made no progress for too long."
+    },
+    {
+      "code": "HOST_TOO_OLD",
+      "retryable": false,
+      "sdkException": "Fatal",
+      "summary": "The manifest needs a newer AutoHost."
+    },
+    {
+      "code": "TRIGGER_RULE_INVALID",
+      "retryable": false,
+      "sdkException": "InvalidArgs",
+      "summary": "A trigger rule field is invalid."
+    },
+    {
+      "code": "INTERNAL",
+      "retryable": false,
+      "sdkException": "Fatal",
+      "summary": "Unexpected host error."
+    }
+  ],
+  "reasonCodes": [
+    {
+      "code": "A11Y_SERVICE_DISABLED",
+      "kind": "availability",
+      "params": [],
+      "userMessage": "Accessibility is turned off, so AutoHost can't see or tap other apps.",
+      "fixAction": "OPEN_ACCESSIBILITY_SETTINGS"
+    },
+    {
+      "code": "A11Y_BLOCKED_ADVANCED_PROTECTION",
+      "kind": "availability",
+      "params": [],
+      "userMessage": "Android Advanced Protection is blocking accessibility for this app.",
+      "fixAction": "EXPLAIN_ADVANCED_PROTECTION"
+    },
+    {
+      "code": "A11Y_LOST",
+      "kind": "wait",
+      "params": [],
+      "userMessage": "Accessibility stopped during the run.",
+      "fixAction": "OPEN_ACCESSIBILITY_SETTINGS"
+    },
+    {
+      "code": "RESTRICTED_SETTINGS_NOT_ALLOWED",
+      "kind": "availability",
+      "params": [],
+      "userMessage": "Android is restricting this setting for apps installed outside a store.",
+      "fixAction": "SHOW_RESTRICTED_SETTINGS_HELP"
+    },
+    {
+      "code": "API_TOO_LOW",
+      "kind": "availability",
+      "params": [
+        "n"
+      ],
+      "userMessage": "This needs Android {n} or newer.",
+      "fixAction": "NONE"
+    },
+    {
+      "code": "NOTIFICATION_PERMISSION_DENIED",
+      "kind": "availability",
+      "params": [],
+      "userMessage": "Notifications are off for AutoHost.",
+      "fixAction": "REQUEST_POST_NOTIFICATIONS"
+    },
+    {
+      "code": "NOTIFICATION_ACCESS_DISABLED",
+      "kind": "availability",
+      "params": [],
+      "userMessage": "Notification access is off, so AutoHost can't read notifications.",
+      "fixAction": "OPEN_NOTIFICATION_ACCESS_SETTINGS"
+    },
+    {
+      "code": "EXACT_ALARM_DENIED",
+      "kind": "availability",
+      "params": [],
+      "userMessage": "Exact alarms are not allowed, so schedules may run late.",
+      "fixAction": "OPEN_EXACT_ALARM_SETTINGS"
+    },
+    {
+      "code": "BATTERY_OPTIMIZED",
+      "kind": "availability",
+      "params": [],
+      "userMessage": "Battery optimisation may stop background runs.",
+      "fixAction": "REQUEST_BATTERY_EXEMPTION"
+    },
+    {
+      "code": "OEM_AUTOSTART_NEEDED",
+      "kind": "availability",
+      "params": [],
+      "userMessage": "Your phone's maker may block background start; allow AutoHost to auto-start.",
+      "fixAction": "SHOW_OEM_GUIDE"
+    },
+    {
+      "code": "AUTO_REVOKE_ENABLED",
+      "kind": "availability",
+      "params": [],
+      "userMessage": "Android may remove permissions from apps that look unused.",
+      "fixAction": "OPEN_APP_INFO_UNUSED_SETTINGS"
+    },
+    {
+      "code": "OVERLAY_PERMISSION_DENIED",
+      "kind": "availability",
+      "params": [],
+      "userMessage": "Display-over-other-apps is off.",
+      "fixAction": "OPEN_OVERLAY_SETTINGS"
+    },
+    {
+      "code": "USAGE_ACCESS_DENIED",
+      "kind": "availability",
+      "params": [],
+      "userMessage": "Usage access is off.",
+      "fixAction": "OPEN_USAGE_ACCESS_SETTINGS"
+    },
+    {
+      "code": "WRITE_SETTINGS_DENIED",
+      "kind": "availability",
+      "params": [],
+      "userMessage": "Modify-system-settings is off.",
+      "fixAction": "OPEN_WRITE_SETTINGS"
+    },
+    {
+      "code": "IME_NOT_SELECTED",
+      "kind": "availability",
+      "params": [],
+      "userMessage": "The AutoHost keyboard isn't selected, so reliable text input and background clipboard are off.",
+      "fixAction": "SELECT_IME"
+    },
+    {
+      "code": "SHELL_TIER_NOT_PAIRED",
+      "kind": "availability",
+      "params": [],
+      "userMessage": "The shell tier isn't set up.",
+      "fixAction": "OPEN_SHELL_SETUP"
+    },
+    {
+      "code": "PC_ASSIST_REQUIRED",
+      "kind": "availability",
+      "params": [],
+      "userMessage": "This needs a one-time command from a computer after each restart.",
+      "fixAction": "SHOW_PC_COMMAND_SHELL"
+    },
+    {
+      "code": "SECURE_SETTINGS_NOT_GRANTED",
+      "kind": "availability",
+      "params": [],
+      "userMessage": "A one-time computer command lets AutoHost repair its own settings automatically.",
+      "fixAction": "SHOW_PC_COMMAND_SECURE"
+    },
+    {
+      "code": "PROJECTION_NOT_GRANTED",
+      "kind": "availability",
+      "params": [],
+      "userMessage": "Screen-capture permission is needed for screenshots on this Android version.",
+      "fixAction": "REQUEST_PROJECTION_CONSENT"
+    },
+    {
+      "code": "RUNTIME_PERMISSION_DENIED",
+      "kind": "availability",
+      "params": [
+        "permission"
+      ],
+      "userMessage": "Android permission {permission} was not granted.",
+      "fixAction": "REQUEST_RUNTIME_PERMISSION"
+    },
+    {
+      "code": "APP_NOT_INSTALLED",
+      "kind": "availability",
+      "params": [
+        "package"
+      ],
+      "userMessage": "{package} isn't installed.",
+      "fixAction": "OPEN_STORE_PAGE"
+    },
+    {
+      "code": "APP_VERSION_TOO_OLD",
+      "kind": "availability",
+      "params": [
+        "package"
+      ],
+      "userMessage": "{package} needs to be updated.",
+      "fixAction": "OPEN_STORE_PAGE"
+    },
+    {
+      "code": "CAPABILITY_NOT_GRANTED",
+      "kind": "availability",
+      "params": [
+        "capability"
+      ],
+      "userMessage": "The task hasn't been allowed to use {capability}.",
+      "fixAction": "OPEN_PERMISSION_REVIEW"
+    },
+    {
+      "code": "DISABLED_BY_SWITCH",
+      "kind": "availability",
+      "params": [],
+      "userMessage": "This feature is switched off in Developer & security settings.",
+      "fixAction": "OPEN_INSECURE_SWITCH"
+    },
+    {
+      "code": "PYTHON_IMPORT_UNAVAILABLE",
+      "kind": "availability",
+      "params": [
+        "module"
+      ],
+      "userMessage": "The script imports {module}, which isn't included.",
+      "fixAction": "NONE"
+    },
+    {
+      "code": "PYTHON_IMPORT_DESKTOP_ONLY",
+      "kind": "availability",
+      "params": [
+        "module"
+      ],
+      "userMessage": "{module} only works on desktop; use the device or browser capability instead.",
+      "fixAction": "NONE"
+    },
+    {
+      "code": "UNVERIFIED_ON_HARDWARE",
+      "kind": "info",
+      "params": [],
+      "userMessage": "Built for newer Android; not yet tested on a real device.",
+      "fixAction": "NONE"
+    },
+    {
+      "code": "DEV_API_DISABLED",
+      "kind": "availability",
+      "params": [],
+      "userMessage": "The Dev API is turned off.",
+      "fixAction": "OPEN_DEV_API_SETTINGS"
+    },
+    {
+      "code": "SCREEN_LOCKED",
+      "kind": "wait",
+      "params": [],
+      "userMessage": "The phone is locked. Unlock it to continue.",
+      "fixAction": "NONE"
+    },
+    {
+      "code": "SECURE_LOCK",
+      "kind": "wait",
+      "params": [],
+      "userMessage": "A secure lock screen blocks automation. Unlock the phone.",
+      "fixAction": "NONE"
+    },
+    {
+      "code": "SECURITY_CHALLENGE",
+      "kind": "wait",
+      "params": [],
+      "userMessage": "The service asked for a security check. Complete it, then continue.",
+      "fixAction": "NONE"
+    },
+    {
+      "code": "TWO_FACTOR_REQUIRED",
+      "kind": "wait",
+      "params": [],
+      "userMessage": "A verification code is required. Enter it, then continue.",
+      "fixAction": "NONE"
+    },
+    {
+      "code": "NEEDS_INPUT",
+      "kind": "wait",
+      "params": [],
+      "userMessage": "The task needs your input.",
+      "fixAction": "NONE"
+    },
+    {
+      "code": "LOCK_TIMEOUT",
+      "kind": "run",
+      "params": [],
+      "userMessage": "Another run was using the screen for too long.",
+      "fixAction": "NONE"
+    },
+    {
+      "code": "CONDITIONS_UNMET",
+      "kind": "run",
+      "params": [
+        "condition"
+      ],
+      "userMessage": "Run skipped: {condition} not met.",
+      "fixAction": "NONE"
+    },
+    {
+      "code": "MISSED_WINDOW",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The scheduled time passed while the phone was unavailable.",
+      "fixAction": "NONE"
+    },
+    {
+      "code": "WORKER_DIED",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The script process stopped unexpectedly.",
+      "fixAction": "NONE"
+    },
+    {
+      "code": "HEARTBEAT_LOST",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The script stopped responding.",
+      "fixAction": "NONE"
+    },
+    {
+      "code": "EXCEPTION",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The script raised an error.",
+      "fixAction": "NONE"
+    },
+    {
+      "code": "STAGE_FAILED",
+      "kind": "run",
+      "params": [
+        "stage"
+      ],
+      "userMessage": "Stage {stage} failed.",
+      "fixAction": "NONE"
+    },
+    {
+      "code": "UNKNOWN_SCREEN",
+      "kind": "run",
+      "params": [],
+      "userMessage": "AutoHost didn't recognise the screen, so it stopped instead of guessing.",
+      "fixAction": "NONE"
+    },
+    {
+      "code": "USER_CANCELLED",
+      "kind": "run",
+      "params": [],
+      "userMessage": "Cancelled.",
+      "fixAction": "NONE"
+    },
+    {
+      "code": "IDLE_TIMEOUT_REASON",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The run was cancelled because it stopped making progress.",
+      "fixAction": "NONE"
+    }
+  ],
+  "fixActions": [
+    {
+      "id": "OPEN_ACCESSIBILITY_SETTINGS",
+      "label": "Open accessibility settings",
+      "kind": "system_screen"
+    },
+    {
+      "id": "EXPLAIN_ADVANCED_PROTECTION",
+      "label": "Learn more",
+      "kind": "in_app_screen"
+    },
+    {
+      "id": "SHOW_RESTRICTED_SETTINGS_HELP",
+      "label": "Show steps",
+      "kind": "in_app_screen"
+    },
+    {
+      "id": "REQUEST_POST_NOTIFICATIONS",
+      "label": "Allow notifications",
+      "kind": "runtime_permission"
+    },
+    {
+      "id": "OPEN_NOTIFICATION_ACCESS_SETTINGS",
+      "label": "Open notification access",
+      "kind": "system_screen"
+    },
+    {
+      "id": "OPEN_EXACT_ALARM_SETTINGS",
+      "label": "Allow exact alarms",
+      "kind": "system_screen"
+    },
+    {
+      "id": "REQUEST_BATTERY_EXEMPTION",
+      "label": "Exempt from battery limits",
+      "kind": "system_screen"
+    },
+    {
+      "id": "SHOW_OEM_GUIDE",
+      "label": "Show phone-specific steps",
+      "kind": "in_app_screen"
+    },
+    {
+      "id": "OPEN_APP_INFO_UNUSED_SETTINGS",
+      "label": "Open app settings",
+      "kind": "system_screen"
+    },
+    {
+      "id": "OPEN_OVERLAY_SETTINGS",
+      "label": "Allow display over apps",
+      "kind": "system_screen"
+    },
+    {
+      "id": "OPEN_USAGE_ACCESS_SETTINGS",
+      "label": "Open usage access",
+      "kind": "system_screen"
+    },
+    {
+      "id": "OPEN_WRITE_SETTINGS",
+      "label": "Allow modifying settings",
+      "kind": "system_screen"
+    },
+    {
+      "id": "SELECT_IME",
+      "label": "Select AutoHost keyboard",
+      "kind": "autofix_or_system_screen"
+    },
+    {
+      "id": "OPEN_SHELL_SETUP",
+      "label": "Open shell setup",
+      "kind": "in_app_screen"
+    },
+    {
+      "id": "SHOW_PC_COMMAND_SHELL",
+      "label": "Show command",
+      "kind": "pc_command"
+    },
+    {
+      "id": "SHOW_PC_COMMAND_SECURE",
+      "label": "Show command",
+      "kind": "pc_command"
+    },
+    {
+      "id": "REQUEST_PROJECTION_CONSENT",
+      "label": "Allow screen capture",
+      "kind": "system_dialog"
+    },
+    {
+      "id": "REQUEST_RUNTIME_PERMISSION",
+      "label": "Allow",
+      "kind": "runtime_permission"
+    },
+    {
+      "id": "OPEN_STORE_PAGE",
+      "label": "Open store page",
+      "kind": "link"
+    },
+    {
+      "id": "OPEN_PERMISSION_REVIEW",
+      "label": "Review permissions",
+      "kind": "in_app_screen"
+    },
+    {
+      "id": "OPEN_INSECURE_SWITCH",
+      "label": "Open switch",
+      "kind": "in_app_screen"
+    },
+    {
+      "id": "OPEN_DEV_API_SETTINGS",
+      "label": "Open Dev API settings",
+      "kind": "in_app_screen"
+    },
+    {
+      "id": "NONE",
+      "label": "",
+      "kind": "none"
+    }
+  ],
+  "runStatuses": [
+    "QUEUED",
+    "STARTING",
+    "RUNNING",
+    "PAUSED",
+    "WAITING_USER",
+    "SUCCEEDED",
+    "FAILED",
+    "CANCELLED",
+    "INTERRUPTED",
+    "SKIPPED"
+  ],
+  "terminalStatuses": [
+    "SUCCEEDED",
+    "FAILED",
+    "CANCELLED",
+    "INTERRUPTED",
+    "SKIPPED"
+  ],
+  "textInputOutcomes": [
+    "VERIFIED",
+    "REJECTED",
+    "ACCEPTED_UNVERIFIED",
+    "COMMIT_OUTCOME_UNKNOWN",
+    "INPUT_SESSION_CHANGED"
+  ],
+  "clickMethods": [
+    "NODE_ACTION",
+    "ANCESTOR_ACTION",
+    "COORDINATE"
+  ],
+  "stopResults": [
+    "VERIFIED",
+    "BEST_EFFORT",
+    "FAILED"
+  ],
+  "launchResults": [
+    "LAUNCHED_VERIFIED",
+    "LAUNCHED_UNVERIFIED",
+    "FAILED"
+  ]
+}

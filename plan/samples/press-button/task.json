@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "id": "app.autohost.sample.press-button",
+  "name": "Press Button",
+  "version": "1.0.0",
+  "description": "Opens an app, waits for a labelled button and presses it. Schedule + profiles make it recurring. (Archetype A reference.)",
+  "host_api": ">=1 <2",
+  "runtime": { "type": "python", "entry": "main.py" },
+  "needs": {
+    "capabilities": [
+      { "id": "device.app.launch", "scope": { "packages": ["${config.target_package}"] } },
+      { "id": "device.app.query", "scope": { "packages": ["${config.target_package}"] } },
+      { "id": "device.ui.observe", "scope": { "packages": ["${config.target_package}"] } },
+      { "id": "device.ui.act", "scope": { "packages": ["${config.target_package}"] } }
+    ],
+    "optional": [
+      { "id": "device.screenshot", "scope": { "packages": ["${config.target_package}"] } },
+      { "id": "notify.post" }
+    ],
+    "apps": [ { "package": "${config.target_package}" } ]
+  },
+  "config_schema": {
+    "type": "object",
+    "required": ["target_package", "button_label"],
+    "properties": {
+      "target_package": { "type": "string", "title": "App", "x-ui": { "widget": "app-picker" } },
+      "button_label": { "type": "string", "title": "Button text", "default": "Continue" },
+      "label_variants": { "type": "array", "title": "Other languages / variants", "default": [] },
+      "wait_seconds": { "type": "integer", "title": "Wait for button (s)", "default": 20, "minimum": 1, "maximum": 300 },
+      "min_interval_minutes": { "type": "integer", "title": "Minimum gap between presses (min)", "default": 0, "minimum": 0 }
+    }
+  },
+  "profile_schema": {
+    "type": "object",
+    "properties": {
+      "label": { "type": "string", "title": "Profile name" },
+      "target": { "type": "object", "title": "Instance", "x-ui": { "widget": "instance-target" } }
+    }
+  },
+  "triggers": { "manual": true, "schedule": { "allowed": true, "default": { "type": "interval", "every_minutes": 30 } }, "events": [] },
+  "execution": { "ui_exclusive": true, "needs_unlocked_screen": true, "pausable": true, "timeout_minutes": 5, "idle_timeout_seconds": 120, "max_attempts": 2, "verification": "final" },
+  "ui": { "mode": "auto" }
+}

@@ -1,0 +1,15 @@
+schema: 1
+name: Press button
+steps:
+  - launchApp:
+      package: ${config.target_package}
+  - waitUntil:
+      visible:
+        text: ["${config.button_label}"]
+      timeout: 20
+  - tapOn:
+      text: ["${config.button_label}"]
+      retryTapIfNoChange: true
+      waitToSettle: true
+  - setResult:
+      code: pressed
