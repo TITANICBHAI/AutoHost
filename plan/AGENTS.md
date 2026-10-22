@@ -6,7 +6,6 @@ You do not decide *what* to build — the docs do. You decide *how to implement 
 ## 0. User authorization and safety — highest priority
 
 - The plan is an implementation contract, not authorization. Do not begin app-code implementation until the user explicitly authorizes it; if scope or authorization is unclear, stop and ask.
-- A pre-agent prompt or context handoff is read-only. Do not edit any files until the user explicitly tells you to start editing. This does not replace the separate explicit authorization required for app-code implementation.
 - Work alone. Do not create, invoke, or delegate to sub-agents.
 - Follow the plan and tracker without silently widening scope. Inspect relevant code, project instructions, and the working tree before editing; preserve unrelated user changes and data.
 - Respect the plan's no-touch list unless the user explicitly changes the scope.
@@ -14,7 +13,7 @@ You do not decide *what* to build — the docs do. You decide *how to implement 
 - Do not push to GitHub or start, poll, or monitor GitHub Actions unless the user explicitly asks. Never expose, copy into files, or print secrets or credentials.
 - Use behavior tests with fake clocks and event sources. Do not add tests that read Kotlin source files as text, and do not call the system wall clock directly in logic under test.
 - On Replit, run supported Gradle or Android tests through existing workflows or scripts under `scripts/`. Test only the production flavor; do not run equivalent test suites for multiple flavors. Do not build APKs on Replit. Use GitHub Actions for APK-build verification only when explicitly requested; otherwise state clearly that those checks were not run.
-- At the start of a batch, mark it **IN PROGRESS** in `TRACKER.md`. At the start of an authorized phase, record its dated **IN PROGRESS** start before phase work. After every meaningful change and each individual verification, immediately record the changed files, exact command, observed result, failures, blockers, decisions, and deferred work in `TRACKER.md`; keep `docs/PROGRESS.md` task checkboxes and evidence in sync. Record evidence for each completed item and batch. Tick only complete, verified work; if a check fails, leave the item unchecked and append the failure, fix, and successful rerun without erasing history. Reconcile both trackers before finishing.
+- At the start of a batch, mark it **IN PROGRESS** in `TRACKER.md`. At the start of an authorized phase, record its dated **IN PROGRESS** start before phase work. After every meaningful change and each individual verification, immediately record the changed files, exact command, observed result, failures, blockers, decisions, and deferred work in `TRACKER.md`; keep `docs/PROGRESS.md` task checkboxes and evidence in sync. Tick only complete, verified work, preserve failed attempts and blockers, and reconcile both trackers before finishing.
 - `TRACKER.md` is the chronological batch and verification log. `docs/PROGRESS.md` remains the phase/task checklist and weighted progress source.
 - `source-uploads/` contains archived input snapshots only; the canonical plan and docs are the active source of truth.
 
