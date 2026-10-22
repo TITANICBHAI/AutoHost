@@ -51,7 +51,7 @@ In this workspace, the source pack is under `plan/`. From the workspace root, ru
 - [x] **P0-02** Create `spikes/` scaffold and SPIKES.md entries [S]
   - evidence: `spikes/README.md` added; `plan/docs/SPIKES.md` already contains the S1–S5 entries. No Android code or experiments were run.
 - [ ] **P0-03 (WIP)** S1a Chaquopy hello + `requests` in one process [M]
-  - evidence: Throwaway single-process smoke harness added under `spikes/s1-python/`; manual source review found no source-level issue. Build/runtime verification is deferred; no build, test, lint, install, APK generation, or device verification run.
+  - evidence: Throwaway single-process smoke harness added under `spikes/s1-python/`; a GitHub Actions build-and-launch workflow for an x86_64 API 35 emulator is configured. Its result is pending; no build/runtime verification has succeeded yet. Real-device and phone-ABI checks remain deferred.
 - [ ] **P0-04** S1b Two worker processes; measure start time and memory [M]
   - evidence:
 - [ ] **P0-05** S1c AIDL round trip worker→main; measure latency [M]

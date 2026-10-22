@@ -55,6 +55,8 @@ public final class MainActivity extends Activity {
                         + ": " + String.valueOf(error.getMessage());
             }
 
+            Log.i(TAG, "P0-03:" + (report.startsWith("PASS") ? "PASS " : "FAIL ")
+                    + report.replace('\n', ' '));
             String finalReport = report;
             runOnUiThread(() -> {
                 if (!isFinishing() && !isDestroyed()) {

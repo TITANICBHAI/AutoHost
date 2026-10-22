@@ -38,6 +38,7 @@ when production dependencies are selected.
 
 ## Verification status
 
-Spike source is present. No build, test, lint, install, APK generation, or
-device verification has been run. Build verification requires separate
-authorization.
+The source is present. A GitHub Actions smoke workflow is configured to build
+the APK and launch it on an x86_64 API 35 emulator. The workflow has not yet
+run, so this spike is not verified. No APK build is run in Replit; primary-phone
+ABI and real-device behavior remain unverified.
