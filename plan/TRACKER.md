@@ -5,7 +5,7 @@ This file records batch history and command-by-command verification. The phase/t
 **Overall AutoHost implementation progress:** 0%  
 **Current phase:** Phase 0 — Feasibility spikes (**BLOCKED: device-dependent work deferred**)  
 **App-code authorization:** Phase 0 authorized; no production modules before Gate 0.  
-**Current batch:** Phase 0 license disposition — **COMPLETED**
+**Current batch:** Phase 0 license selection — **COMPLETED**
 **Batch started:** 2026-10-22
 **Batch completed:** 2026-10-22
 
@@ -78,6 +78,9 @@ This file records batch history and command-by-command verification. The phase/t
 
 ## Batch notes
 
+- 2026-10-22: Started a documentation batch to record the user's selection of Apache-2.0, subject to dependency/reuse compatibility review and attribution requirements.
+- 2026-10-22: Recorded Apache-2.0 as the selected app license in `plan/docs/DECISIONS.md`; P0-32 is WIP pending the dependency/reuse inventory and fallback ADRs. A combined patch failed to apply the `plan/docs/PROGRESS.md` hunks because they were out of order; correction was pending. No tests, builds, or checks were run.
+- 2026-10-22: Applied the corrected `plan/docs/PROGRESS.md` update and regenerated its dashboard with `cd plan && python tools/progress.py`; it reported `Overall: 0% (weighted 1/725 points)`. No `--check`, tests, lint, builds, or device checks were run.
 - 2026-10-22: Started a documentation batch to record the user's decision to defer P0-32 until the dependency/reuse inventory is ready. No license is selected in this batch.
 - 2026-10-22: Recorded the user's P0-32 disposition in `plan/docs/DECISIONS.md` and `plan/docs/PROGRESS.md`; license selection remains open until dependency/reuse inventory. No tests, builds, or verification commands were run.
 - 2026-10-22: Progress dashboard regenerated with `cd plan && python tools/progress.py`; it reported `Overall: 0% (weighted 1/725 points)`. Direct review showed Phase 0 BLOCKED with two blocked tasks. No `--check`, tests, lint, builds, or device checks were run.

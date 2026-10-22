@@ -29,7 +29,7 @@ ADR format: **Context → Decision → Consequences**. Add new ADRs at the botto
 | ID | Question | Default |
 |---|---|---|
 | D-01 | App name / package | `AutoHost` / `app.autohost` |
-| D-02 | **App licence** (decide in Phase 0) | Defer until dependency/reuse inventory is ready; Apache-2.0 only if reused code is Apache/MIT-compatible |
+| D-02 | **App licence** | Apache-2.0 selected by the user; dependency/reuse compatibility review remains required |
 | D-03 | DB encryption (SQLCipher) | No; secrets always Keystore-wrapped; revisit in Phase 2 |
 | D-04 | Worker slots | Adaptive: 2 if ≤3 GB RAM/low-RAM, up to 4; + on-demand UI-handler worker |
 | D-05 | Retention | Logs 30 d, evidence 14 d |
@@ -45,3 +45,4 @@ ADR format: **Context → Decision → Consequences**. Add new ADRs at the botto
 
 ## Log (append below)
 - 2026-10-22: The user chose to defer the app-license decision until the dependency/reuse inventory is ready. No license is selected.
+- 2026-10-22: The user superseded the earlier deferral and selected Apache-2.0, subject to dependency/reuse compatibility review and required attribution. No dependencies or code reuse have been approved yet.
