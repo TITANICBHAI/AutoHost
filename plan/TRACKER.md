@@ -3,9 +3,9 @@
 This file records batch history and command-by-command verification. The phase/task checklist and weighted implementation progress remain in `docs/PROGRESS.md`.
 
 **Overall AutoHost implementation progress:** 0%  
-**Current phase:** Phase 0 — Feasibility spikes (**NOT_STARTED**)  
-**App-code authorization:** Not granted; do not start implementation.  
-**Current batch:** Defer tests and real-device verification unless explicitly requested — **IN PROGRESS**
+**Current phase:** Phase 0 — Feasibility spikes (**BLOCKED: device-dependent work deferred**)  
+**App-code authorization:** Phase 0 authorized; no production modules before Gate 0.  
+**Current batch:** Phase 0 device-free setup — **COMPLETED**
 **Batch started:** 2026-10-22
 **Batch completed:** 2026-10-22
 
@@ -55,6 +55,8 @@ This file records batch history and command-by-command verification. The phase/t
 
 ## Current batch checklist
 
+- [x] Create the Phase 0 throwaway spike workspace and ensure the spike register has S1–S5 entries.
+  - Evidence: Added `spikes/README.md`; direct review confirmed `plan/docs/SPIKES.md` already contains S1–S5 headings. No Android code, builds, tests, or device checks were performed.
 - [x] Add the user's no-testing-until-authorized rule to the pre-agent prompt, including builds, lint, and automated verification.
   - Evidence: direct review of `plan/PRE_AGENT.md` lines 24, 33–34 confirms all tests and checks are deferred until explicit authorization.
 - [x] Add the do-not-ask / defer rule for real-device verification and update the Phase 0 handoff guidance.
@@ -76,6 +78,9 @@ This file records batch history and command-by-command verification. The phase/t
 
 ## Batch notes
 
+- 2026-10-22: Started Phase 0 after the user's explicit instruction to begin it. P0-02 is the initial device-free task. Per the handoff, real-device facts/actions and all tests, builds, lint, and automated verification remain deferred unless separately authorized; no device findings will be inferred.
+- 2026-10-22: Completed the device-free P0-02 scaffold: added `spikes/README.md`; the existing `plan/docs/SPIKES.md` already listed S1–S5. P0-02 is complete. No tests/builds/checks were run. Phase 0 is BLOCKED because device facts and Android experiments are deferred.
+- 2026-10-22: Progress dashboard generation command `cd plan && python tools/progress.py` completed and reported `Overall: 0% (weighted 1/725 points)`. This regenerated status only; no `--check`, tests, lint, builds, or device checks were run.
 - 2026-10-22: Started the documentation-only batch to prepare a read-only handoff for the next agent and align the requested work/evidence rules. No app-code authorization was granted or used.
 - 2026-10-22: Added `plan/PRE_AGENT.md`, archived the supplied request as `plan/source-uploads/next-agent-tracker-request.md`, and aligned the handoff/verification rules in `plan/AGENTS.md`, `plan/plan.md`, `plan/docs/PROGRESS.md`, and this tracker. Updated the reading pointers in `plan/README.md` and `replit.md`. Verification remains pending; batch checkboxes stay unchecked until verified.
 - 2026-10-22: Corrected the archived request's original tracker links to preserve the supplied text more faithfully. No app code was changed.
