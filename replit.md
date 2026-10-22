@@ -10,7 +10,7 @@ Implementation workspace for AutoHost, an Android-native platform for user-writt
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
-- `scripts/push-to-github.sh https://github.com/OWNER/REPO.git [branch]` — push the current commit using the `GITHUB_PERSONAL_ACCESS_TOKEN` Replit Secret
+- `Push AutoHost to GitHub` console workflow — push the current commit to `https://github.com/TITANICBHAI/AutoHost` using the `GITHUB_PERSONAL_ACCESS_TOKEN` Replit Secret
 
 ## Stack
 
@@ -40,7 +40,7 @@ AutoHost hosts user-written Python automations and declarative flows on Android,
 ## User preferences
 
 - GitHub pushes must use HTTPS and a PAT stored in Replit Secrets; do not use OAuth, SSH, or embed credentials in source, commands, or remotes.
-- The GitHub repository will be specified later.
+- The AutoHost GitHub repository is public; push only when the user explicitly asks.
 
 ## Gotchas
 
