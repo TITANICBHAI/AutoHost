@@ -5,7 +5,7 @@ This file records batch history and command-by-command verification. The phase/t
 **Overall AutoHost implementation progress:** 0%  
 **Current phase:** Phase 0 — Feasibility spikes (**NOT_STARTED**)  
 **App-code authorization:** Not granted; do not start implementation.  
-**Current batch:** Keep requested rules in the three designated files — **COMPLETE**
+**Current batch:** Add both progress views to the pre-agent read order — **COMPLETE**
 **Batch started:** 2026-10-22
 **Batch completed:** 2026-10-22
 
@@ -39,12 +39,19 @@ This file records batch history and command-by-command verification. The phase/t
 - [x] Verify the phase tracker and document/reference consistency; record exact commands and results below.
   - Evidence: `cd plan && python tools/progress.py --check` returned `progress check: ok`; the document/reference assertion command printed `document/reference consistency: ok`; the whitespace command `git diff --check && ! rg -n '[[:blank:]]+$' plan/PRE_AGENT.md plan/source-uploads/next-agent-tracker-request.md && printf 'whitespace check: ok\n'` printed `whitespace check: ok` after the logged fix.
 
-## Current correction batch checklist
+## Completed correction batch checklist
 
 - [x] Keep the requested rules directly in `PRE_AGENT.md`, `TRACKER.md`, and `plan.md`; remove my extra copies and pointers from other files.
   - Evidence: the rule-placement assertions passed for those three files, and assertions confirmed the added handoff rule/pointers are absent from `AGENTS.md`, `docs/PROGRESS.md`, `README.md`, and `replit.md`.
 - [x] Verify the rule placement and whitespace; record exact commands and outcomes below.
   - Evidence: the rule-placement command printed `rule placement: ok`; `git diff --check` exited 0 and printed `whitespace check: ok`.
+
+## Current batch checklist
+
+- [x] Name both `plan/docs/PROGRESS.md` and `plan/docs/progress.html` in the pre-agent read order, clarifying that Markdown is authoritative.
+  - Evidence: `plan/PRE_AGENT.md` explicitly names both files and says the Markdown file takes precedence if the generated HTML differs.
+- [x] Verify the read-order text and whitespace; record exact commands and outcomes below.
+  - Evidence: the assertions for both paths and authority text passed; `git diff --check` exited 0 and the new prompt had no trailing whitespace.
 
 ## Rules for maintaining this tracker
 
@@ -73,6 +80,9 @@ This file records batch history and command-by-command verification. The phase/t
 - 2026-10-22: Removed the extra additions I had made to `plan/AGENTS.md`, `plan/docs/PROGRESS.md`, `plan/README.md`, and `replit.md`. The requested rules remain directly in `plan/PRE_AGENT.md`, `plan/TRACKER.md`, and `plan/plan.md`; placement verification is pending.
 - 2026-10-22: Verification command `set -eu; rg -Fq 'This handoff is context, not permission to edit.' plan/PRE_AGENT.md; rg -Fq 'At the start of a batch, mark it **IN PROGRESS**' plan/TRACKER.md; rg -Fq '**A context handoff is read-only.**' plan/plan.md; ! rg -Fq 'A pre-agent prompt or context handoff is read-only.' plan/AGENTS.md; ! rg -Fq 'A pre-agent context handoff is read-only.' plan/docs/PROGRESS.md; ! rg -Fq 'plan/PRE_AGENT.md' plan/README.md replit.md; printf 'rule placement: ok\n'` printed `rule placement: ok`. Placement passed; whitespace validation remains pending.
 - 2026-10-22: Verification command `git diff --check && printf 'whitespace check: ok\n'` exited 0 and printed `whitespace check: ok`. The requested rules now remain only in the pre-agent prompt, tracker, and `plan.md`; the corrective batch is complete.
+- 2026-10-22: Started a documentation batch to include both progress views in the pre-agent prompt. `PROGRESS.md` is already listed; add `progress.html` as the generated visual dashboard and state that the Markdown remains authoritative.
+- 2026-10-22: Updated `plan/PRE_AGENT.md` read order to name `plan/docs/PROGRESS.md` and `plan/docs/progress.html` separately, with the Markdown specified as authoritative if the generated HTML differs. Verification pending.
+- 2026-10-22: Verification command `set -eu; rg -Fq 'plan/docs/PROGRESS.md' plan/PRE_AGENT.md; rg -Fq 'plan/docs/progress.html' plan/PRE_AGENT.md; rg -Fq 'PROGRESS.md` is the authoritative phase checklist and weighted-progress source.' plan/PRE_AGENT.md; rg -Fq 'If it differs from `PROGRESS.md`, follow the Markdown file.' plan/PRE_AGENT.md; git diff --check; ! rg -n '[[:blank:]]+$' plan/PRE_AGENT.md; printf 'pre-agent read list and whitespace: ok\n'` printed `pre-agent read list and whitespace: ok`. Both progress files are listed and the tracker batch is complete.
 - Phase 0 remains **NOT_STARTED**. Documentation organization does not authorize app-code implementation.
 - The user explicitly authorized pushing this workspace to the public `AutoHost` repository. This permission does not authorize app-code implementation.
 - The archive's `plan.md` and `docs/` copies are canonical. The imported uploads were exact duplicates at intake; `source-uploads/` now preserves the unmodified source snapshots and is not authoritative.

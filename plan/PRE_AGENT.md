@@ -11,10 +11,11 @@ The user must separately and explicitly authorize app-code implementation. A req
 ## Read order
 
 1. `plan/AGENTS.md` — highest-priority safety, scope, testing, and working rules.
-2. `plan/TRACKER.md` and `plan/docs/PROGRESS.md` — current batch history, phase status, evidence, blockers, and next unticked task.
-3. The documents named by the authorized task in `plan/docs/PROGRESS.md`.
-4. The sections of `plan/plan.md` cited by that task.
-5. `plan/README.md` for the source-pack location and tracker commands.
+2. `plan/TRACKER.md` and `plan/docs/PROGRESS.md` — current batch history, phase status, evidence, blockers, and next unticked task. `PROGRESS.md` is the authoritative phase checklist and weighted-progress source.
+3. `plan/docs/progress.html` — generated visual overview of progress. If it differs from `PROGRESS.md`, follow the Markdown file.
+4. The documents named by the authorized task in `plan/docs/PROGRESS.md`.
+5. The sections of `plan/plan.md` cited by that task.
+6. `plan/README.md` for the source-pack location and tracker commands.
 
 `plan/source-uploads/` contains archived input snapshots only. The canonical plan and active documents are under `plan/`.
 
