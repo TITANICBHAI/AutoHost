@@ -5,7 +5,7 @@ This file records batch history and command-by-command verification. The phase/t
 **Overall AutoHost implementation progress:** 0%  
 **Current phase:** Phase 0 — Feasibility spikes (**NOT_STARTED**)  
 **App-code authorization:** Not granted; do not start implementation.  
-**Current batch:** Add both progress views to the pre-agent read order — **COMPLETE**
+**Current batch:** Defer tests and real-device verification unless explicitly requested — **IN PROGRESS**
 **Batch started:** 2026-10-22
 **Batch completed:** 2026-10-22
 
@@ -46,12 +46,21 @@ This file records batch history and command-by-command verification. The phase/t
 - [x] Verify the rule placement and whitespace; record exact commands and outcomes below.
   - Evidence: the rule-placement command printed `rule placement: ok`; `git diff --check` exited 0 and printed `whitespace check: ok`.
 
-## Current batch checklist
+## Completed progress-view update checklist
 
 - [x] Name both `plan/docs/PROGRESS.md` and `plan/docs/progress.html` in the pre-agent read order, clarifying that Markdown is authoritative.
   - Evidence: `plan/PRE_AGENT.md` explicitly names both files and says the Markdown file takes precedence if the generated HTML differs.
 - [x] Verify the read-order text and whitespace; record exact commands and outcomes below.
   - Evidence: the assertions for both paths and authority text passed; `git diff --check` exited 0 and the new prompt had no trailing whitespace.
+
+## Current batch checklist
+
+- [x] Add the user's no-testing-until-authorized rule to the pre-agent prompt, including builds, lint, and automated verification.
+  - Evidence: direct review of `plan/PRE_AGENT.md` lines 24, 33–34 confirms all tests and checks are deferred until explicit authorization.
+- [x] Add the do-not-ask / defer rule for real-device verification and update the Phase 0 handoff guidance.
+  - Evidence: direct review of `plan/PRE_AGENT.md` lines 25, 36, and 41 confirms real-device work is skipped without asking and left deferred.
+- [x] Review the prompt wording and record that no tests or automated checks were run, as requested.
+  - Evidence: direct review of `plan/PRE_AGENT.md` lines 24–41; no tests, builds, lint, or automated checks were run.
 
 ## Rules for maintaining this tracker
 
@@ -83,6 +92,9 @@ This file records batch history and command-by-command verification. The phase/t
 - 2026-10-22: Started a documentation batch to include both progress views in the pre-agent prompt. `PROGRESS.md` is already listed; add `progress.html` as the generated visual dashboard and state that the Markdown remains authoritative.
 - 2026-10-22: Updated `plan/PRE_AGENT.md` read order to name `plan/docs/PROGRESS.md` and `plan/docs/progress.html` separately, with the Markdown specified as authoritative if the generated HTML differs. Verification pending.
 - 2026-10-22: Verification command `set -eu; rg -Fq 'plan/docs/PROGRESS.md' plan/PRE_AGENT.md; rg -Fq 'plan/docs/progress.html' plan/PRE_AGENT.md; rg -Fq 'PROGRESS.md` is the authoritative phase checklist and weighted-progress source.' plan/PRE_AGENT.md; rg -Fq 'If it differs from `PROGRESS.md`, follow the Markdown file.' plan/PRE_AGENT.md; git diff --check; ! rg -n '[[:blank:]]+$' plan/PRE_AGENT.md; printf 'pre-agent read list and whitespace: ok\n'` printed `pre-agent read list and whitespace: ok`. Both progress files are listed and the tracker batch is complete.
+- 2026-10-22: Started a prompt-only update to defer all tests and real-device verification until the user explicitly asks. No tests, builds, or hardware work are authorized by this update.
+- 2026-10-22: Updated `plan/PRE_AGENT.md` to prohibit tests, lint, builds, and automated verification unless explicitly authorized; it directs agents to skip real-device verification without asking, leave related items unchecked, and record them as deferred. No tests or automated checks were run.
+- 2026-10-22: Directly reviewed `plan/PRE_AGENT.md` lines 20–55 and confirmed the no-testing rule, the no-ask/defer rule for real-device verification, and the Phase 0 guidance. No tests, builds, lint, or automated checks were run, per user instruction. Batch complete.
 - Phase 0 remains **NOT_STARTED**. Documentation organization does not authorize app-code implementation.
 - The user explicitly authorized pushing this workspace to the public `AutoHost` repository. This permission does not authorize app-code implementation.
 - The archive's `plan.md` and `docs/` copies are canonical. The imported uploads were exact duplicates at intake; `source-uploads/` now preserves the unmodified source snapshots and is not authoritative.
