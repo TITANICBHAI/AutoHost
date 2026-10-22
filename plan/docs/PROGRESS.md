@@ -50,8 +50,8 @@ In this workspace, the source pack is under `plan/`. From the workspace root, ru
 - [ ] **P0-01** Collect device facts into DEVICES.md (primary phone, any extra real devices, emulators) [S] (BLOCKED: device facts are deferred by the active handoff)
 - [x] **P0-02** Create `spikes/` scaffold and SPIKES.md entries [S]
   - evidence: `spikes/README.md` added; `plan/docs/SPIKES.md` already contains the S1–S5 entries. No Android code or experiments were run.
-- [ ] **P0-03** S1a Chaquopy hello + `requests` in one process [M]
-  - evidence:
+- [ ] **P0-03 (WIP)** S1a Chaquopy hello + `requests` in one process [M]
+  - evidence: Throwaway single-process smoke harness added under `spikes/s1-python/`; manual source review found no source-level issue. Build/runtime verification is deferred; no build, test, lint, install, APK generation, or device verification run.
 - [ ] **P0-04** S1b Two worker processes; measure start time and memory [M]
   - evidence:
 - [ ] **P0-05** S1c AIDL round trip worker→main; measure latency [M]
