@@ -5,8 +5,9 @@ This file records batch history and command-by-command verification. The phase/t
 **Overall AutoHost implementation progress:** 0%  
 **Current phase:** Phase 0 — Feasibility spikes (**NOT_STARTED**)  
 **App-code authorization:** Not granted; do not start implementation.  
-**Current batch:** Consolidate agent pre-prompt and push workspace — **IN PROGRESS**  
+**Current batch:** Prepare next-agent prompt and tracking rules — **COMPLETE**
 **Batch started:** 2026-10-22
+**Batch completed:** 2026-10-22
 
 ## Completed setup batch checklist
 
@@ -19,7 +20,7 @@ This file records batch history and command-by-command verification. The phase/t
 - [x] Verify filenames, references, and the phase tracker; do not run app builds or tests.
   - Evidence: final organization/rule consistency command passed; `cd plan && python tools/progress.py --check` returned `progress check: ok`; final `git diff --check` exited 0 with no output. No app builds or tests were run.
 
-## Current batch checklist
+## Previous GitHub preparation checklist (carried forward; incomplete)
 
 - [x] Consolidate all active rules into `AGENTS.md`; remove `AGENT_RULES.md` and stale references.
   - Evidence: `test ! -e plan/AGENT_RULES.md`, active-file `rg` assertion, and numbered-Markdown `find` assertion all passed; active pre-prompt and README now point to `AGENTS.md`.
@@ -27,18 +28,40 @@ This file records batch history and command-by-command verification. The phase/t
 - [ ] Review and commit the intended workspace changes without including secrets.
 - [ ] Verify the pushed branch and record its commit and result.
 
+## Current batch checklist
+
+- [x] Preserve the supplied request under `source-uploads/` with a descriptive Markdown name.
+  - Evidence: `test -s plan/source-uploads/next-agent-tracker-request.md` and the archived-link assertion passed in the document/reference consistency check.
+- [x] Add a dedicated read-first pre-agent prompt that routes the next agent to the canonical plan and trackers.
+  - Evidence: `test -s plan/PRE_AGENT.md` and the README and `replit.md` pointer assertions passed in the document/reference consistency check.
+- [x] Align the requested authorization, solo-work, scope, safety, verification, and evidence rules across the plan, agent instructions, and tracker.
+  - Evidence: authorization/read-only rule assertions passed across `plan/plan.md`, `plan/AGENTS.md`, `plan/docs/PROGRESS.md`, and `plan/TRACKER.md`; exact consistency command is recorded below.
+- [x] Verify the phase tracker and document/reference consistency; record exact commands and results below.
+  - Evidence: `cd plan && python tools/progress.py --check` returned `progress check: ok`; the document/reference assertion command printed `document/reference consistency: ok`; the whitespace command `git diff --check && ! rg -n '[[:blank:]]+$' plan/PRE_AGENT.md plan/source-uploads/next-agent-tracker-request.md && printf 'whitespace check: ok\n'` printed `whitespace check: ok` after the logged fix.
+
 ## Rules for maintaining this tracker
 
 - At the start of a batch, mark it **IN PROGRESS** here before doing the work. At the start of an authorized phase, record its dated **IN PROGRESS** start before phase work.
-- After each meaningful change, update the relevant status, progress, evidence, and history. As soon as an individual checklist item or verification step completes or fails, record its status, exact command, and observed result here before beginning the next item or check.
-- Tick work only after it is complete and verified. Record changed files and the exact verification. Preserve failures, fixes, blockers, decisions, and deferred work; do not erase history.
+- Keep batch notes current: after each meaningful change, update the relevant status, progress, evidence, and history rather than waiting for the batch to finish.
+- As soon as an individual checklist item or verification step completes or fails, record its status, exact command, and observed result here before beginning the next item or check.
+- Tick work only after it is complete and verified. For each completed item and batch, record changed files, the exact verification performed, and its observed result.
+- If a check fails, leave the affected item unchecked and record the failure; append the fix and successful rerun when available. Preserve failures, blockers, decisions, and deferred work; do not erase history.
 - Before finishing, reconcile this log and `docs/PROGRESS.md` against the actual files, code, and test evidence. Leave incomplete work unchecked and explain why.
-- This plan is not authorization to edit app code. Do not implement app code until the user explicitly authorizes it. Work alone; do not delegate. Do not push to GitHub or use GitHub Actions unless explicitly asked. Never expose secrets.
+- A context-only pre-agent prompt authorizes reading only; do not edit files until the user explicitly says to start editing. The plan is not authorization for app-code work: obtain explicit authorization before implementation. Work alone; do not delegate. Do not push to GitHub or use GitHub Actions unless explicitly asked. Never expose secrets.
 - Use behavior tests with fake clocks and event sources. Do not add tests that read Kotlin source files as text, and do not call the system wall clock directly in logic under test.
 - Test only the production flavor. On Replit, run supported Gradle or Android tests through the existing workflow or scripts under `scripts/`; do not build APKs. Use GitHub Actions for APK-build verification only when the user explicitly requests it; otherwise state that those checks were not run.
 
 ## Batch notes
 
+- 2026-10-22: Started the documentation-only batch to prepare a read-only handoff for the next agent and align the requested work/evidence rules. No app-code authorization was granted or used.
+- 2026-10-22: Added `plan/PRE_AGENT.md`, archived the supplied request as `plan/source-uploads/next-agent-tracker-request.md`, and aligned the handoff/verification rules in `plan/AGENTS.md`, `plan/plan.md`, `plan/docs/PROGRESS.md`, and this tracker. Updated the reading pointers in `plan/README.md` and `replit.md`. Verification remains pending; batch checkboxes stay unchecked until verified.
+- 2026-10-22: Corrected the archived request's original tracker links to preserve the supplied text more faithfully. No app code was changed.
+- 2026-10-22: Verification command `cd plan && python tools/progress.py --check` returned `progress check: ok`. The tracker-format check passed; document/reference and whitespace checks remain pending, so the batch verification item stays unchecked.
+- 2026-10-22: Verification command `set -eu; test -s plan/PRE_AGENT.md; test -s plan/source-uploads/next-agent-tracker-request.md; rg -Fq 'plan/PRE_AGENT.md' plan/README.md; rg -Fq 'plan/PRE_AGENT.md' replit.md; rg -Fq 'A pre-agent prompt or context handoff is read-only.' plan/AGENTS.md; rg -Fq 'A context handoff is read-only.' plan/plan.md; rg -Fq 'A pre-agent context handoff is read-only.' plan/docs/PROGRESS.md; rg -Fq 'context-only pre-agent prompt authorizes reading only' plan/TRACKER.md; rg -Fq 'Before finishing, reconcile that folder/[TRACKER.md](http://tracker.md/)' plan/source-uploads/next-agent-tracker-request.md; printf 'document/reference consistency: ok\n'` printed `document/reference consistency: ok`; the archive, handoff, and cross-document rule checks passed. Whitespace validation remains pending.
+- 2026-10-22: Verification command `git diff --check && ! rg -n '[[:blank:]]+$' plan/PRE_AGENT.md plan/source-uploads/next-agent-tracker-request.md && printf 'whitespace check: ok\n'` failed with exit code 2: `plan/TRACKER.md:8` had trailing spaces on the updated batch heading. The verification item remains unchecked; fix and rerun pending.
+- 2026-10-22: Removed the trailing spaces from the updated batch heading in `plan/TRACKER.md`. The failed attempt remains recorded; whitespace rerun is pending.
+- 2026-10-22: Verification rerun with `git diff --check && ! rg -n '[[:blank:]]+$' plan/PRE_AGENT.md plan/source-uploads/next-agent-tracker-request.md && printf 'whitespace check: ok\n'` exited 0 and printed `whitespace check: ok`.
+- 2026-10-22: Final whitespace verification command `git diff --check && ! rg -n '[[:blank:]]+$' plan/PRE_AGENT.md plan/source-uploads/next-agent-tracker-request.md && printf 'final whitespace check: ok\n'` exited 0 and printed `final whitespace check: ok`.
 - Phase 0 remains **NOT_STARTED**. Documentation organization does not authorize app-code implementation.
 - The user explicitly authorized pushing this workspace to the public `AutoHost` repository. This permission does not authorize app-code implementation.
 - The archive's `plan.md` and `docs/` copies are canonical. The imported uploads were exact duplicates at intake; `source-uploads/` now preserves the unmodified source snapshots and is not authoritative.

@@ -39,6 +39,7 @@ Tasks 0/213 · Gate items 0/70 · Capabilities 0/46 · WIP 0 · Blocked 0
 9. At the start of every batch, mark it **IN PROGRESS** in `../TRACKER.md`. After each meaningful change and each individual check, record the exact command and observed result there before proceeding.
 10. Keep this phase/task checklist and `../TRACKER.md` consistent. Preserve failed checks, blockers, decisions, and deferred work; never erase history.
 11. Before finishing a batch, compare the checkboxes and evidence here with the actual code and test results. Leave incomplete or unverified items unchecked and explain why.
+12. A pre-agent context handoff is read-only. Do not edit files until the user explicitly says to start editing; app-code work still requires its own explicit authorization.
 
 In this workspace, the source pack is under `plan/`. From the workspace root, run tracker commands as `(cd plan && python tools/progress.py --check)`; use `(cd plan && python tools/progress.py)` to regenerate the dashboard.
 

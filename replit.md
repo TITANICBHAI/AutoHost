@@ -24,6 +24,7 @@ Implementation workspace for AutoHost, an Android-native platform for user-writt
 ## Where things live
 
 - `plan/AGENTS.md` and `plan/README.md` — implementation instructions and reading order
+- `plan/PRE_AGENT.md` — read-only handoff prompt for a new agent context
 - `plan/plan.md` and `plan/docs/` — product plan, architecture, UI, API, and verification requirements
 - `plan/docs/PROGRESS.md` — current phase and next unfinished task
 - `plan/schemas/`, `plan/samples/`, `plan/sdk-python/` — starter contracts and examples
