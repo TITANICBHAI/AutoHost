@@ -3,7 +3,7 @@
 
 <!-- DASHBOARD:START -->
 **Overall: 0%** (weighted 1/725 points)  ░░░░░░░░░░░░░░░░░░░░
-Tasks 1/213 · Gate items 0/70 · Capabilities 0/46 · WIP 0 · Blocked 1
+Tasks 1/213 · Gate items 0/70 · Capabilities 0/46 · WIP 0 · Blocked 2
 **Current phase:** Phase 0 — Feasibility spikes [BLOCKED]
 
 | Phase | Status | Tasks | Progress | Gate |
@@ -25,7 +25,7 @@ Tasks 1/213 · Gate items 0/70 · Capabilities 0/46 · WIP 0 · Blocked 1
 <!-- DASHBOARD:END -->
 
 **Current focus:** Phase 0 — Feasibility spikes (**BLOCKED**; device-dependent work is deferred)
-**Last updated by / when:** Replit Agent / 2026-10-22 (Phase 0 started; P0-02 scaffold recorded; device-dependent tasks deferred)  ·  **Primary device:** _(fill from DEVICES.md)_
+**Last updated by / when:** Replit Agent / 2026-10-22 (P0-02 scaffold recorded; device-dependent tasks deferred; user deferred license choice pending reuse inventory)  ·  **Primary device:** _(fill from DEVICES.md)_
 
 ## How to use this tracker
 1. Work phases **in order**. Do not tick a task in phase N+1 until all **gate** items of phase N are ticked with evidence (`--check` fails otherwise).
@@ -99,7 +99,7 @@ In this workspace, the source pack is under `plan/`. From the workspace root, ru
   - evidence:
 - [ ] **P0-30** S5c Coverage table: SET_TEXT vs IME vs paste [S]
 - [ ] **P0-31** S5 verdict recorded [S]
-- [ ] **P0-32** Decide app licence; write ADRs for every fallback chosen [S]
+- [ ] **P0-32** Decide app licence; write ADRs for every fallback chosen [S] (BLOCKED: user deferred license pending reuse inventory)
 
 ### Gate (see docs/GATES.md)
 - [ ] **G0-a** All five spike verdicts recorded with measurements — `docs/GATES.md#g0-a`
@@ -754,9 +754,10 @@ In this workspace, the source pack is under `plan/`. From the workspace root, ru
 
 ## Blockers
 - P0-01 and Android experiments remain deferred: the active handoff says not to request device facts or physical actions and to leave real-device work unchecked until explicitly authorized. Builds, tests, lint, and automated verification were not authorized; no Android test workflow is configured. No hardware results are inferred.
+- P0-32: the user chose to defer the app-license decision until the dependency/reuse inventory is ready. No license is selected.
 
 ## Open questions for the user
-- P0-32: confirm the app's distribution licence. `plan/docs/DECISIONS.md` lists Apache-2.0 as the default only if all reused code is Apache/MIT-compatible; no dependency or reuse inventory has been completed.
+- P0-32 disposition: license selection remains open and is deferred until the dependency/reuse inventory is ready.
 
 ## Evidence index
 | Date | Item | Artifact (path/link) | Device / API |

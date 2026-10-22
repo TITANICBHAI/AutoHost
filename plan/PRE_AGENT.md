@@ -16,6 +16,7 @@ The user must separately and explicitly authorize app-code implementation. A req
 4. The documents named by the authorized task in `plan/docs/PROGRESS.md`.
 5. The sections of `plan/plan.md` cited by that task.
 6. `plan/README.md` for the source-pack location and tracker commands.
+7. The real copies are inside docs/, and tools/progress.py only reads docs/PROGRESS.md
 
 `plan/source-uploads/` contains archived input snapshots only. The canonical plan and active documents are under `plan/`.
 

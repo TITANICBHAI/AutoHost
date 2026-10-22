@@ -5,7 +5,7 @@ This file records batch history and command-by-command verification. The phase/t
 **Overall AutoHost implementation progress:** 0%  
 **Current phase:** Phase 0 — Feasibility spikes (**BLOCKED: device-dependent work deferred**)  
 **App-code authorization:** Phase 0 authorized; no production modules before Gate 0.  
-**Current batch:** Phase 0 device-free setup — **COMPLETED**
+**Current batch:** Phase 0 license disposition — **COMPLETED**
 **Batch started:** 2026-10-22
 **Batch completed:** 2026-10-22
 
@@ -78,6 +78,9 @@ This file records batch history and command-by-command verification. The phase/t
 
 ## Batch notes
 
+- 2026-10-22: Started a documentation batch to record the user's decision to defer P0-32 until the dependency/reuse inventory is ready. No license is selected in this batch.
+- 2026-10-22: Recorded the user's P0-32 disposition in `plan/docs/DECISIONS.md` and `plan/docs/PROGRESS.md`; license selection remains open until dependency/reuse inventory. No tests, builds, or verification commands were run.
+- 2026-10-22: Progress dashboard regenerated with `cd plan && python tools/progress.py`; it reported `Overall: 0% (weighted 1/725 points)`. Direct review showed Phase 0 BLOCKED with two blocked tasks. No `--check`, tests, lint, builds, or device checks were run.
 - 2026-10-22: Started Phase 0 after the user's explicit instruction to begin it. P0-02 is the initial device-free task. Per the handoff, real-device facts/actions and all tests, builds, lint, and automated verification remain deferred unless separately authorized; no device findings will be inferred.
 - 2026-10-22: Completed the device-free P0-02 scaffold: added `spikes/README.md`; the existing `plan/docs/SPIKES.md` already listed S1–S5. P0-02 is complete. No tests/builds/checks were run. Phase 0 is BLOCKED because device facts and Android experiments are deferred.
 - 2026-10-22: Progress dashboard generation command `cd plan && python tools/progress.py` completed and reported `Overall: 0% (weighted 1/725 points)`. This regenerated status only; no `--check`, tests, lint, builds, or device checks were run.
