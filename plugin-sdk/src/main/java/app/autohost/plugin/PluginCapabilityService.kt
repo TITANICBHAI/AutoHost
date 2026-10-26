@@ -88,14 +88,14 @@ abstract class PluginCapabilityService : Service() {
     }.toString()
 
     /** Wrap a result the host will accept verbatim. */
-    protected fun envelopeOk(result: JSONObject): String =
-        JSONObject().put("ok", true).put("result", result).toString()
+    protected fun envelopeOk(result: JSONObject): JSONObject =
+        JSONObject().put("ok", true).put("result", result)
 
     /** Wrap a typed failure — codes mirror schemas/errors.json. */
-    protected fun envelopeErr(code: String, message: String, reason: String? = null): String {
+    protected fun envelopeErr(code: String, message: String, reason: String? = null): JSONObject {
         val error = JSONObject().put("code", code).put("message", message)
         if (reason != null) error.put("reason", reason)
-        return JSONObject().put("ok", false).put("error", error).toString()
+        return JSONObject().put("ok", false).put("error", error)
     }
 
     protected fun availabilityNeedsSetup(reason: String, fixAction: String): String =
@@ -110,8 +110,9 @@ abstract class PluginCapabilityService : Service() {
     private fun invoke(callJson: String): String = try {
         val call = JSONObject(callJson)
         onInvoke(call.optString("method"), call.optJSONObject("args") ?: JSONObject(), call.optString("runId"))
+            .toString()
     } catch (e: Exception) {
-        envelopeErr("INTERNAL", "plugin threw: ${e.message}")
+        envelopeErr("INTERNAL", "plugin threw: ${e.message}").toString()
     }
 
     companion object {

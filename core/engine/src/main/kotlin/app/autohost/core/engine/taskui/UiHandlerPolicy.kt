@@ -91,7 +91,10 @@ data class UiHandlerOutcome(
                 status = status,
                 reason = (obj["reason"] as? JsonPrimitive)?.contentOrNull,
                 message = (obj["message"] as? JsonPrimitive)?.contentOrNull,
-                data = (obj["result"] as? JsonObject)?.get("data")?.let { it as? JsonObject },
+                data = (obj["result"] as? JsonObject)
+                    ?.get("data")
+                    ?.let { it as? JsonObject }
+                    ?.let { data -> (data["state"] as? JsonObject) ?: data },
             )
         }.getOrNull()
     }

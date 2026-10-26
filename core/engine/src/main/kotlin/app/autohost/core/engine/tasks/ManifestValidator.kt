@@ -198,8 +198,12 @@ object ManifestValidator {
                     if (pkg.isNullOrEmpty()) {
                         errors += Issue("/needs/$key/$i/package", "REQUIRED", "app entry needs a \"package\"")
                     }
-                    (cap["min_version_code"] as? JsonPrimitive)?.content?.toLongOrNull()
-                        ?: run { if (cap.containsKey("min_version_code")) errors += Issue("/needs/$key/$i/min_version_code", "TYPE", "must be an integer") }
+                    val minVersionCode = cap["min_version_code"] as? JsonPrimitive
+                    if (cap.containsKey("min_version_code") &&
+                        (minVersionCode == null || minVersionCode.isString || minVersionCode.content.toLongOrNull() == null)
+                    ) {
+                        errors += Issue("/needs/$key/$i/min_version_code", "TYPE", "must be an integer")
+                    }
                 } else {
                     val cid = (cap["id"] as? JsonPrimitive)?.content
                     when {

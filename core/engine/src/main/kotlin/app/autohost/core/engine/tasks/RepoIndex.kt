@@ -100,6 +100,7 @@ object RepoIndex {
         for (key in obj.keys) {
             if (key !in ENTRY_KEYS) {
                 issues += Issue("$path/$key", "UNKNOWN_KEY", "\"$key\" is not part of index v1")
+                valid = false
             }
         }
         fun str(key: String): String? = (obj[key] as? JsonPrimitive)?.takeIf { it.isString }?.content

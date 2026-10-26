@@ -179,7 +179,7 @@ class ScheduleEngine(private val clock: Clock) {
                 return candidate
             }
             // move to the next local day; future days assume a fresh counter
-            cursor = day.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
+            cursor = day.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
             blockedToday = false
         }
         return null

@@ -11,6 +11,9 @@ plugins {
 android {
     namespace = "app.autohost.plugin"
     compileSdk = 36
+    buildFeatures {
+        aidl = true
+    }
 
     defaultConfig {
         minSdk = 29

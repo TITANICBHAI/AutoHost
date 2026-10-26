@@ -53,9 +53,19 @@ class IncidentTracker(private val clock: Clock) {
                         lastSeenAtMs = record.tsMs,
                     )
                 }
-            } else if (existing != null && existing.open) {
-                // a later success in the same stage resolves the incident (plan §12.5)
-                incidents[record.key(stage)] = existing.copy(resolvedAtMs = clock.nowMs())
+            } else {
+                // A success has no error code, so correlate by capability, method, and stage.
+                // Error codes distinguish failures; they must not prevent recovery from resolving one.
+                incidents.entries.toList()
+                    .filter { (_, incident) ->
+                        incident.open &&
+                            incident.capability == record.capability &&
+                            incident.method == record.method &&
+                            incident.stage == stage
+                    }
+                    .forEach { (key, incident) ->
+                        incidents[key] = incident.copy(resolvedAtMs = clock.nowMs())
+                    }
             }
         }
     }
