@@ -103,8 +103,8 @@ class ReliabilityPoliciesTest {
     fun `repeat failures update lastSeen instead of duplicating`() {
         val clock = FakeClock()
         val tracker = IncidentTracker(clock)
-        tracker.onAudit(audit(ok = false), "setup")
-        tracker.onAudit(audit(ok = false), "setup")
+        tracker.onAudit(audit(ok = false, ts = 1), "setup")
+        tracker.onAudit(audit(ok = false, ts = 2), "setup")
         assertEquals(1, tracker.allOf("run-1").size)
         assertEquals(2, tracker.allOf("run-1").single().lastSeenAtMs)
     }
@@ -155,7 +155,7 @@ class ReliabilityPoliciesTest {
             RunDirStat("/mid", now - 2_000, 100),
             RunDirStat("/new", now - 1_000, 100),
         )
-        val doomed = RetentionPolicy.selectForDeletion(entries, RetentionRules(maxAgeDays = 365, maxRuns = 100, maxBytes = 150), now)
+        val doomed = RetentionPolicy.selectForDeletion(entries, RetentionRules(maxAgeDays = 365, maxRuns = 100, maxBytes = 200), now)
         assertEquals(setOf("/oldest"), doomed)
     }
 

@@ -69,7 +69,7 @@ class EventMatcherTest {
 
     @Test
     fun `invalid regex never matches and never throws`() {
-        val r = rule("notification.posted", """{"title_regex":"([""")
+        val r = rule("notification.posted", """{"title_regex":"(["}""")
         assertEquals(
             false,
             EventMatcher.matches(
@@ -190,7 +190,7 @@ class TriggerDecisionEngineTest {
     fun `cooldown is evaluated before debounce`() {
         val r = rule(cooldownSeconds = 60, debounceMs = 500)
         assertEquals(
-            TriggerDecisionEngine.Decision.Cooldown(60_000),
+            TriggerDecisionEngine.Decision.Cooldown(59_000),
             TriggerDecisionEngine.evaluate(
                 r, TriggerDecisionEngine.RuleState(lastFireAtMs = clock.nowMs()), JsonObject(emptyMap()), clock.nowMs() + 1_000,
             ),

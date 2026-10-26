@@ -56,6 +56,9 @@ class SystemSettingsProvider(private val reader: Reader, private val writer: Wri
             "read" -> {
                 val key = (args["key"] as? JsonPrimitive)?.content
                     ?: return Envelope.err(ErrorCode.INVALID_ARGS, "\"key\" is required")
+                if (key.isBlank()) {
+                    return Envelope.err(ErrorCode.INVALID_ARGS, "\"key\" must not be blank")
+                }
                 val value = reader.read(table, key)
                 Envelope.ok(buildJsonObject {
                     value?.let { put("value", it) }

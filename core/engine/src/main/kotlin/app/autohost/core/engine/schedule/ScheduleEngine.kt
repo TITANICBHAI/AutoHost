@@ -173,7 +173,7 @@ class ScheduleEngine(private val clock: Clock) {
         repeat(370) { // at most one year of day iterations
             val day = LocalDate.ofInstant(Instant.ofEpochMilli(cursor), zone)
             for (candidate in dayCandidates(rule, day, zone)) {
-                if (candidate <= cursor) continue
+                if (candidate <= afterMs) continue
                 if (blockedToday && counterDay != null && localDayKey(candidate, zone) == counterDay) continue
                 if (endMs != null && candidate > endMs) return null
                 return candidate
@@ -194,7 +194,8 @@ class ScheduleEngine(private val clock: Clock) {
         }
         "window" -> {
             val everyMinutes = rule.everyMinutes
-            if (day.dayOfWeek.value !in rule.days || !isHhMm(rule.start) || !isHhMm(rule.end) ||
+            if ((rule.days.isNotEmpty() && day.dayOfWeek.value !in rule.days) ||
+                !isHhMm(rule.start) || !isHhMm(rule.end) ||
                 everyMinutes == null
             ) {
                 emptyList()

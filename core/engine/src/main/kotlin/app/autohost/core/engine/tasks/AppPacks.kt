@@ -109,8 +109,11 @@ object AppPacks {
                 }
             }
         }
-        val tips = (root["tips"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }
-        if (root.containsKey("tips") && tips == null) {
+        val tipsArray = root["tips"] as? JsonArray
+        val tips = tipsArray?.mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }
+        if (root.containsKey("tips") &&
+            (tipsArray == null || tipsArray.any { (it as? JsonPrimitive)?.isString != true })
+        ) {
             issues += Issue("/tips", "TYPE", "\"tips\" must be an array of strings")
         }
         if ((tips?.size ?: 0) > MAX_TIPS) issues += Issue("/tips", "MAX", "at most $MAX_TIPS tips")

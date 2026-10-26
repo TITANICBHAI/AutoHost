@@ -200,6 +200,8 @@ class RunLifecycleP5Test {
         val record = h.orchestrator.start(request(idleSeconds = 100)).getOrNull()!!
         runCurrent()
         val token = h.provider.specs.first().runToken
+        h.orchestrator.onEvent(token, BrokerEvent(type = "heartbeat"))
+        runCurrent()
 
         repeat(10) {
             h.orchestrator.onEvent(token, BrokerEvent(type = "log", message = "tick"))

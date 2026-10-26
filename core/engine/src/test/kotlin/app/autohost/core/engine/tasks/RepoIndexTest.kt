@@ -21,9 +21,7 @@ class RepoIndexTest {
 
     @Test
     fun `a full document parses into typed entries`() {
-        val text = """{"schema":1,"name":"Example repo","updated_at":"2026-10-26T00:00:00Z","tasks":[""" +
-            entryJson(extra = ""","title":"Example","runtime":"python","sha256":"${"a".repeat(64)}","min_host_api":1,"notes":"hi"}""") +
-            """]}"""
+        val text = """{"schema":1,"name":"Example repo","updated_at":"2026-10-26T00:00:00Z","tasks":[{"id":"app.example.task","version":"1.2.0","source":"https://example.com/tasks/example.aatask","title":"Example","runtime":"python","sha256":"${"a".repeat(64)}","min_host_api":1,"notes":"hi"}]}"""
         val result = RepoIndex.parse(text)
         assertTrue(result.ok)
         val entry = result.index!!.entries.single()

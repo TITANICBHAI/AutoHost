@@ -8,6 +8,7 @@ import app.autohost.core.model.Availability
 import app.autohost.core.model.Envelope
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -144,7 +145,7 @@ class PluginHostTest {
         val ctx = app.autohost.core.broker.CallContext("run-1", "task", null, emptyMap(), 0L)
         val ok = provider.invoke(ctx, "now", kotlinx.serialization.json.JsonObject(emptyMap()))
         assertTrue(ok.ok)
-        assertEquals(123L, (ok.result as? JsonPrimitive)?.content?.toLong())
+        assertEquals(123L, (ok.result as? JsonObject)?.get("now")?.jsonPrimitive?.content?.toLong())
         val unknown = provider.invoke(ctx, "nope", kotlinx.serialization.json.JsonObject(emptyMap()))
         assertEquals(app.autohost.core.model.ErrorCode.INVALID_ARGS, unknown.error?.code)
         val crashed = PluginProvider("p", PluginHost.parseDescribe(describeOk)!![0], FakeBinder(describe = describeOk, invokeThrows = true))

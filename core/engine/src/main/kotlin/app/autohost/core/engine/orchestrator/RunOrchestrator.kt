@@ -75,6 +75,7 @@ class RunOrchestrator(
     )
 
     init {
+        runtimes.setDeathListener(::onWorkerDeath)
         // Heartbeat-loss watchdog: only RUNNING runs are judged; STARTING gets generous start time.
         monitorScope.launch(dispatchers.default) {
             while (true) {
@@ -149,6 +150,7 @@ class RunOrchestrator(
         )
         store.create(record)
         requests[runId] = request
+        lastActivity[runId] = clock.monotonicMs()
         AhLog.i(TAG, "run queued", buildJsonObject { put("run_id", runId); put("task_id", request.taskId) })
 
         monitorScope.launch(dispatchers.default) {

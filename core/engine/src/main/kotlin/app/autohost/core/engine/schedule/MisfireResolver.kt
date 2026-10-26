@@ -30,7 +30,7 @@ object MisfireResolver {
     ): List<Long> {
         if (horizonMs <= nextFireAtMs) return emptyList()
         val out = mutableListOf<Long>()
-        var cursor = nextFireAtMs - 1
+        var cursor = nextFireAtMs
         val working = state
         while (out.size < max) {
             val fire = engine.nextFire(rule, cursor, working) ?: break

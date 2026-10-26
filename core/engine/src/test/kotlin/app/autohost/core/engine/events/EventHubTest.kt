@@ -70,8 +70,8 @@ class EventHubTest {
     @Test
     fun `recent filters by kind and trims to limit`() {
         val hub = EventHub(clock)
-        repeat(4) { hub.dispatch(event("screen.on")) }
-        repeat(2) { hub.dispatch(event("screen.off")) }
+        repeat(4) { hub.dispatch(event("screen.on", at = (it + 1).toLong())) }
+        repeat(2) { hub.dispatch(event("screen.off", at = (it + 5).toLong())) }
         assertEquals(2, hub.recent(kinds = setOf("screen.off")).size)
         assertEquals(listOf(5L, 6L), hub.recent(limit = 2).map { it.atMs })
         assertTrue(hub.recent(kinds = setOf("toast.shown")).isEmpty())

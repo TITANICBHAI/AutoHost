@@ -12,7 +12,10 @@ object RunStateMachine {
 
     private val transitions: Map<RunStatus, Set<RunStatus>> = mapOf(
         RunStatus.QUEUED to setOf(RunStatus.STARTING, RunStatus.CANCELLED, RunStatus.SKIPPED),
-        RunStatus.STARTING to setOf(RunStatus.RUNNING, RunStatus.FAILED, RunStatus.CANCELLED, RunStatus.INTERRUPTED),
+        RunStatus.STARTING to setOf(
+            RunStatus.RUNNING, RunStatus.WAITING_USER, RunStatus.SUCCEEDED,
+            RunStatus.FAILED, RunStatus.CANCELLED, RunStatus.INTERRUPTED,
+        ),
         RunStatus.RUNNING to setOf(
             RunStatus.RUNNING, RunStatus.PAUSED, RunStatus.WAITING_USER,
             RunStatus.SUCCEEDED, RunStatus.FAILED, RunStatus.CANCELLED, RunStatus.INTERRUPTED,

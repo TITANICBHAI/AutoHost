@@ -93,7 +93,12 @@ class CapabilityResolverTest {
         assertEquals("NEEDS_SETUP", statusOf(rows, "device.ui"))
         assertEquals("OPEN_ACCESSIBILITY_SETTINGS", rows.first { it.id == "device.ui" }.fixAction)
         assertEquals("UNSUPPORTED", statusOf(rows, "notify.post"))
-        assertTrue(resolver.canRun(rows)) // optional failures don't block
+        assertFalse(resolver.canRun(rows)) // a required capability that needs setup still blocks
+        val optionalOnly = resolver.check(
+            manifest(Needs(optional = listOf(CapabilityNeed("notify.post")))),
+            configSchema = null,
+        )
+        assertTrue(resolver.canRun(optionalOnly)) // optional failures don't block
     }
 
     @Test
@@ -123,7 +128,13 @@ class CapabilityResolverTest {
     fun `disabled insecure-feature switch is DENIED with OPEN_INSECURE_SWITCH fix`() {
         // P8-13 semantics: the row uses the FEATURE id — android.api.direct → raw_api — and
         // capabilities without a switch (device.ui) are never gated by one.
-        val probe = FakeProbe(switches = mapOf("raw_api" to false), availability = mapOf("android.api.direct" to Availability.Available))
+        val probe = FakeProbe(
+            switches = mapOf("raw_api" to false),
+            availability = mapOf(
+                "android.api.direct" to Availability.Available,
+                "device.ui" to Availability.Available,
+            ),
+        )
         val resolver = CapabilityResolver(CapabilityCatalog.parse(catalogJson), probe)
         val rows = resolver.check(
             manifest(Needs(capabilities = listOf(CapabilityNeed("android.api.direct"), CapabilityNeed("device.ui")))),

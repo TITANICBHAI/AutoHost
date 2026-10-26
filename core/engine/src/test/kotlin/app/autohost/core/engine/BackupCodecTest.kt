@@ -19,7 +19,7 @@ class BackupCodecTest {
     private val document = BackupCodec.Document(
         createdAt = "2026-01-01T00:00:00Z",
         appVersion = "1.0.0",
-        tasks = listOf(BackupCodec.BackupTask("com.example.demo", manifestJson, "a" * 64)),
+        tasks = listOf(BackupCodec.BackupTask("com.example.demo", manifestJson, "a" * 64, bundleB64 = "YQ==")),
         profiles = listOf(
             BackupCodec.BackupProfile(
                 id = "01HX",
