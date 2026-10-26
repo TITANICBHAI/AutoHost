@@ -194,8 +194,8 @@ autohost_install_android_command_line_tools() {
   curl --fail --location --retry 3 --connect-timeout 20 \
     "https://dl.google.com/android/repository/commandlinetools-linux-${revision}_latest.zip" \
     --output "$temporary_dir/commandline-tools.zip"
-  printf '%s  %s\n' "$archive_sha1" "$temporary_dir/commandline-tools.zip" | sha1sum --check
-  unzip -tq "$temporary_dir/commandline-tools.zip"
+  printf '%s  %s\n' "$archive_sha1" "$temporary_dir/commandline-tools.zip" | sha1sum --check >&2
+  unzip -tq "$temporary_dir/commandline-tools.zip" >&2
   mkdir -p "$temporary_dir/extracted" "$sdk_root/cmdline-tools"
   unzip -q "$temporary_dir/commandline-tools.zip" -d "$temporary_dir/extracted"
   if [[ ! -x "$temporary_dir/extracted/cmdline-tools/bin/sdkmanager" ]]; then
