@@ -5,13 +5,14 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT_DIR"
 # shellcheck source=scripts/android-build-env.sh
 source "$ROOT_DIR/scripts/android-build-env.sh"
+trap autohost_cleanup_android_build_env EXIT
 autohost_prepare_android_build_env
 
 run_gradle() {
   printf '\n==> gradle'
   printf ' %q' "$@"
   printf ' --console=plain --stacktrace\n'
-  gradle "$@" --console=plain --stacktrace
+  "$AUTOHOST_GRADLE_BIN" "$@" --console=plain --stacktrace
 }
 
 echo "== AutoHost JVM verification =="

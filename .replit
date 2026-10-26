@@ -27,7 +27,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "uv pip install --python \"$(command -v python3)\" -r sdk-python/requirements-test.txt && bash scripts/test-python.sh"
+args = "bash scripts/test-python.sh"
 
 [workflows.workflow.metadata]
 outputType = "console"
