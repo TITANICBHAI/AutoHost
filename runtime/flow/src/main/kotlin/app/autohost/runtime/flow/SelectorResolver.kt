@@ -84,7 +84,7 @@ internal object SelectorResolver {
  */
 class FlowFailure(
     val code: String,
-    val message: String,
+    override val message: String,
     val retryable: Boolean = false,
     val selector: JsonObject? = null,
     val label: String? = null,

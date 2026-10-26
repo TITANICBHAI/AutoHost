@@ -1,6 +1,5 @@
 package app.autohost.runtime.flow
 
-import app.autohost.broker.ICapabilityBroker
 import app.autohost.core.common.AhJson
 import app.autohost.core.common.AppDispatchers
 import app.autohost.core.model.Envelope
@@ -25,8 +24,7 @@ import java.io.File
 /**
  * P6-06 (written; awaiting Gradle): the provider contract — entry resolution, typed start
  * failures, in-process execution through a fake binder, plug-gated YAML, subflow registration,
- * and run-control semantics. The binder is a fake `ICapabilityBroker` mirroring the AIDL proxy
- * (call → envelope JSON) without Android.
+ * and run-control semantics. The binder is a fake transport (call → envelope JSON) without Android.
  */
 class FlowRuntimeProviderTest {
 
@@ -37,29 +35,27 @@ class FlowRuntimeProviderTest {
     )
     private val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher())
 
-    /** Pure-JVM stand-in for the AIDL proxy: same call/emit surface, envelope semantics included. */
-    private class FakeBinder : ICapabilityBroker {
+    /** Pure-JVM stand-in for the AIDL adapter, with envelope semantics included. */
+    private class FakeBinder : FlowBinderTransport {
         val calls = mutableListOf<Triple<String, String, JsonObject>>()
         val events = mutableListOf<JsonObject>()
         var failEnvelope: String? = null
 
-        override fun call(runToken: String?, capability: String?, method: String?, argsJson: String?): String {
+        override fun call(runToken: String, capability: String, method: String, argsJson: String): String {
             failEnvelope?.let { return it }
-            val args = AhJson.json.parseToJsonElement(argsJson.orEmpty()) as? JsonObject ?: JsonObject(emptyMap())
-            calls.add(Triple(capability ?: "", method ?: "", args))
+            val args = AhJson.json.parseToJsonElement(argsJson) as? JsonObject ?: JsonObject(emptyMap())
+            calls.add(Triple(capability, method, args))
             return AhJson.json.encodeToString(
                 Envelope.serializer(),
                 Envelope.ok(buildJsonObject { put("ok", true) }),
             )
         }
 
-        override fun emit(runToken: String?, eventJson: String?) {
+        override fun emit(runToken: String, eventJson: String) {
             events.add(
-                (AhJson.json.parseToJsonElement(eventJson ?: "{}") as? JsonObject) ?: JsonObject(emptyMap()),
+                (AhJson.json.parseToJsonElement(eventJson) as? JsonObject) ?: JsonObject(emptyMap()),
             )
         }
-
-        override fun describe(runToken: String?): String = "{}"
     }
 
     private fun provider(binder: FakeBinder): FlowRuntimeProvider = FlowRuntimeProvider(

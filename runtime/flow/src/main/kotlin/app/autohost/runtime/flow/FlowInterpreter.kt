@@ -1,5 +1,6 @@
 package app.autohost.runtime.flow
 
+import app.autohost.core.model.FlowDocument
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -108,7 +109,7 @@ object FlowInterpreter {
         run: JsonObject = buildJsonObject { put("attempt", 1) },
     ): FlowOutcome = runFlow(FlowParser.parse(flowText), ex, config, profile, env, secrets, run)
 
-    fun runFlow(
+    suspend fun runFlow(
         doc: app.autohost.core.model.FlowDocument,
         ex: FlowExec,
         config: JsonObject = JsonObject(emptyMap()),
@@ -182,7 +183,7 @@ object FlowInterpreter {
         }
     }
 
-    private fun whenHolds(
+    private suspend fun whenHolds(
         whenCondition: app.autohost.core.model.FlowWhen,
         scope: FlowScope,
         ex: FlowExec,

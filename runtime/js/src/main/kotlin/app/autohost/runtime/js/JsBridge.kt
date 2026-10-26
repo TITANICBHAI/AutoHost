@@ -70,10 +70,10 @@ class JsBridge(
             OP_CALL -> opCall(payload)
             OP_EMIT -> opEmit(payload)
             OP_SLEEP -> opSleep(payload)
-            OP_CTX -> buildJsonObject { put("ok", true); put("result", opCtx(payload)) }
+            OP_CTX -> opCtx(payload)
             OP_STATE_SAVE -> opStateSave(payload)
             OP_SECRET -> opSecret(payload)
-            OP_CLOCK -> buildJsonObject { put("ok", true); put("result", opClock()) }
+            OP_CLOCK -> opClock()
             OP_RESULT -> opResult(payload)
             OP_NEXT_RUN -> opNextRun(payload)
             OP_CAPABILITIES -> opCapabilities()
@@ -130,7 +130,7 @@ class JsBridge(
         return okNull()
     }
 
-    private fun opCtx(payload: JsonObject?): JsonElement {
+    private fun opCtx(payload: JsonObject?): JsonObject {
         val what = (payload?.get("what") as? JsonPrimitive)?.content ?: ""
         return when (what) {
             "config" -> runInfo.config
@@ -159,7 +159,8 @@ class JsBridge(
         val newState = payload ?: JsonObject(emptyMap())
         state.set(newState)
         // ctx.save() in Python calls state.set through the broker; mirror exactly (raises on error).
-        return callViaBridge("state", "set", buildJsonObject { put("state", newState) })
+        val reply = callViaBridge("state", "set", buildJsonObject { put("state", newState) })
+        return if ((reply["ok"] as? JsonPrimitive)?.content == "true") okNull() else reply
     }
 
     private fun opSecret(payload: JsonObject?): JsonObject {

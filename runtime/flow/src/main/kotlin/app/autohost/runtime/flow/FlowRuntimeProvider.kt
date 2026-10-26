@@ -1,6 +1,5 @@
 package app.autohost.runtime.flow
 
-import app.autohost.broker.ICapabilityBroker
 import app.autohost.core.common.AhJson
 import app.autohost.core.common.AhLog
 import app.autohost.core.common.AppDispatchers
@@ -32,7 +31,7 @@ import java.util.concurrent.atomic.AtomicReference
  * interpreter's own liveness is guarded by the idle watchdog via broker-call audit activity.
  */
 class FlowRuntimeProvider(
-    private val binder: ICapabilityBroker,
+    private val binder: FlowBinderTransport,
     private val dispatchers: AppDispatchers,
     private val scope: CoroutineScope,
     private val apiLevel: Int = 29,
@@ -140,7 +139,7 @@ class FlowRuntimeProvider(
 /** One broker call over the AIDL binder; envelope errors become [BrokerCallException]. */
 class BinderFlowBroker(
     private val runToken: String,
-    private val binder: ICapabilityBroker,
+    private val binder: FlowBinderTransport,
     private val ioDispatcher: CoroutineDispatcher,
 ) : FlowBroker {
 
@@ -169,10 +168,13 @@ class BinderFlowBroker(
         }
     }
 
-    private fun decodeEnvelope(text: String?): Envelope? = try {
-        AhJson.json.decodeFromString(Envelope.serializer(), text ?: return null)
-    } catch (e: Exception) {
-        null
+    private fun decodeEnvelope(text: String?): Envelope? {
+        if (text == null) return null
+        return try {
+            AhJson.json.decodeFromString(Envelope.serializer(), text)
+        } catch (e: Exception) {
+            null
+        }
     }
 }
 

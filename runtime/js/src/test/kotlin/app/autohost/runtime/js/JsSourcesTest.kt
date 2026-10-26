@@ -36,6 +36,7 @@ class JsSourcesTest {
     fun `explicit entry wins and must exist`() {
         val dir = taskDir()
         File(dir, "main.js").writeText("a")
+        File(dir, "entry.js").writeText("explicit")
         assertEquals("entry.js", JsSources.resolveEntryFile(dir, "entry.js")!!.name)
         assertNull("missing explicit entry must not fall back", JsSources.resolveEntryFile(dir, "nope.js"))
         assertNull("missing default must be null too", JsSources.resolveEntryFile(tmp.newFolder("empty"), null))

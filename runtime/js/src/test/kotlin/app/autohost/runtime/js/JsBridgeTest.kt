@@ -5,6 +5,7 @@ import app.autohost.core.common.Clock
 import app.autohost.core.model.Envelope
 import app.autohost.core.model.ErrorCode
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -139,7 +140,7 @@ class JsBridgeTest {
     fun `emit redacts secret values before they leave`() {
         val caller = FakeCaller()
         val reply = decode(bridge(caller).handle("emit", payload("x" to "the secret is s3cret-value")))
-        assertNull(reply["result"])
+        assertEquals(JsonNull, reply["result"])
         val event = caller.events.single().second
         assertEquals("the secret is [REDACTED]", (event["x"] as JsonPrimitive).content)
     }
@@ -150,9 +151,9 @@ class JsBridgeTest {
         val ctrl = controls(fm)
         val sleeps = mutableListOf<Long>()
         val reply = decode(bridge(ctrl = ctrl, sleeper = { ms -> sleeps.add(ms); fm.sleeper(ms) }).handle("sleep", "{\"seconds\":7200}"))
-        assertNull(reply["result"])
+        assertEquals(JsonNull, reply["result"])
         // The full (capped) duration was slept in ≤200 ms slices, without real waiting.
-        assertEquals(7_200_000L, sleeps.sum())
+        assertEquals(3_600_000L, sleeps.sum())
         assertTrue(sleeps.max() <= 200)
     }
 
@@ -185,7 +186,7 @@ class JsBridgeTest {
         val caller = FakeCaller()
         val b = bridge(caller)
         val reply = decode(b.handle("state_save", "{\"stage\":2,\"done\":true}"))
-        assertNull(reply["result"])
+        assertEquals(JsonNull, reply["result"])
         assertEquals("state" to "set", caller.calls.single().second)
         val state = decode(b.handle("ctx", payload("what" to "state")))["result"] as JsonObject
         assertEquals(2, (state["stage"] as JsonPrimitive).content.toInt())
@@ -194,7 +195,7 @@ class JsBridgeTest {
     @Test
     fun `clock produces the same ISO shape the python SDK produces`() {
         val now = ((decode(bridge().handle("clock", "null"))["result"] as JsonObject)["now_iso"] as JsonPrimitive).content
-        assertEquals("2026-10-26T00:00:00Z", now)
+        assertEquals("2026-10-26T07:33:20Z", now)
     }
 
     // --- secret / result / next_run / capabilities ---------------------------------------------
@@ -241,6 +242,6 @@ class JsBridgeTest {
     @Test
     fun `iso format truncates to seconds like the python runtime`() {
         assertEquals("1970-01-01T00:00:00Z", IsoFormat.ofMs(0))
-        assertEquals("2026-10-26T00:00:00Z", IsoFormat.ofMs(1_793_000_000_999))
+        assertEquals("2026-10-26T07:33:20Z", IsoFormat.ofMs(1_793_000_000_999))
     }
 }

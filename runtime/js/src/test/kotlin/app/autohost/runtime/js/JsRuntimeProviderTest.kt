@@ -22,6 +22,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -107,7 +108,7 @@ class JsRuntimeProviderTest {
     }
 
     private fun taskDir(): File {
-        val dir = tmp.newFolder("task")
+        val dir = tmp.newFolder()
         File(dir, "task.json").writeText("{}")
         File(dir, "main.js").writeText("export function main() { return autohost.ctx.result('ok'); }")
         return dir
@@ -140,27 +141,29 @@ class JsRuntimeProviderTest {
 
     /** The engine runs on its own thread: tests await the finished (or death) signal. */
     private fun awaitFinished(caller: RecordingCaller, seconds: Long = 2): JsonObject {
-        val done = CountDownLatch(1)
-        scope.launch {
-            while (caller.events.none {
-                    (it.second)["type"]?.let { t -> (t as? JsonPrimitive)?.content } == "finished"
-                }
-            ) {
-                delay(5)
-            }
-            done.countDown()
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(seconds)
+        while (
+            caller.events.none {
+                (it.second)["type"]?.let { t -> (t as? JsonPrimitive)?.content } == "finished"
+            } && System.nanoTime() < deadline
+        ) {
+            Thread.sleep(5)
         }
-        assertTrue("run never finished", done.await(seconds, TimeUnit.SECONDS))
+        assertTrue(
+            "run never finished",
+            caller.events.any {
+                (it.second)["type"]?.let { t -> (t as? JsonPrimitive)?.content } == "finished"
+            },
+        )
         return finished(caller)
     }
 
     private fun awaitDeath(captured: Array<String?>, seconds: Long = 2) {
-        val done = CountDownLatch(1)
-        scope.launch {
-            while (captured[0] == null) delay(5)
-            done.countDown()
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(seconds)
+        while (captured[0] == null && System.nanoTime() < deadline) {
+            Thread.sleep(5)
         }
-        assertTrue("death was never reported", done.await(seconds, TimeUnit.SECONDS))
+        assertTrue("death was never reported", captured[0] != null)
     }
 
     private fun str(obj: JsonObject, key: String): String? = (obj[key] as? JsonPrimitive)?.contentOrNull
@@ -270,6 +273,6 @@ class JsRuntimeProviderTest {
         }
         runBlocking { provider(engine, caller).start(spec(taskDir())) }
         val value = awaitFinished(caller)["result"]!!.jsonObject
-        assertEquals("2026-10-26T00:00:00Z", str(value, "now"))
+        assertEquals("2026-10-26T07:33:20Z", str(value, "now"))
     }
 }

@@ -17,7 +17,7 @@ kotlin {
 dependencies {
     api(project(":core:model"))
     implementation(project(":core:common"))
-    implementation(project(":core:broker")) // P6-06: BinderFlowBroker speaks ICapabilityBroker (AIDL)
+    implementation(project(":runtime:api"))
     implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.junit)

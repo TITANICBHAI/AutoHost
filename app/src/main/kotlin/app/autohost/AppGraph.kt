@@ -87,6 +87,7 @@ import app.autohost.prompt.UiPromptProvider
 import app.autohost.recorder.RecorderController
 import app.autohost.runtime.api.RuntimeRegistry
 import app.autohost.runtime.flow.FlowRuntimeProvider
+import app.autohost.runtime.flow.FlowBinderTransport
 import app.autohost.runtime.js.JsBrokerCaller
 import app.autohost.runtime.js.JsRuntimeProvider
 import app.autohost.runtime.python.PythonRuntimeProvider
@@ -171,7 +172,14 @@ class AppGraph(private val app: Application) {
 
     /** P6-06: declarative flows run in-process — no `:w*` worker (plan §7.9, Gate 6-a). */
     val flowRuntime = FlowRuntimeProvider(
-        binder = binder,
+        binder = object : FlowBinderTransport {
+            override fun call(runToken: String, capability: String, method: String, argsJson: String) =
+                binder.call(runToken, capability, method, argsJson)
+
+            override fun emit(runToken: String, eventJson: String) {
+                binder.emit(runToken, eventJson)
+            }
+        },
         dispatchers = dispatchers,
         scope = appScope,
         apiLevel = ApiGate.sdkInt,

@@ -2,6 +2,7 @@ package app.autohost.core.devapi
 
 import app.autohost.core.common.AhJson
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -22,7 +23,7 @@ object JsonRpc {
         data class Success(val id: Any?, val result: JsonObject) : Response {
             override fun toJson(): JsonObject = buildJsonObject {
                 put("jsonrpc", "2.0")
-                put("id", id ?: 0)
+                put("id", id.toJsonElement())
                 put("result", result)
             }
         }
@@ -30,7 +31,7 @@ object JsonRpc {
         data class Failure(val id: Any?, val code: String, val message: String, val details: JsonObject? = null) : Response {
             override fun toJson(): JsonObject = buildJsonObject {
                 put("jsonrpc", "2.0")
-                put("id", id ?: 0)
+                put("id", id.toJsonElement())
                 put("error", buildJsonObject {
                     put("code", -32000)
                     put("message", message)
@@ -71,6 +72,15 @@ object JsonRpc {
         data class Left<L>(val value: L) : Either<L, Nothing>
         data class Right<R>(val value: R) : Either<Nothing, R>
     }
+
+    private fun Any?.toJsonElement(): JsonElement = when (this) {
+        null -> JsonPrimitive(0)
+        is JsonElement -> this
+        is String -> JsonPrimitive(this)
+        is Number -> JsonPrimitive(this)
+        is Boolean -> JsonPrimitive(this)
+        else -> JsonPrimitive(toString())
+    }
 }
 
 /**
@@ -104,11 +114,9 @@ class TokenStore(private val random: () -> ByteArray = { ByteArray(32).also { ja
         val ba = a.encodeToByteArray()
         val bb = b.encodeToByteArray()
         var diff = ba.size xor bb.size
-        for (i in ba.indices) diff = diff or (ba[i].toInt() xor bb.getOrNull(i)?.toInt().orEmpty())
+        for (i in ba.indices) diff = diff or (ba[i].toInt() xor bb.getOrElse(i) { 0 }.toInt())
         return diff == 0
     }
-
-    private fun Int.orEmpty(): Int = this
 }
 
 /** P2-21: rate limiting — a sliding window of timestamps (default 20 req/s, docs/DEVAPI.md §1). */

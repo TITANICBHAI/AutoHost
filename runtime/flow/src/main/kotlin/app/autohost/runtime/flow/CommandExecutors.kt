@@ -379,7 +379,7 @@ internal object CommandExecutors {
             throw FlowFailure("INVALID_ARGS", "flow nesting deeper than ${FlowInterpreter.MAX_FLOW_DEPTH}", label = label)
         }
         val childScope = scope.child(emptyMap())
-        (doc.env as? JsonObject ?: JsonObject(emptyMap())).forEach { (k, v) -> childScope.env[k] = v }
+        doc.env.forEach { (k, v) -> childScope.env[k] = v }
         body(step)["env"]?.let { overlay ->
             (overlay as? JsonObject)?.forEach { (k, v) -> childScope.env[k] = scope.resolveValue(v) }
         }

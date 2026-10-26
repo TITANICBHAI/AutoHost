@@ -25,7 +25,7 @@ object WsFrames {
     }
 
     sealed class Decode {
-        data class Frame(val frame: Frame) : Decode()
+        data class Frame(val frame: WsFrames.Frame) : Decode()
         data object NeedMore : Decode()
         data object Closed : Decode()
         data class Invalid(val reason: String) : Decode()
@@ -72,17 +72,18 @@ object WsFrames {
             }
         }
         val maskLength = if (masked) 4 else 0
-        val total = header + maskLength + payloadLength
+        val total = header.toLong() + maskLength + payloadLength
         if (total > 8 * 1024 * 1024) return Decode.Invalid("frame exceeds the 8 MiB transport cap")
-        if (length < total) return Decode.NeedMore
-        var payload = buffer.copyOfRange(offset + header + maskLength, offset + total)
+        if (length.toLong() < total) return Decode.NeedMore
+        val totalBytes = total.toInt()
+        var payload = buffer.copyOfRange(offset + header + maskLength, offset + totalBytes)
         if (masked) {
             val maskStart = offset + header
             val out = payload.copyOf()
             for (i in out.indices) out[i] = (out[i].toInt() xor buffer[maskStart + (i % 4)].toInt()).toByte()
             payload = out
         }
-        return Decode.Frame(Frame(opcode, payload))
+        return Decode.Frame(WsFrames.Frame(opcode, payload))
     }
 
     /** One-shot convenience over a full read window (tests, simple callers). */

@@ -66,7 +66,7 @@ internal object ExprEvaluator {
         var pos = 0
         while (pos < expr.length) {
             val match = TOKEN.matchAt(expr, pos) ?: throw ExprError("unexpected character '${expr[pos]}' at $pos")
-            pos = match.end()
+            pos = match.range.last + 1
             val group = when {
                 match.groups["ws"] != null -> continue
                 match.groups["num"] != null -> Kind.NUM

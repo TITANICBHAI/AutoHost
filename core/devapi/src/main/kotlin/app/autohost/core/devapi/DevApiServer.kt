@@ -4,6 +4,7 @@ import app.autohost.core.common.AhJson
 import kotlinx.coroutines.channels.Channel
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import java.io.BufferedReader
 import java.io.BufferedWriter
@@ -252,9 +253,9 @@ class DevApiServer(
     /** Broadcast a server notification `{"method":"event","params":{…}}` to all open WS connections. */
     fun broadcast(topic: String, payload: JsonObject) {
         val notification = buildJsonObject {
-            put("method", "event")
+            put("method", JsonPrimitive("event"))
             put("params", buildJsonObject {
-                put("topic", topic)
+                put("topic", JsonPrimitive(topic))
                 put("data", payload)
             })
         }.toString()

@@ -21,7 +21,7 @@ internal object JsonValues {
         element is JsonPrimitive && !element.isString && element.content in setOf("true", "false")
 
     fun bool(element: JsonElement): Boolean? =
-        if (isBool(element)) element.content == "true" else null
+        if (isBool(element)) (element as JsonPrimitive).content == "true" else null
 
     fun isInt(element: JsonElement): Boolean =
         element is JsonPrimitive && !element.isString && INT_RE.matches(element.content)
