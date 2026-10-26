@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AutoHost</string>
+    <string name="run_notification_title">AutoHost is running</string>
+    <string name="run_notification_stop">Stop</string>
+    <string name="channel_runs">Runs</string>
+    <string name="channel_runs_description">Shows what an automation is doing right now and how to stop it</string>
+    <string name="library_empty_title">No tasks yet</string>
+    <string name="library_empty_body">Push a task bundle to the dev folder with adb, then tap Refresh.</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_run">Run</string>
+    <string name="action_stop">Stop</string>
+    <string name="setup_title">Setup</string>
+    <string name="setup_a11y_off">Accessibility is off</string>
+    <string name="setup_a11y_off_body">AutoHost needs its accessibility service to see and tap other apps. Turning it on takes one tap in system settings.</string>
+    <string name="setup_a11y_fix">Open accessibility settings</string>
+    <string name="setup_a11y_on">Accessibility is on</string>
+    <string name="setup_notifications">Notifications permission</string>
+    <string name="tab_tasks">Tasks</string>
+    <string name="tab_setup">Setup</string>
+    <string name="tile_unbound_subtitle">Tap to bind a task</string>
+    <string name="tile_running_subtitle">running…</string>
+    <string name="widget_description">Run AutoHost tasks and see their last status</string>
+    <string name="channel_surfaces">Task surfaces</string>
+    <string name="channel_events">Event triggers</string>
+    <string name="channel_events_description">Low-priority notice shown while event triggers are armed</string>
+    <string name="tab_triggers">Triggers</string>
+</resources>

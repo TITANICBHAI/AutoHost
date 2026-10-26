@@ -1,0 +1,9 @@
+REGION_KEYS: tuple[str, ...]
+
+def ocr(source: str = "screen", path: str | None = None,
+        region: dict[str, int] | None = None) -> dict: ...
+def template_match(needle_path: str, *, source: str = "screen", path: str | None = None,
+                   region: dict[str, int] | None = None, threshold: float | None = None,
+                   stride: int | None = None) -> dict: ...
+def qr_decode(source: str = "screen", path: str | None = None,
+              region: dict[str, int] | None = None) -> dict: ...

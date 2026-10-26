@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug-only test target (docs/FIXTURE_APP.md). Never shipped; different package from AutoHost so
+     scoping is exercised in instrumented tests. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:label="AutoHost Fixture"
+        android:theme="@android:style/Theme.Material.Light">
+
+        <activity android:name=".HomeActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".ButtonScreenActivity" android:exported="true" />
+        <activity android:name=".DelayedButtonScreenActivity" android:exported="true" />
+        <activity android:name=".TextFieldScreenActivity" android:exported="true" />
+        <activity android:name=".ListScreenActivity" android:exported="true" />
+        <activity android:name=".UnboundedRangeScreenActivity" android:exported="true" />
+        <activity android:name=".DialogScreenActivity" android:exported="true" />
+        <activity android:name=".PermissionDialogScreenActivity" android:exported="true" />
+        <activity android:name=".KeyboardScreenActivity" android:exported="true" />
+        <activity android:name=".DynamicScreenActivity" android:exported="true" />
+        <activity android:name=".SecureScreenActivity" android:exported="true" />
+        <activity android:name=".CanvasScreenActivity" android:exported="true" />
+        <activity android:name=".WebViewScreenActivity" android:exported="true" />
+        <activity android:name=".ToastScreenActivity" android:exported="true" />
+        <activity android:name=".ClipboardScreenActivity" android:exported="true" />
+        <activity android:name=".NotificationScreenActivity" android:exported="true" />
+        <activity android:name=".CrashScreenActivity" android:exported="true" />
+        <activity android:name=".LocaleScreenActivity" android:exported="true" />
+
+        <activity android:name=".DeepLinkActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="fixture" android:host="screen" />
+            </intent-filter>
+        </activity>
+
+        <provider
+            android:name=".FixtureStateProvider"
+            android:authorities="app.autohost.fixture.state"
+            android:exported="true"
+            android:grantUriPermissions="true" />
+    </application>
+</manifest>

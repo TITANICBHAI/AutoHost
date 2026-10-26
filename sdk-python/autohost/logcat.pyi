@@ -1,0 +1,6 @@
+MAX_LINES: int
+DEFAULT_MAX_LINES: int
+
+def snapshot(*, tag: str | None = None, level: str | None = None, contains: str | None = None,
+             package: str | None = None, max_lines: int | None = None, since_ms: int | None = None) -> dict: ...
+def clear() -> dict: ...

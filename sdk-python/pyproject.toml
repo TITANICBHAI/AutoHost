@@ -1,0 +1,9 @@
+[project]
+name = "autohost-sdk"
+version = "0.1.0"
+description = "AutoHost Python SDK (stdlib only) and simulator"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.setuptools]
+packages = ["autohost", "autohost.device", "autohost_sim"]

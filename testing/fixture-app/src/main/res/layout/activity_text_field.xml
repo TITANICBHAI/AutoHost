@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="16dp">
+
+    <EditText android:id="@id/fx_text"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:hint="type here" android:inputType="text" />
+
+    <EditText android:id="@id/fx_password"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:hint="password" android:inputType="textPassword" />
+
+    <EditText android:id="@id/fx_multiline"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:hint="multiline" android:inputType="textMultiLine" />
+
+    <TextView android:id="@id/fx_echo"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="echo:" />
+
+    <TextView android:id="@id/fx_state"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:textSize="10sp" android:text="{}" />
+</LinearLayout>

@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "id": "app.autohost.sample.pack-presser",
+  "name": "Press Button (app pack)",
+  "version": "1.0.0",
+  "description": "The press-button archetype driven by an app pack: the selectors live in the .aapack (uses_packs), the task only names them. A pack fix ships once for every task (plan §7.10, P11-04).",
+  "host_api": ">=1 <2",
+  "uses_packs": ["app.autohost.sample.presser-pack"],
+  "runtime": { "type": "python", "entry": "main.py" },
+  "needs": {
+    "capabilities": [
+      { "id": "device.app.launch", "scope": { "packages": ["${config.target_package}"] } },
+      { "id": "device.app.query", "scope": { "packages": ["${config.target_package}"] } },
+      { "id": "device.ui.observe", "scope": { "packages": ["${config.target_package}"] } },
+      { "id": "device.ui.act", "scope": { "packages": ["${config.target_package}"] } }
+    ],
+    "apps": [ { "package": "${config.target_package}" } ]
+  },
+  "config_schema": {
+    "type": "object",
+    "required": ["target_package"],
+    "properties": {
+      "target_package": { "type": "string", "title": "App", "x-ui": { "widget": "app-picker" } },
+      "locale": { "type": "string", "title": "Label locale (e.g. de)", "default": null },
+      "wait_seconds": { "type": "integer", "title": "Wait for button (s)", "default": 20, "minimum": 1, "maximum": 300 }
+    }
+  },
+  "triggers": { "manual": true, "schedule": { "allowed": true, "default": { "type": "interval", "every_minutes": 60 } }, "events": [] },
+  "execution": { "ui_exclusive": true, "needs_unlocked_screen": true, "pausable": true, "timeout_minutes": 5, "idle_timeout_seconds": 120, "max_attempts": 2 },
+  "ui": { "mode": "auto" }
+}

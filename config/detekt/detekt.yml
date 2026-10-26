@@ -1,0 +1,30 @@
+# AutoHost detekt config — builds on the default rule set (buildUponDefaultConfig = true).
+# Only deviations are listed here. Keep this file small; prefer fixing code over silencing rules.
+# Run via `gradle detekt` (part of `gradle check`).
+
+build:
+  maxIssues: 0
+
+complexity:
+  LongMethod:
+    # Compose UI builders and test setups run long legitimately; tighten later, never silently.
+    threshold: 120
+  LongParameterList:
+    # Compose @Composable functions and SDK facades take many parameters by design.
+    active: false
+  TooManyFunctions:
+    active: false
+
+style:
+  MagicNumber:
+    # Device/API constants (SDK_INT checks, timeouts in ms) are everywhere in Android code.
+    active: false
+  MaxLineLength:
+    maxLineLength: 120
+    excludeCommentStatements: true
+  ReturnCount:
+    # Guard-clause style is the house pattern (fail closed).
+    excludeGuardClauses: true
+  UnusedPrivateMember:
+    # Compose previews and AIDL seam shims can look unused to static analysis.
+    ignoreAnnotated: ['Preview']

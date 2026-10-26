@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "id": "app.autohost.sample.hello",
+  "name": "Hello",
+  "version": "1.0.0",
+  "description": "Logs progress, counts runs, needs no capabilities. Proves the runtime and run lifecycle.",
+  "host_api": ">=1 <2",
+  "runtime": { "type": "python", "entry": "main.py" },
+  "needs": { "capabilities": [], "optional": [], "apps": [] },
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "greeting": { "type": "string", "title": "Greeting", "default": "Hello" },
+      "steps": { "type": "integer", "title": "Steps", "default": 5, "minimum": 1, "maximum": 60 }
+    }
+  },
+  "profile_schema": { "type": "object", "properties": { "label": { "type": "string", "title": "Profile name" } } },
+  "triggers": { "manual": true, "schedule": { "allowed": true, "default": { "type": "interval", "every_minutes": 60 } }, "events": [] },
+  "execution": { "ui_exclusive": false, "needs_unlocked_screen": false, "pausable": true, "timeout_minutes": 5, "idle_timeout_seconds": 60, "max_attempts": 1, "verification": "off" },
+  "ui": { "mode": "auto" }
+}

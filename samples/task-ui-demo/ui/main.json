@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "title": "Task UI Demo",
+  "body": [
+    { "type": "text", "value": "Hello, {{config.greeting_name}}", "style": "headline" },
+    { "type": "markdown", "value": "Buttons below call **@ui.handler** functions in `main.py`. Values typed here ride along as `{{input.*}}`." },
+    {
+      "type": "card",
+      "title": "Try a handler call",
+      "children": [
+        { "type": "input", "name": "who", "label": "Who", "default": "AutoHost" },
+        { "type": "input", "name": "new_item", "label": "New table row" },
+        {
+          "type": "row",
+          "children": [
+            { "type": "button", "label": "Greet", "action": { "type": "call", "handler": "greet", "args": { "who": "{{input.who}}" } } },
+            { "type": "button", "label": "Add row", "style": "outlined", "action": { "type": "call", "handler": "add_item", "args": { "new_item": "{{input.new_item}}" } } }
+          ]
+        },
+        { "type": "stat", "label": "Greetings", "value": "{{state.greetings}}" }
+      ]
+    },
+    {
+      "type": "card",
+      "title": "Items (state-driven table)",
+      "children": [
+        { "type": "table", "columns": ["#", "item"], "rows": "{{state.items}}" }
+      ]
+    },
+    {
+      "type": "card",
+      "title": "Runs and navigation",
+      "children": [
+        { "type": "text", "value": "Latest run: {{run.status}}", "style": "label" },
+        {
+          "type": "row",
+          "children": [
+            { "type": "button", "label": "Run once", "style": "outlined", "action": { "type": "run" } },
+            { "type": "button", "label": "Configure…", "style": "outlined", "action": { "type": "navigate", "route": "config" } }
+          ]
+        },
+        { "type": "progress" },
+        { "type": "logview" }
+      ]
+    },
+    {
+      "type": "card",
+      "title": "Danger zone",
+      "children": [
+        {
+          "type": "button",
+          "label": "Reset counters",
+          "style": "danger",
+          "action": {
+            "type": "confirm",
+            "title": "Reset demo counters?",
+            "message": "This clears the demo's counters.json (greetings + items).",
+            "action": { "type": "call", "handler": "reset" }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "id": "app.autohost.sample.capabilities-showcase",
+  "name": "Capabilities Showcase",
+  "version": "1.0.0",
+  "description": "An honest availability sweep over every Phase-8/9 capability: clipboard, intents, notifications, events, audio, power, screen control, settings reads, shared files, WebSocket, webhooks, task chaining and the shell tier. Each section reports what worked or the exact typed error — never a fake success.",
+  "host_api": ">=1 <2",
+  "runtime": { "type": "python", "entry": "main.py" },
+  "needs": {
+    "capabilities": [],
+    "optional": [
+      { "id": "device.clipboard" },
+      { "id": "device.intent" },
+      { "id": "device.notifications" },
+      { "id": "device.events" },
+      { "id": "device.audio" },
+      { "id": "device.power" },
+      { "id": "device.screen" },
+      { "id": "ui.overlay" },
+      { "id": "device.settings" },
+      { "id": "files.shared" },
+      { "id": "net.ws" },
+      { "id": "net.server" },
+      { "id": "tasks.run" },
+      { "id": "device.shell" }
+    ],
+    "apps": []
+  },
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "sections": {
+        "type": "array",
+        "title": "Sections to sweep",
+        "description": "Subset of: clipboard intents notifications events audio power screen_control settings_read files_shared net_ws webhooks chaining shell_tier",
+        "items": { "type": "string" },
+        "default": []
+      },
+      "tree_uri": { "type": "string", "title": "SAF tree URI", "description": "Grant files.shared with a picked folder and paste its tree URI here", "default": "" },
+      "ws_url": { "type": "string", "title": "WebSocket URL", "description": "ws(s):// endpoint inside the net.ws domain scope", "default": "" },
+      "chain_target": { "type": "string", "title": "Task to chain", "description": "Task id for the tasks.run section (must be in the tasks.run scope)", "default": "app.autohost.sample.hello" },
+      "shell_command": { "type": "string", "title": "Shell command", "description": "Allowlisted command for the shell_tier section (needs the shell switch on and a matching pattern in the grant)", "default": "" }
+    }
+  },
+  "profile_schema": { "type": "object", "properties": {} },
+  "triggers": { "manual": true, "schedule": { "allowed": false }, "events": [] },
+  "execution": { "ui_exclusive": false, "needs_unlocked_screen": false, "pausable": true, "timeout_minutes": 5, "idle_timeout_seconds": 60, "max_attempts": 1, "verification": "off" },
+  "ui": { "mode": "auto" }
+}

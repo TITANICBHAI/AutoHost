@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="16dp">
+    <Button android:id="@id/fx_btn_alert" android:layout_width="match_parent" android:layout_height="56dp" android:text="Show alert dialog" />
+    <Button android:id="@id/fx_btn_popup" android:layout_width="match_parent" android:layout_height="56dp" android:text="Show popup window" />
+    <Button android:id="@id/fx_btn_sheet" android:layout_width="match_parent" android:layout_height="56dp" android:text="Show bottom sheet" />
+    <TextView android:id="@id/fx_dialog_result" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" />
+    <TextView android:id="@id/fx_state" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="10sp" android:text="{}" />
+</LinearLayout>

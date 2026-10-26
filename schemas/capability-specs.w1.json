@@ -1,0 +1,3655 @@
+{
+  "_typeNotation": "Mini notation: 'string' 'int' 'bool' 'number' 'json'; 'T?' optional; '[T]' list; '{k:T}' object; 'A|B' enum/union; named types are in 'types'. Codegen converts to JSON Schema, Kotlin and Python stubs.",
+  "version": 1,
+  "wave": "W1",
+  "types": {
+    "Selector": "see schemas/broker.schema.json#/$defs/Selector",
+    "NodeSummary": "see schemas/broker.schema.json#/$defs/NodeSummary",
+    "NodeRef": "string  # opaque, run-scoped, short TTL",
+    "UiSnapshot": "{ts:int, package:string?, activity:string?, keyboard:'visible|hidden', nodes:[NodeSummary]?, compact:string?, nodeCount:int, empty:bool, path:string?}  # meta.degraded when served from cache",
+    "LaunchResult": "'LAUNCHED_VERIFIED|LAUNCHED_UNVERIFIED|FAILED'",
+    "StopResult": "{result:'VERIFIED|BEST_EFFORT|FAILED', method:string}",
+    "TextInputOutcome": "'VERIFIED|REJECTED|ACCEPTED_UNVERIFIED|COMMIT_OUTCOME_UNKNOWN|INPUT_SESSION_CHANGED'"
+  },
+  "capabilities": [
+    {
+      "id": "device.ui",
+      "summary": "Observe and act on other apps' UI through the best available provider (accessibility; shell as fallback).",
+      "permissions": [
+        {
+          "id": "device.ui.observe",
+          "scope": {
+            "packages": "[string]"
+          }
+        },
+        {
+          "id": "device.ui.act",
+          "scope": {
+            "packages": "[string]",
+            "allow_coordinates": "bool?",
+            "allow_global": "bool?"
+          }
+        }
+      ],
+      "androidAccess": [
+        "ACCESSIBILITY_SERVICE"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T1",
+        "T3"
+      ],
+      "methods": [
+        {
+          "name": "snapshot",
+          "description": "Read the UI tree (hardened: ReadGate, guards).",
+          "params": {
+            "scope": "{packages:[string]}?",
+            "compact": "bool?",
+            "filter": "{on_screen:bool?, min_size:int?, min_visible_ratio:number?}?"
+          },
+          "returns": "UiSnapshot",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "TIMEOUT",
+            "NO_ACTIVE_WINDOW"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.ui.observe"
+        },
+        {
+          "name": "find",
+          "description": "",
+          "params": {
+            "selector": "Selector",
+            "limit": "int?",
+            "within": "NodeRef?"
+          },
+          "returns": "{nodes:[NodeSummary]}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "TIMEOUT",
+            "NO_ACTIVE_WINDOW"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.ui.observe"
+        },
+        {
+          "name": "wait_for",
+          "description": "",
+          "params": {
+            "selector": "Selector",
+            "timeout_ms": "int",
+            "visible_only": "bool?"
+          },
+          "returns": "{node:NodeSummary?}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "TIMEOUT",
+            "NO_ACTIVE_WINDOW"
+          ],
+          "risk": "low",
+          "timeoutMs": 120000,
+          "requires": "device.ui.observe"
+        },
+        {
+          "name": "wait_for_settle",
+          "description": "",
+          "params": {
+            "timeout_ms": "int?",
+            "stable_ms": "int?"
+          },
+          "returns": "{settled:bool, waited_ms:int}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "TIMEOUT",
+            "NO_ACTIVE_WINDOW"
+          ],
+          "risk": "low",
+          "timeoutMs": 30000,
+          "requires": "device.ui.observe"
+        },
+        {
+          "name": "is_window_updating",
+          "description": "",
+          "params": {},
+          "returns": "{updating:bool}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "TIMEOUT",
+            "NO_ACTIVE_WINDOW"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.ui.observe"
+        },
+        {
+          "name": "dump",
+          "description": "",
+          "params": {
+            "compact": "bool?",
+            "filter": "json?"
+          },
+          "returns": "{text:string}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "TIMEOUT",
+            "NO_ACTIVE_WINDOW"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.ui.observe"
+        },
+        {
+          "name": "click",
+          "description": "Fail closed on stale/obscured targets.",
+          "params": {
+            "target": "NodeRef|Selector",
+            "strategy": "'auto|node|ancestor|coordinate'?",
+            "expect": "Selector?",
+            "retry_if_no_change": "bool?",
+            "timeout_ms": "int?"
+          },
+          "returns": "{method:'NODE_ACTION|ANCESTOR_ACTION|COORDINATE', verified:bool}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "TIMEOUT",
+            "NO_ACTIVE_WINDOW",
+            "NOT_FOUND",
+            "STALE_NODE",
+            "OBSCURED_BY_WINDOW"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.ui.act"
+        },
+        {
+          "name": "long_click",
+          "description": "",
+          "params": {
+            "target": "NodeRef|Selector"
+          },
+          "returns": "{method:string}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "TIMEOUT",
+            "NO_ACTIVE_WINDOW",
+            "NOT_FOUND",
+            "STALE_NODE"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.ui.act"
+        },
+        {
+          "name": "set_text",
+          "description": "Strategy chain: SET_TEXT → IME → paste → shell.",
+          "params": {
+            "target": "NodeRef|Selector",
+            "text": "string",
+            "secret": "bool?",
+            "verify": "bool?"
+          },
+          "returns": "{outcome:TextInputOutcome, strategy:string}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "TIMEOUT",
+            "NO_ACTIVE_WINDOW",
+            "NOT_FOUND",
+            "STALE_NODE",
+            "TEXT_INPUT_REJECTED",
+            "TEXT_INPUT_UNVERIFIED"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.ui.act"
+        },
+        {
+          "name": "scroll_until",
+          "description": "",
+          "params": {
+            "selector": "Selector",
+            "direction": "'down|up|left|right'",
+            "max_swipes": "int?"
+          },
+          "returns": "{found:bool, node:NodeSummary?}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "TIMEOUT",
+            "NO_ACTIVE_WINDOW"
+          ],
+          "risk": "low",
+          "timeoutMs": 60000,
+          "requires": "device.ui.act"
+        },
+        {
+          "name": "swipe",
+          "description": "",
+          "params": {
+            "x1": "int",
+            "y1": "int",
+            "x2": "int",
+            "y2": "int",
+            "duration_ms": "int?"
+          },
+          "returns": "{method:'COORDINATE'}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "TIMEOUT",
+            "NO_ACTIVE_WINDOW"
+          ],
+          "risk": "medium",
+          "timeoutMs": 10000,
+          "requires": "device.ui.act"
+        },
+        {
+          "name": "tap",
+          "description": "",
+          "params": {
+            "x": "int",
+            "y": "int"
+          },
+          "returns": "{method:'COORDINATE'}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "TIMEOUT",
+            "NO_ACTIVE_WINDOW"
+          ],
+          "risk": "medium",
+          "timeoutMs": 10000,
+          "requires": "device.ui.act"
+        },
+        {
+          "name": "press",
+          "description": "",
+          "params": {
+            "key": "'back|home|recents|enter|notifications|quick_settings|lock|power_dialog'"
+          },
+          "returns": "{ok:bool}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "TIMEOUT",
+            "NO_ACTIVE_WINDOW"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.ui.act"
+        },
+        {
+          "name": "hide_keyboard",
+          "description": "",
+          "params": {},
+          "returns": "{ok:bool}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "TIMEOUT",
+            "NO_ACTIVE_WINDOW"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.ui.act"
+        },
+        {
+          "name": "keyboard_visible",
+          "description": "",
+          "params": {},
+          "returns": "{visible:bool}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "TIMEOUT",
+            "NO_ACTIVE_WINDOW"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.ui.observe"
+        }
+      ]
+    },
+    {
+      "id": "device.screenshot",
+      "summary": "Capture the screen (fallback chain: accessibility API 30+ → MediaProjection → shell).",
+      "permissions": [
+        {
+          "id": "device.screenshot",
+          "scope": {
+            "packages": "[string]"
+          }
+        }
+      ],
+      "androidAccess": [
+        "MEDIA_PROJECTION?"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T1",
+        "T0",
+        "T3"
+      ],
+      "methods": [
+        {
+          "name": "capture",
+          "description": "",
+          "params": {
+            "region": "[int]?",
+            "scale": "number?"
+          },
+          "returns": "{path:string, width:int, height:int, provider:string}",
+          "errors": [
+            "SCREENSHOT_BLOCKED",
+            "PROJECTION_NOT_GRANTED",
+            "CAPABILITY_UNAVAILABLE",
+            "RATE_LIMITED",
+            "SCOPE_VIOLATION"
+          ],
+          "risk": "low",
+          "timeoutMs": 15000,
+          "requires": "device.screenshot"
+        }
+      ]
+    },
+    {
+      "id": "device.app",
+      "summary": "Query, launch and stop apps.",
+      "permissions": [
+        {
+          "id": "device.app.query",
+          "scope": {
+            "packages": "[string]|'*'"
+          }
+        },
+        {
+          "id": "device.app.launch",
+          "scope": {
+            "packages": "[string]"
+          }
+        },
+        {
+          "id": "device.app.stop",
+          "scope": {
+            "packages": "[string]"
+          }
+        }
+      ],
+      "androidAccess": [
+        "QUERY_ALL_PACKAGES"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0",
+        "T1",
+        "T3"
+      ],
+      "methods": [
+        {
+          "name": "query",
+          "description": "",
+          "params": {
+            "package": "string"
+          },
+          "returns": "{installed:bool, version_name:string?, version_code:int?}",
+          "errors": [
+            "SCOPE_VIOLATION"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.app.query"
+        },
+        {
+          "name": "list",
+          "description": "",
+          "params": {
+            "filter": "string?"
+          },
+          "returns": "{packages:[{package:string, label:string}]}",
+          "errors": [
+            "PERMISSION_DENIED"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.app.query"
+        },
+        {
+          "name": "foreground",
+          "description": "",
+          "params": {},
+          "returns": "{package:string?, activity:string?}",
+          "errors": [],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.app.query"
+        },
+        {
+          "name": "wait_foreground",
+          "description": "",
+          "params": {
+            "package": "string",
+            "timeout_ms": "int"
+          },
+          "returns": "{ok:bool}",
+          "errors": [
+            "TIMEOUT"
+          ],
+          "risk": "low",
+          "timeoutMs": 120000,
+          "requires": "device.app.query"
+        },
+        {
+          "name": "launch",
+          "description": "Verify the foreground package after launch; blocked background starts are silent.",
+          "params": {
+            "package": "string",
+            "activity": "string?",
+            "uri": "string?",
+            "user": "int?"
+          },
+          "returns": "{result:LaunchResult, strategy:string}",
+          "errors": [
+            "SCOPE_VIOLATION",
+            "NOT_FOUND"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.app.launch"
+        },
+        {
+          "name": "stop",
+          "description": "",
+          "params": {
+            "package": "string",
+            "strategy": "'auto|shell|ui|kill_background'?"
+          },
+          "returns": "StopResult",
+          "errors": [
+            "SCOPE_VIOLATION"
+          ],
+          "risk": "medium",
+          "timeoutMs": 20000,
+          "requires": "device.app.stop"
+        }
+      ]
+    },
+    {
+      "id": "device.screen",
+      "summary": "Screen/keyguard state (control methods arrive in W2).",
+      "permissions": [
+        {
+          "id": "device.screen.read",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "is_on",
+          "description": "",
+          "params": {},
+          "returns": "{on:bool}",
+          "errors": [],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.screen.read"
+        },
+        {
+          "name": "is_unlocked",
+          "description": "",
+          "params": {},
+          "returns": "{unlocked:bool, secure:bool}",
+          "errors": [],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.screen.read"
+        }
+      ]
+    },
+    {
+      "id": "device.ime",
+      "summary": "Reliable text entry and background clipboard through the AutoHost keyboard.",
+      "permissions": [
+        {
+          "id": "device.ime",
+          "scope": {
+            "packages": "[string]"
+          }
+        }
+      ],
+      "androidAccess": [
+        "INPUT_METHOD_SELECTED"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "commit_text",
+          "description": "",
+          "params": {
+            "text": "string",
+            "secret": "bool?",
+            "clear_first": "bool?"
+          },
+          "returns": "{outcome:TextInputOutcome}",
+          "errors": [
+            "NEEDS_SETUP",
+            "CAPABILITY_UNAVAILABLE"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.ime"
+        },
+        {
+          "name": "clipboard_get",
+          "description": "",
+          "params": {},
+          "returns": "{text:string?}",
+          "errors": [
+            "NEEDS_SETUP"
+          ],
+          "risk": "medium",
+          "timeoutMs": 10000,
+          "requires": "device.ime"
+        },
+        {
+          "name": "clipboard_set",
+          "description": "",
+          "params": {
+            "text": "string"
+          },
+          "returns": "{ok:bool}",
+          "errors": [
+            "NEEDS_SETUP"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.ime"
+        }
+      ]
+    },
+    {
+      "id": "notify.post",
+      "summary": "Post a notification (with actions/progress).",
+      "permissions": [
+        {
+          "id": "notify.post",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [
+        "POST_NOTIFICATIONS(33+)"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "post",
+          "description": "",
+          "params": {
+            "title": "string",
+            "text": "string",
+            "channel": "string?",
+            "actions": "[{id:string,label:string}]?",
+            "progress": "number?"
+          },
+          "returns": "{id:int}",
+          "errors": [
+            "NEEDS_SETUP"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "notify.post"
+        }
+      ]
+    },
+    {
+      "id": "ui.prompt",
+      "summary": "Ask the user something while a run waits (WAITING_USER).",
+      "permissions": [
+        {
+          "id": "ui.prompt",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "ask",
+          "description": "",
+          "params": {
+            "title": "string",
+            "message": "string",
+            "kind": "'confirm|text|choice'",
+            "choices": "[string]?",
+            "timeout_ms": "int?"
+          },
+          "returns": "{answer:string?, confirmed:bool?}",
+          "errors": [
+            "TIMEOUT",
+            "CANCELLED"
+          ],
+          "risk": "low",
+          "timeoutMs": 3600000,
+          "requires": "ui.prompt"
+        },
+        {
+          "name": "toast",
+          "description": "",
+          "params": {
+            "text": "string"
+          },
+          "returns": "{ok:bool}",
+          "errors": [],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "ui.prompt"
+        }
+      ]
+    },
+    {
+      "id": "files.private",
+      "summary": "Task-private storage.",
+      "permissions": [
+        {
+          "id": "files.private",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "read",
+          "description": "",
+          "params": {
+            "path": "string",
+            "binary": "bool?"
+          },
+          "returns": "{content:string}",
+          "errors": [
+            "NOT_FOUND"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "files.private"
+        },
+        {
+          "name": "write",
+          "description": "",
+          "params": {
+            "path": "string",
+            "content": "string",
+            "binary": "bool?"
+          },
+          "returns": "{ok:bool}",
+          "errors": [
+            "INVALID_ARGS"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "files.private"
+        },
+        {
+          "name": "list",
+          "description": "",
+          "params": {
+            "path": "string?"
+          },
+          "returns": "{entries:[string]}",
+          "errors": [],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "files.private"
+        },
+        {
+          "name": "delete",
+          "description": "",
+          "params": {
+            "path": "string"
+          },
+          "returns": "{ok:bool}",
+          "errors": [
+            "NOT_FOUND"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "files.private"
+        }
+      ]
+    },
+    {
+      "id": "net.http",
+      "summary": "Brokered HTTP with domain allowlist and size caps.",
+      "permissions": [
+        {
+          "id": "net.http",
+          "scope": {
+            "domains": "[string]",
+            "max_bytes": "int?"
+          }
+        }
+      ],
+      "androidAccess": [
+        "INTERNET"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "request",
+          "description": "",
+          "params": {
+            "method": "string",
+            "url": "string",
+            "headers": "{string:string}?",
+            "body": "string?",
+            "timeout_ms": "int?",
+            "max_bytes": "int?"
+          },
+          "returns": "{status:int, headers:{string:string}, text:string?, body_b64:string?, truncated:bool}",
+          "errors": [
+            "SCOPE_VIOLATION",
+            "TIMEOUT"
+          ],
+          "risk": "low",
+          "timeoutMs": 60000,
+          "requires": "net.http"
+        }
+      ]
+    },
+    {
+      "id": "store",
+      "summary": "Persistent key-value stores (profile- and task-scoped). Non-secret values only.",
+      "permissions": [
+        {
+          "id": "store.profile",
+          "scope": {}
+        },
+        {
+          "id": "store.task",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [],
+      "minSdk": 29,
+      "tiers": [
+        "host"
+      ],
+      "methods": [
+        {
+          "name": "get",
+          "description": "",
+          "params": {
+            "scope": "'profile|task'",
+            "key": "string"
+          },
+          "returns": "{value:json?}",
+          "errors": [],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "store.profile"
+        },
+        {
+          "name": "set",
+          "description": "",
+          "params": {
+            "scope": "'profile|task'",
+            "key": "string",
+            "value": "json"
+          },
+          "returns": "{ok:bool}",
+          "errors": [
+            "INVALID_ARGS"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "store.profile"
+        },
+        {
+          "name": "delete",
+          "description": "",
+          "params": {
+            "scope": "'profile|task'",
+            "key": "string"
+          },
+          "returns": "{ok:bool}",
+          "errors": [],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "store.profile"
+        },
+        {
+          "name": "list",
+          "description": "",
+          "params": {
+            "scope": "'profile|task'",
+            "prefix": "string?"
+          },
+          "returns": "{keys:[string]}",
+          "errors": [],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "store.profile"
+        }
+      ]
+    },
+    {
+      "id": "secrets",
+      "summary": "Read declared secret fields of the active profile (host injects at call time).",
+      "permissions": [
+        {
+          "id": "secrets.read",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [],
+      "minSdk": 29,
+      "tiers": [
+        "host"
+      ],
+      "methods": [
+        {
+          "name": "get",
+          "description": "Value is registered with the redactor; never log it.",
+          "params": {
+            "name": "string"
+          },
+          "returns": "{value:string}",
+          "errors": [
+            "NOT_FOUND",
+            "PERMISSION_DENIED"
+          ],
+          "risk": "medium",
+          "timeoutMs": 10000,
+          "requires": "secrets.read"
+        }
+      ]
+    },
+    {
+      "id": "state",
+      "summary": "Checkpoints and stage records owned by the host.",
+      "permissions": [
+        {
+          "id": "state.checkpoint",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [],
+      "minSdk": 29,
+      "tiers": [
+        "host"
+      ],
+      "methods": [
+        {
+          "name": "get",
+          "description": "",
+          "params": {},
+          "returns": "{state:json}",
+          "errors": [],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "state.checkpoint"
+        },
+        {
+          "name": "set",
+          "description": "",
+          "params": {
+            "state": "json"
+          },
+          "returns": "{ok:bool}",
+          "errors": [
+            "INVALID_ARGS"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "state.checkpoint"
+        },
+        {
+          "name": "stage_begin",
+          "description": "",
+          "params": {
+            "name": "string"
+          },
+          "returns": "{status:'PENDING|IN_PROGRESS|DONE'}",
+          "errors": [],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "state.checkpoint"
+        },
+        {
+          "name": "stage_end",
+          "description": "",
+          "params": {
+            "name": "string",
+            "ok": "bool",
+            "error": "json?"
+          },
+          "returns": "{ok:bool}",
+          "errors": [],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "state.checkpoint"
+        }
+      ]
+    },
+    {
+      "id": "device.notifications",
+      "summary": "Read, react to, press and dismiss other apps' notifications through the notification listener.",
+      "permissions": [
+        {
+          "id": "device.notifications",
+          "scope": {
+            "packages": "[string]"
+          }
+        }
+      ],
+      "androidAccess": [
+        "NOTIFICATION_LISTENER_SERVICE (user-granted notification access)"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "list",
+          "description": "Active notifications visible in the grant scope.",
+          "params": {
+            "package": "string?",
+            "include_ongoing": "bool?"
+          },
+          "returns": "{count:int, notifications:[NotifInfo]}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "INVALID_ARGS",
+            "INTERNAL"
+          ],
+          "risk": "low",
+          "timeoutMs": 15000,
+          "requires": "device.notifications"
+        },
+        {
+          "name": "read",
+          "description": "Full text of one notification.",
+          "params": {
+            "id": "string"
+          },
+          "returns": "NotifInfo",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "INVALID_ARGS",
+            "INTERNAL"
+          ],
+          "risk": "low",
+          "timeoutMs": 15000,
+          "requires": "device.notifications"
+        },
+        {
+          "name": "press",
+          "description": "Tap one of the notification's action buttons (sent, not verified).",
+          "params": {
+            "id": "string",
+            "action": "int|string?"
+          },
+          "returns": "{sent:bool, action_index:int}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "INVALID_ARGS",
+            "INTERNAL"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.notifications"
+        },
+        {
+          "name": "dismiss",
+          "description": "",
+          "params": {
+            "id": "string"
+          },
+          "returns": "{dismissed:bool}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "INVALID_ARGS",
+            "INTERNAL"
+          ],
+          "risk": "low",
+          "timeoutMs": 15000,
+          "requires": "device.notifications"
+        },
+        {
+          "name": "dismiss_all",
+          "description": "Dismiss every dismissible notification in scope.",
+          "params": {},
+          "returns": "{dismissed:int}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "INVALID_ARGS",
+            "INTERNAL"
+          ],
+          "risk": "low",
+          "timeoutMs": 15000,
+          "requires": "device.notifications"
+        },
+        {
+          "name": "wait_for",
+          "description": "Block until a matching notification appears (P8-01).",
+          "params": {
+            "package": "string?",
+            "title_regex": "string?",
+            "text_regex": "string?",
+            "timeout_ms": "int?"
+          },
+          "returns": "{found:bool, notification:NotifInfo?}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "INVALID_ARGS",
+            "INTERNAL",
+            "TIMEOUT"
+          ],
+          "risk": "low",
+          "timeoutMs": 120000,
+          "requires": "device.notifications"
+        }
+      ]
+    },
+    {
+      "id": "device.clipboard",
+      "summary": "Read (focus-gated) and set the system clipboard; background reads go through the IME.",
+      "permissions": [
+        {
+          "id": "device.clipboard"
+        }
+      ],
+      "androidAccess": [],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "get",
+          "description": "Focused reads only on Android 10+; CAPABILITY_UNAVAILABLE with an honest hint otherwise.",
+          "params": {},
+          "returns": "{text:string, empty:bool?, focused:bool}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "INVALID_ARGS",
+            "INTERNAL",
+            "CAPABILITY_UNAVAILABLE"
+          ],
+          "risk": "low",
+          "timeoutMs": 15000,
+          "requires": "device.clipboard"
+        },
+        {
+          "name": "set",
+          "description": "",
+          "params": {
+            "text": "string"
+          },
+          "returns": "{set:bool}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "INVALID_ARGS",
+            "INTERNAL"
+          ],
+          "risk": "low",
+          "timeoutMs": 15000,
+          "requires": "device.clipboard"
+        }
+      ]
+    },
+    {
+      "id": "device.intent",
+      "summary": "Start activities and broadcasts behind an allowlist carried by the grant.",
+      "permissions": [
+        {
+          "id": "device.intent",
+          "scope": {
+            "actions": "[string]?",
+            "packages": "[string]?"
+          }
+        }
+      ],
+      "androidAccess": [],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "open_url",
+          "description": "",
+          "params": {
+            "url": "string"
+          },
+          "returns": "{dispatched:bool, verified:bool}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "INVALID_ARGS",
+            "INTERNAL"
+          ],
+          "risk": "low",
+          "timeoutMs": 15000,
+          "requires": "device.intent"
+        },
+        {
+          "name": "open_settings",
+          "description": "page in {wifi,bluetooth,display,sound,applications,battery,date,locale,input,accessibility,notification_listener,exact_alarms,app_details,settings}.",
+          "params": {
+            "page": "string"
+          },
+          "returns": "{dispatched:bool, verified:bool}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "INVALID_ARGS",
+            "INTERNAL"
+          ],
+          "risk": "low",
+          "timeoutMs": 15000,
+          "requires": "device.intent"
+        },
+        {
+          "name": "start_activity",
+          "description": "Explicit actions/packages must be granted; http(s) VIEW is the built-in exception.",
+          "params": {
+            "action": "string?",
+            "component": "string?",
+            "data": "string?",
+            "extras": "{string:string}?"
+          },
+          "returns": "{dispatched:bool, verified:bool}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "INVALID_ARGS",
+            "INTERNAL"
+          ],
+          "risk": "low",
+          "timeoutMs": 15000,
+          "requires": "device.intent"
+        },
+        {
+          "name": "broadcast",
+          "description": "Action must be in the grant's actions scope.",
+          "params": {
+            "action": "string",
+            "extras": "{string:string}?"
+          },
+          "returns": "{dispatched:bool, verified:bool}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "INVALID_ARGS",
+            "INTERNAL"
+          ],
+          "risk": "low",
+          "timeoutMs": 15000,
+          "requires": "device.intent"
+        }
+      ]
+    },
+    {
+      "id": "device.events",
+      "summary": "Read-side window into the host EventHub ring buffer; reactive use is via trigger rules.",
+      "permissions": [
+        {
+          "id": "device.events"
+        }
+      ],
+      "androidAccess": [],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "recent",
+          "description": "The last events the hub observed (buffer 200). Live delivery is trigger rules (§11.9).",
+          "params": {
+            "kinds": "[string]?",
+            "limit": "int?"
+          },
+          "returns": "{events:[{kind, package?, payload, at_ms}]}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "INVALID_ARGS",
+            "INTERNAL"
+          ],
+          "risk": "low",
+          "timeoutMs": 15000,
+          "requires": "device.events"
+        }
+      ]
+    },
+    {
+      "id": "files.shared",
+      "summary": "User-picked folders (SAF) and MediaStore reads/writes. Trees must be granted; media ops need the media scope flag plus the storage permission (lazy).",
+      "permissions": [
+        {
+          "id": "files.shared",
+          "scope": {
+            "trees": "[string]",
+            "media": "bool?"
+          }
+        }
+      ],
+      "androidAccess": [],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "list",
+          "description": "Children of a path inside a granted tree.",
+          "params": {
+            "tree": "string",
+            "path": "string?"
+          },
+          "returns": "{entries:[{name,dir,size}],truncated:bool}",
+          "errors": [
+            "SCOPE_VIOLATION",
+            "NOT_FOUND"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "files.shared"
+        },
+        {
+          "name": "read",
+          "description": "Read a document (5 MB cap, truncated honestly).",
+          "params": {
+            "tree": "string",
+            "path": "string"
+          },
+          "returns": "{body_b64:string,truncated:bool}",
+          "errors": [
+            "SCOPE_VIOLATION",
+            "NOT_FOUND"
+          ],
+          "risk": "low",
+          "timeoutMs": 30000,
+          "requires": "files.shared"
+        },
+        {
+          "name": "write",
+          "description": "Create/overwrite a document inside a granted tree.",
+          "params": {
+            "tree": "string",
+            "path": "string",
+            "body_b64": "string"
+          },
+          "returns": "{written:int}",
+          "errors": [
+            "SCOPE_VIOLATION",
+            "INVALID_ARGS"
+          ],
+          "risk": "medium",
+          "timeoutMs": 30000,
+          "requires": "files.shared"
+        },
+        {
+          "name": "delete",
+          "description": "Delete a document inside a granted tree.",
+          "params": {
+            "tree": "string",
+            "path": "string"
+          },
+          "returns": "{deleted:bool}",
+          "errors": [
+            "SCOPE_VIOLATION",
+            "NOT_FOUND"
+          ],
+          "risk": "medium",
+          "timeoutMs": 10000,
+          "requires": "files.shared"
+        },
+        {
+          "name": "media_list",
+          "description": "Newest MediaStore rows for a media type.",
+          "params": {
+            "media_type": "'images|video|audio|files'",
+            "limit": "int?"
+          },
+          "returns": "{rows:[{id,name,media_type,size}]}",
+          "errors": [
+            "SCOPE_VIOLATION",
+            "NEEDS_SETUP"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "files.shared"
+        },
+        {
+          "name": "media_read",
+          "description": "Read a MediaStore row's bytes (5 MB cap).",
+          "params": {
+            "id": "string"
+          },
+          "returns": "{body_b64:string,truncated:bool}",
+          "errors": [
+            "SCOPE_VIOLATION",
+            "NOT_FOUND",
+            "NEEDS_SETUP"
+          ],
+          "risk": "low",
+          "timeoutMs": 30000,
+          "requires": "files.shared"
+        },
+        {
+          "name": "media_write",
+          "description": "Insert a new MediaStore row (own contribution; pending->ready).",
+          "params": {
+            "name": "string",
+            "body_b64": "string",
+            "media_type": "'images|video|audio|files'?"
+          },
+          "returns": "{id:string}",
+          "errors": [
+            "SCOPE_VIOLATION",
+            "INVALID_ARGS"
+          ],
+          "risk": "medium",
+          "timeoutMs": 30000,
+          "requires": "files.shared"
+        },
+        {
+          "name": "media_delete",
+          "description": "Delete a MediaStore row (may surface a system confirm on some OEMs).",
+          "params": {
+            "id": "string"
+          },
+          "returns": "{deleted:bool}",
+          "errors": [
+            "SCOPE_VIOLATION",
+            "NOT_FOUND"
+          ],
+          "risk": "medium",
+          "timeoutMs": 10000,
+          "requires": "files.shared"
+        }
+      ]
+    },
+    {
+      "id": "net.ws",
+      "summary": "Outbound WebSocket client (RFC 6455) with size/time caps and the net.http domain allowlist.",
+      "permissions": [
+        {
+          "id": "net.ws",
+          "scope": {
+            "domains": "[string]"
+          }
+        }
+      ],
+      "androidAccess": [
+        "INTERNET"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "connect",
+          "description": "Open a ws:// or wss:// connection (origin + subprotocols optional).",
+          "params": {
+            "url": "string",
+            "subprotocols": "[string]?",
+            "timeout_ms": "int?"
+          },
+          "returns": "{handle:string, subprotocol:string?}",
+          "errors": [
+            "SCOPE_VIOLATION",
+            "TIMEOUT"
+          ],
+          "risk": "low",
+          "timeoutMs": 30000,
+          "requires": "net.ws"
+        },
+        {
+          "name": "send",
+          "description": "Send a text frame.",
+          "params": {
+            "handle": "string",
+            "text": "string"
+          },
+          "returns": "{sent:bool}",
+          "errors": [
+            "NOT_FOUND",
+            "SCOPE_VIOLATION"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "net.ws"
+        },
+        {
+          "name": "recv",
+          "description": "Wait for one frame (poll with deadline; server pings answered internally).",
+          "params": {
+            "handle": "string",
+            "timeout_ms": "int?"
+          },
+          "returns": "{kind:'text|closed', text:string?}",
+          "errors": [
+            "NOT_FOUND",
+            "TIMEOUT",
+            "SCOPE_VIOLATION"
+          ],
+          "risk": "low",
+          "timeoutMs": 65000,
+          "requires": "net.ws"
+        },
+        {
+          "name": "close",
+          "description": "Close the connection.",
+          "params": {
+            "handle": "string"
+          },
+          "returns": "{closed:bool}",
+          "errors": [
+            "NOT_FOUND"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "net.ws"
+        }
+      ]
+    },
+    {
+      "id": "net.server",
+      "summary": "Local webhook endpoint: POST /hook/<name> fires the matching `external` trigger. Localhost by default; LAN opt-in with token.",
+      "permissions": [
+        {
+          "id": "net.server",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [
+        "INTERNET"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "status",
+          "description": "Whether the webhook server is running, port and binding.",
+          "params": {},
+          "returns": "{running:bool, port:int, lan:bool, hook_count:int}",
+          "errors": [],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "net.server"
+        },
+        {
+          "name": "hook_names",
+          "description": "Names of installed `external` trigger rules (what a webhook can fire).",
+          "params": {},
+          "returns": "{names:[string]}",
+          "errors": [],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "net.server"
+        }
+      ]
+    },
+    {
+      "id": "device.audio",
+      "summary": "Volume, ringer, DND status (honest), TTS, vibrate, flashlight. DND changes need policy access (setup action).",
+      "permissions": [
+        {
+          "id": "device.audio",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "volume",
+          "description": "Read (or set with level 0-100) a stream volume.",
+          "params": {
+            "stream": "'music|ring|notification|alarm'?",
+            "level": "int?"
+          },
+          "returns": "{stream:string, level:int, max:int, muted:bool}",
+          "errors": [
+            "INVALID_ARGS"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.audio"
+        },
+        {
+          "name": "ringer",
+          "description": "Ringer mode read; set to normal/silent/vibrate where the device allows.",
+          "params": {
+            "mode": "'normal|silent|vibrate'?"
+          },
+          "returns": "{mode:string}",
+          "errors": [
+            "INVALID_ARGS",
+            "NEEDS_SETUP"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.audio"
+        },
+        {
+          "name": "dnd",
+          "description": "Do-not-disturb state (read-only in v1; changes need notification-policy access).",
+          "params": {},
+          "returns": "{on:bool, interrupted:int}",
+          "errors": [],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.audio"
+        },
+        {
+          "name": "speak",
+          "description": "TTS the text (default engine, best effort; result is queued not verified).",
+          "params": {
+            "text": "string",
+            "language": "string?",
+            "queue": "bool?"
+          },
+          "returns": "{spoken:bool}",
+          "errors": [
+            "INVALID_ARGS",
+            "CAPABILITY_UNAVAILABLE"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.audio"
+        },
+        {
+          "name": "vibrate",
+          "description": "Vibrate for a duration.",
+          "params": {
+            "ms": "int?"
+          },
+          "returns": "{vibrated:bool}",
+          "errors": [
+            "INVALID_ARGS"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.audio"
+        },
+        {
+          "name": "flashlight",
+          "description": "Torch on/off; unavailable when the camera is in use.",
+          "params": {
+            "on": "bool"
+          },
+          "returns": "{on:bool}",
+          "errors": [
+            "CAPABILITY_UNAVAILABLE",
+            "INVALID_ARGS"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.audio"
+        },
+        {
+          "name": "play_sound",
+          "description": "Play a short built-in tone (best effort).",
+          "params": {
+            "tone": "'beep|confirm|alert'?"
+          },
+          "returns": "{played:bool}",
+          "errors": [
+            "INVALID_ARGS"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.audio"
+        }
+      ]
+    },
+    {
+      "id": "device.power",
+      "summary": "Battery/charging state, task-scoped wake lock and keep-awake. Never changes device-level battery settings.",
+      "permissions": [
+        {
+          "id": "device.power",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "battery",
+          "description": "Battery level, charging state and plug type.",
+          "params": {},
+          "returns": "{level:int, charging:bool, plugged:'ac|usb|wireless|none', health:string}",
+          "errors": [],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.power"
+        },
+        {
+          "name": "wake_lock",
+          "description": "Acquire (or release) the task-scoped PARTIAL_WAKE_LOCK; auto-released at run end.",
+          "params": {
+            "hold": "bool?",
+            "reason": "string?"
+          },
+          "returns": "{held:bool}",
+          "errors": [],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.power"
+        },
+        {
+          "name": "keep_awake",
+          "description": "Keep the screen on for this run (best effort; pre-flight ScreenGuard still applies).",
+          "params": {
+            "on": "bool"
+          },
+          "returns": "{on:bool}",
+          "errors": [],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.power"
+        }
+      ]
+    },
+    {
+      "id": "ui.overlay",
+      "summary": "Floating overlays a run can draw: highlight boxes, text panels, status strips. Visible and stoppable; needs the accessibility overlay.",
+      "permissions": [
+        {
+          "id": "ui.overlay",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [
+        "ACCESSIBILITY_SERVICE"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T1"
+      ],
+      "methods": [
+        {
+          "name": "highlight",
+          "description": "Draw a highlight rectangle (absolute pixels) for a duration.",
+          "params": {
+            "x": "int",
+            "y": "int",
+            "w": "int",
+            "h": "int",
+            "label": "string?",
+            "ms": "int?"
+          },
+          "returns": "{shown:bool}",
+          "errors": [
+            "CAPABILITY_UNAVAILABLE"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "ui.overlay"
+        },
+        {
+          "name": "panel",
+          "description": "Show a small text panel (run progress) until cleared or the run ends.",
+          "params": {
+            "text": "string",
+            "corner": "'top|bottom'?"
+          },
+          "returns": "{shown:bool}",
+          "errors": [
+            "CAPABILITY_UNAVAILABLE"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "ui.overlay"
+        },
+        {
+          "name": "clear",
+          "description": "Remove this run's overlays.",
+          "params": {},
+          "returns": "{cleared:bool}",
+          "errors": [],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "ui.overlay"
+        }
+      ]
+    },
+    {
+      "id": "device.settings",
+      "summary": "Read system/secure/global settings tables; write via the one-time WRITE_SECURE_SETTINGS grant or the paired shell tier (W4, gated).",
+      "permissions": [
+        {
+          "id": "device.settings.read",
+          "scope": {}
+        },
+        {
+          "id": "device.settings.write",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [
+        "WRITE_SECURE_SETTINGS (one-time `adb shell pm grant`, optional) OR the paired shell tier"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0",
+        "T3"
+      ],
+      "methods": [
+        {
+          "name": "read",
+          "description": "Read one setting by table and key (string value; null when absent).",
+          "params": {
+            "table": "'system|secure|global'",
+            "key": "string"
+          },
+          "returns": "{value:string?, exists:bool}",
+          "errors": [
+            "INVALID_ARGS"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.settings.read"
+        },
+        {
+          "name": "read_many",
+          "description": "Read several keys from one table in one call.",
+          "params": {
+            "table": "'system|secure|global'",
+            "keys": "[string]"
+          },
+          "returns": "{values:{string:string?}}",
+          "errors": [
+            "INVALID_ARGS"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "device.settings.read"
+        },
+        {
+          "name": "write",
+          "description": "Write one setting (ADR-067). Protected keys (accessibility/IME self-heal ownership, provisioning) are always refused; secure/global writes need confirm:true. Verified by read-back.",
+          "params": {
+            "table": "'system|secure|global'",
+            "key": "string",
+            "value": "string (max 1000 chars)",
+            "confirm": "bool (required for secure|global)"
+          },
+          "returns": "{written:bool, table:string, key:string, path:'write_secure'|'shell', verified:bool}",
+          "errors": [
+            "INVALID_ARGS",
+            "SCOPE_VIOLATION",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "CAPABILITY_UNAVAILABLE"
+          ],
+          "risk": "high",
+          "timeoutMs": 15000,
+          "requires": "device.settings.write"
+        }
+      ]
+    },
+    {
+      "id": "schedule.self",
+      "summary": "Script-proposed next-run adjustments within declared bounds (ctx.next_run). Proposals are user-visible and clamped.",
+      "permissions": [
+        {
+          "id": "schedule.self",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [],
+      "minSdk": 29,
+      "tiers": [
+        "host"
+      ],
+      "methods": []
+    },
+    {
+      "id": "tasks.run",
+      "summary": "Start another task/profile and await its result (chaining). Depth/cycle limited; counts toward locks.",
+      "permissions": [
+        {
+          "id": "tasks.run",
+          "scope": {
+            "tasks": "[string]"
+          }
+        }
+      ],
+      "androidAccess": [],
+      "minSdk": 29,
+      "tiers": [
+        "host"
+      ],
+      "methods": [
+        {
+          "name": "run",
+          "description": "Run a task (optionally with a profile) and wait for its terminal status.",
+          "params": {
+            "task": "string",
+            "profile": "string?",
+            "args": "object?"
+          },
+          "returns": "{run_id:string, status:string, result:string?}",
+          "errors": [
+            "SCOPE_VIOLATION",
+            "NOT_FOUND",
+            "TIMEOUT",
+            "CHAIN_DEPTH"
+          ],
+          "risk": "medium",
+          "timeoutMs": 600000,
+          "requires": "tasks.run"
+        }
+      ]
+    },
+    {
+      "id": "android.api.direct",
+      "summary": "Raw Android API access from Python (Chaquopy jclass / system services). Breaks the sandbox by design; needs the android.api.direct grant AND the raw_api switch.",
+      "permissions": [
+        {
+          "id": "android.api.direct",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [],
+      "minSdk": 29,
+      "tiers": [
+        "T2"
+      ],
+      "methods": [
+        {
+          "name": "authorize",
+          "description": "Handshake: confirms the grant + raw_api switch and returns a session marker for the worker.",
+          "params": {},
+          "returns": "{authorized:bool, worker_pid:int}",
+          "errors": [
+            "INSECURE_FEATURE_DISABLED",
+            "PERMISSION_DENIED"
+          ],
+          "risk": "high",
+          "timeoutMs": 10000,
+          "requires": "android.api.direct"
+        }
+      ]
+    },
+    {
+      "id": "device.shell",
+      "summary": "Run allowlisted shell commands through the paired shell tier (ADB-over-TCP, wireless debugging, Shizuku or root). DANGEROUS; allowlist default empty; needs the device.shell grant AND the shell switch.",
+      "permissions": [
+        {
+          "id": "device.shell",
+          "scope": {
+            "commands": "[string] (glob patterns; empty = deny all)"
+          }
+        }
+      ],
+      "androidAccess": [
+        "SHELL TIER (adb-over-tcp pairing, wireless-debugging pairing, Shizuku server or root)"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T3"
+      ],
+      "methods": [
+        {
+          "name": "run",
+          "description": "Execute one allowlisted command. Shell metacharacters (; & | ` ( ) < > and $) are always refused (ADR-066); the command must match a pattern in the grant's commands list.",
+          "params": {
+            "command": "string",
+            "timeout_ms": "int? (default 15000, max 120000)"
+          },
+          "returns": "{stdout:string, stderr:string, exit_code:int?, mode:string, transport:string, duration_ms:int}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "NEEDS_SETUP",
+            "TIMEOUT",
+            "INVALID_ARGS",
+            "INSECURE_FEATURE_DISABLED",
+            "INTERNAL"
+          ],
+          "risk": "high",
+          "timeoutMs": 120000,
+          "requires": "device.shell"
+        },
+        {
+          "name": "transports",
+          "description": "Status of every configured shell transport (live / awaiting_authorization / needs_setup / unsupported).",
+          "params": {},
+          "returns": "{transports:[{id:string, describe:string, state:string, reason:string?}]}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "INTERNAL"
+          ],
+          "risk": "low",
+          "timeoutMs": 5000,
+          "requires": "device.shell"
+        }
+      ]
+    },
+    {
+      "id": "device.app.manage",
+      "summary": "Install/uninstall APK, clear app data, grant/revoke runtime permissions, verified force-stop. T3 shell tier; DANGEROUS; needs the device.app.manage grant AND the app_manage switch. Destructive methods demand confirm:true.",
+      "permissions": [
+        {
+          "id": "device.app.manage",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [
+        "SHELL TIER (pm/am through adb-over-tcp, wireless debugging, Shizuku or root); installer-UI mode uses the accessibility service + the auto-accept gate"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T3"
+      ],
+      "methods": [
+        {
+          "name": "force_stop",
+          "description": "Verified force-stop chain: `am force-stop` over the shell tier first (real exit code, VERIFIED), then the App-info UI path, then killBackgroundProcesses (BEST_EFFORT/FAILED honestly).",
+          "params": {
+            "package": "string"
+          },
+          "returns": "{result:'VERIFIED'|'BEST_EFFORT'|'FAILED', method:string, exit_code:int?, verified:bool?}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "TIMEOUT",
+            "INSECURE_FEATURE_DISABLED",
+            "INTERNAL"
+          ],
+          "risk": "high",
+          "timeoutMs": 15000,
+          "requires": "device.app.manage"
+        },
+        {
+          "name": "clear_state",
+          "description": "`pm clear <pkg>` — destroys the app's data. Needs confirm:true; VERIFIED on exit 0 with a Success line.",
+          "params": {
+            "package": "string",
+            "confirm": "bool"
+          },
+          "returns": "{result:'VERIFIED', method:'pm_clear'}",
+          "errors": [
+            "INVALID_ARGS",
+            "SCOPE_VIOLATION",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "CAPABILITY_UNAVAILABLE",
+            "INSECURE_FEATURE_DISABLED"
+          ],
+          "risk": "high",
+          "timeoutMs": 30000,
+          "requires": "device.app.manage"
+        },
+        {
+          "name": "grant_permission",
+          "description": "`pm grant <pkg> <permission>` — runtime permission grant via the shell uid. Applied on exit 0; no readback claim (verified:false).",
+          "params": {
+            "package": "string",
+            "permission": "string (fully-qualified, e.g. android.permission.CAMERA)"
+          },
+          "returns": "{result:'VERIFIED', method:'pm_grant', verified:false}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "CAPABILITY_UNAVAILABLE",
+            "INSECURE_FEATURE_DISABLED"
+          ],
+          "risk": "high",
+          "timeoutMs": 15000,
+          "requires": "device.app.manage"
+        },
+        {
+          "name": "revoke_permission",
+          "description": "`pm revoke <pkg> <permission>` — the revoke twin of grant_permission.",
+          "params": {
+            "package": "string",
+            "permission": "string"
+          },
+          "returns": "{result:'VERIFIED', method:'pm_revoke', verified:false}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "CAPABILITY_UNAVAILABLE",
+            "INSECURE_FEATURE_DISABLED"
+          ],
+          "risk": "high",
+          "timeoutMs": 15000,
+          "requires": "device.app.manage"
+        },
+        {
+          "name": "install",
+          "description": "Install an APK. mode pm: `cat <path> | pm install -S <bytes>` over the shell tier (VERIFIED on Success). mode installer: ACTION_VIEW through FileProvider with the a11y auto-accept gate tapping the known installer buttons; outcomes are honest UI-chain results (CONFIRMED = the installer window appeared and left; WAITING_USER = nothing we recognize appeared in time) — never a package readback.",
+          "params": {
+            "path": "string (absolute device path to an .apk)",
+            "confirm": "bool",
+            "mode": "'pm'|'installer' (default pm)"
+          },
+          "returns": "{result:'VERIFIED'|'CONFIRMED'|'WAITING_USER', method:string, verified:bool?}",
+          "errors": [
+            "INVALID_ARGS",
+            "SCOPE_VIOLATION",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "NOT_FOUND",
+            "CAPABILITY_UNAVAILABLE",
+            "INSECURE_FEATURE_DISABLED"
+          ],
+          "risk": "high",
+          "timeoutMs": 120000,
+          "requires": "device.app.manage"
+        },
+        {
+          "name": "uninstall",
+          "description": "`pm uninstall <pkg>` — needs confirm:true; NOT_FOUND when the package is absent.",
+          "params": {
+            "package": "string",
+            "confirm": "bool"
+          },
+          "returns": "{result:'VERIFIED', method:'pm_uninstall'}",
+          "errors": [
+            "INVALID_ARGS",
+            "SCOPE_VIOLATION",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "NOT_FOUND",
+            "CAPABILITY_UNAVAILABLE",
+            "INSECURE_FEATURE_DISABLED"
+          ],
+          "risk": "high",
+          "timeoutMs": 45000,
+          "requires": "device.app.manage"
+        }
+      ]
+    },
+    {
+      "id": "device.logcat",
+      "summary": "Snapshot/clear the logcat main buffer for evidence. T3 shell tier; dev-grade; needs the device.logcat grant AND the logcat switch. A package filter resolves the app's pid via pidof — no package claims without it.",
+      "permissions": [
+        {
+          "id": "device.logcat",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [
+        "SHELL TIER (logcat/pidof)"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T3"
+      ],
+      "methods": [
+        {
+          "name": "snapshot",
+          "description": "Bounded `logcat -d -v epoch -t N` dump (device-side tag filter; level/pid/text filters applied at parse; since_ms bounds the window).",
+          "params": {
+            "tag": "string?",
+            "level": "'V'|'D'|'I'|'W'|'E'|'F' (minimum)",
+            "contains": "string? (text filter)",
+            "package": "string? (pid filter via pidof)",
+            "max_lines": "int? (default 500, max 5000)",
+            "since_ms": "int?"
+          },
+          "returns": "{lines:[{ts:int?, level:string, tag:string, pid:int?, message:string}], count:int, parsed:int, package:string?}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "TIMEOUT",
+            "INSECURE_FEATURE_DISABLED",
+            "INTERNAL"
+          ],
+          "risk": "medium",
+          "timeoutMs": 30000,
+          "requires": "device.logcat"
+        },
+        {
+          "name": "clear",
+          "description": "`logcat -c` — clears the main buffer.",
+          "params": {},
+          "returns": "{cleared:bool}",
+          "errors": [
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INSECURE_FEATURE_DISABLED"
+          ],
+          "risk": "medium",
+          "timeoutMs": 10000,
+          "requires": "device.logcat"
+        }
+      ]
+    },
+    {
+      "id": "device.radio",
+      "summary": "Wi-Fi / Bluetooth / airplane / mobile-data toggles through the shell tier (`svc`, settings + broadcast). T3 only — Wi-Fi toggling is blocked for normal apps since API 29; Bluetooth toggling works only up to API 32. Acts report the exit code honestly; no readback claim (verified:false).",
+      "permissions": [
+        {
+          "id": "device.radio",
+          "scope": {
+            "radios": "[string] ('wifi'|'bluetooth'|'mobile_data'|'airplane')"
+          }
+        }
+      ],
+      "androidAccess": [
+        "SHELL TIER (svc/settings/am broadcast)"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T3"
+      ],
+      "methods": [
+        {
+          "name": "set",
+          "description": "Toggle one radio. airplane runs the two-step global write + the connectivity broadcast.",
+          "params": {
+            "radio": "'wifi'|'bluetooth'|'mobile_data'|'airplane'",
+            "enable": "bool"
+          },
+          "returns": "{radio:string, enable:bool, applied:bool, verified:false}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "TIMEOUT",
+            "INTERNAL"
+          ],
+          "risk": "high",
+          "timeoutMs": 15000,
+          "requires": "device.radio"
+        }
+      ]
+    },
+    {
+      "id": "device.display",
+      "summary": "Dark mode, orientation and font scale through the shell tier (`cmd uimode night`, `settings put`). T3.",
+      "permissions": [
+        {
+          "id": "device.display",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [
+        "SHELL TIER (cmd uimode / settings put)"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T3"
+      ],
+      "methods": [
+        {
+          "name": "set_dark_mode",
+          "description": "`cmd uimode night yes|no|auto`.",
+          "params": {
+            "mode": "'yes'|'no'|'auto'"
+          },
+          "returns": "{mode:string, applied:bool}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP"
+          ],
+          "risk": "medium",
+          "timeoutMs": 15000,
+          "requires": "device.display"
+        },
+        {
+          "name": "set_orientation",
+          "description": "Lock the orientation (accelerometer_rotation off + user_rotation) or re-enable auto-rotate.",
+          "params": {
+            "orientation": "'auto'|'portrait'|'landscape'|'reverse_portrait'|'reverse_landscape'"
+          },
+          "returns": "{orientation:string, applied:bool}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP"
+          ],
+          "risk": "medium",
+          "timeoutMs": 15000,
+          "requires": "device.display"
+        },
+        {
+          "name": "set_font_scale",
+          "description": "`settings put system font_scale <v>` (0.5..2.0 sane window).",
+          "params": {
+            "scale": "string (numeric, e.g. \"1.0\")"
+          },
+          "returns": "{scale:string, applied:bool}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP"
+          ],
+          "risk": "medium",
+          "timeoutMs": 15000,
+          "requires": "device.display"
+        }
+      ]
+    },
+    {
+      "id": "device.location.mock",
+      "summary": "The mock-location appop for AutoHost itself (DANGEROUS; needs the device.location.mock grant AND the mock_location switch). Verified against `appops get` — the readback is real.",
+      "permissions": [
+        {
+          "id": "device.location.mock",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [
+        "SHELL TIER (appops set/get android:mock_location)"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T3"
+      ],
+      "methods": [
+        {
+          "name": "set",
+          "description": "Allow or deny the mock-location appop for app.autohost (the only targetable package).",
+          "params": {
+            "enable": "bool"
+          },
+          "returns": "{enable:bool, applied:bool, verified:bool, appop_package:'app.autohost'}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INSECURE_FEATURE_DISABLED"
+          ],
+          "risk": "high",
+          "timeoutMs": 15000,
+          "requires": "device.location.mock"
+        }
+      ]
+    },
+    {
+      "id": "browser.webview",
+      "summary": "Automate pages in a visible in-app WebView (Playwright-like subset): open/navigate/click/type/extract/cookies. Real input events where the WebView allows; challenges are detected and routed to WAITING_USER — never bypassed. Per-profile cookie isolation (S26).",
+      "permissions": [
+        {
+          "id": "browser.open",
+          "scope": {
+            "domains": "[string] (glob patterns like net.http; empty = deny all)"
+          }
+        },
+        {
+          "id": "browser.read",
+          "scope": {
+            "domains": "[string] (same scope object as browser.open)"
+          }
+        }
+      ],
+      "androidAccess": [
+        "in-app WebView (always available; the visible surface is user-stoppable)"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "open",
+          "description": "Open a page in the visible in-app browser. URL is http(s) (domain-allowlisted) or task:<relpath> (a file inside this task's own bundle). Result carries challenge:{kind,matched} when an anti-bot wall is detected.",
+          "params": {
+            "url": "string",
+            "profile": "string? (cookie-isolated profile; default = run id)",
+            "timeout_ms": "int? (default 20000, max 120000)",
+            "challenge": "'raise' (default; SDK pauses the run) | 'report' (return the dict)"
+          },
+          "returns": "{page_id:string, url:string, title:string?, load_state:string, profile:string, input_mode:'real'|'synthetic', challenge?:{kind:string, matched:string}}",
+          "errors": [
+            "INVALID_ARGS",
+            "SCOPE_VIOLATION",
+            "PERMISSION_DENIED",
+            "TIMEOUT",
+            "INTERNAL"
+          ],
+          "risk": "medium",
+          "timeoutMs": 120000,
+          "requires": "browser.open"
+        },
+        {
+          "name": "navigate",
+          "description": "Navigate an open page to a new URL (same policy as open).",
+          "params": {
+            "page_id": "string",
+            "url": "string",
+            "timeout_ms": "int?",
+            "challenge": "'raise'|'report'"
+          },
+          "returns": "{page_id, url, title?, load_state, profile, input_mode, challenge?}",
+          "errors": [
+            "INVALID_ARGS",
+            "SCOPE_VIOLATION",
+            "NOT_FOUND",
+            "TIMEOUT",
+            "INTERNAL"
+          ],
+          "risk": "medium",
+          "timeoutMs": 120000,
+          "requires": "browser.open"
+        },
+        {
+          "name": "click",
+          "description": "Click a CSS selector: the element's box is resolved and a real MotionEvent stream is injected (input_mode 'real'); old WebViews fall back to JS dispatch reported honestly as 'synthetic' (S25).",
+          "params": {
+            "page_id": "string",
+            "selector": "string (CSS)",
+            "timeout_ms": "int?"
+          },
+          "returns": "{clicked:bool, found:bool, input_mode:'real'|'synthetic'}",
+          "errors": [
+            "INVALID_ARGS",
+            "NOT_FOUND",
+            "CAPABILITY_UNAVAILABLE",
+            "TIMEOUT"
+          ],
+          "risk": "medium",
+          "timeoutMs": 120000,
+          "requires": "browser.open"
+        },
+        {
+          "name": "type",
+          "description": "Click the selector then type: ASCII goes as real key events (KeyCharacterMap); anything else falls back to a JS value-set reported as input_mode 'synthetic'. The text is never echoed back.",
+          "params": {
+            "page_id": "string",
+            "selector": "string (CSS)",
+            "text": "string",
+            "timeout_ms": "int?"
+          },
+          "returns": "{typed:bool, found:bool, input_mode:'real'|'synthetic'}",
+          "errors": [
+            "INVALID_ARGS",
+            "NOT_FOUND",
+            "CAPABILITY_UNAVAILABLE",
+            "TIMEOUT"
+          ],
+          "risk": "medium",
+          "timeoutMs": 120000,
+          "requires": "browser.open"
+        },
+        {
+          "name": "extract",
+          "description": "Extract text/attribute values for all elements matching a CSS selector (capped).",
+          "params": {
+            "page_id": "string",
+            "selector": "string (CSS)",
+            "attribute": "'text' (default) | 'html' | any attribute name"
+          },
+          "returns": "{values:[string?], count:int, truncated:bool}",
+          "errors": [
+            "INVALID_ARGS",
+            "NOT_FOUND",
+            "CAPABILITY_UNAVAILABLE"
+          ],
+          "risk": "low",
+          "timeoutMs": 20000,
+          "requires": "browser.read"
+        },
+        {
+          "name": "cookies",
+          "description": "Cookies of the page's profile jar (per-profile isolated, S26).",
+          "params": {
+            "page_id": "string"
+          },
+          "returns": "{cookies:[{name, value, domain?, path?, expires_at_ms?}]}",
+          "errors": [
+            "INVALID_ARGS",
+            "NOT_FOUND",
+            "CAPABILITY_UNAVAILABLE"
+          ],
+          "risk": "medium",
+          "timeoutMs": 10000,
+          "requires": "browser.read"
+        },
+        {
+          "name": "clear_cookies",
+          "description": "Clear the page's profile cookie jar.",
+          "params": {
+            "page_id": "string"
+          },
+          "returns": "{cleared:true}",
+          "errors": [
+            "INVALID_ARGS",
+            "NOT_FOUND",
+            "CAPABILITY_UNAVAILABLE"
+          ],
+          "risk": "medium",
+          "timeoutMs": 10000,
+          "requires": "browser.open"
+        },
+        {
+          "name": "pages",
+          "description": "All pages of this run (max 4).",
+          "params": {},
+          "returns": "{pages:[{page_id, url, title?, load_state, profile, provider}]}",
+          "errors": [
+            "PERMISSION_DENIED"
+          ],
+          "risk": "low",
+          "timeoutMs": 5000,
+          "requires": "browser.open"
+        },
+        {
+          "name": "close",
+          "description": "Close one page (its visible surface finishes).",
+          "params": {
+            "page_id": "string"
+          },
+          "returns": "{closed:true}",
+          "errors": [
+            "INVALID_ARGS",
+            "NOT_FOUND"
+          ],
+          "risk": "low",
+          "timeoutMs": 5000,
+          "requires": "browser.open"
+        }
+      ]
+    },
+    {
+      "id": "browser.a11y",
+      "summary": "Drive the user's own browser app through the accessibility layer: open (VIEW intent + foreground wait), click by visible text, type into the focused field, extract the visible text. No cookies, no CSS — the DOM is not exposed; those limits are enforced, not worked around.",
+      "permissions": [
+        {
+          "id": "browser.open",
+          "scope": {
+            "domains": "[string] (same semantics as browser.webview)"
+          }
+        },
+        {
+          "id": "browser.read",
+          "scope": {
+            "domains": "[string]"
+          }
+        }
+      ],
+      "androidAccess": [
+        "ACCESSIBILITY SERVICE (T1) — the AutoHost accessibility service must be enabled"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T1"
+      ],
+      "methods": [
+        {
+          "name": "open",
+          "description": "ACTION_VIEW the URL in the user's browser and wait for a foreground browser. http(s) only (allowlisted); challenge detection runs on the visible text.",
+          "params": {
+            "url": "string",
+            "timeout_ms": "int?"
+          },
+          "returns": "{package:string, page:{url, load_state:'foreground', input_mode:'a11y'}, challenge?:{kind,matched}}",
+          "errors": [
+            "INVALID_ARGS",
+            "SCOPE_VIOLATION",
+            "CAPABILITY_UNAVAILABLE",
+            "TIMEOUT"
+          ],
+          "risk": "medium",
+          "timeoutMs": 120000,
+          "requires": "browser.open"
+        },
+        {
+          "name": "click",
+          "description": "Click a node whose text (or content-desc) contains the selector (case-insensitive), through the a11y click chain.",
+          "params": {
+            "selector": "string (visible text)",
+            "timeout_ms": "int?"
+          },
+          "returns": "{clicked:bool, found:bool, input_mode:'a11y'}",
+          "errors": [
+            "INVALID_ARGS",
+            "NEEDS_SETUP"
+          ],
+          "risk": "medium",
+          "timeoutMs": 120000,
+          "requires": "browser.open"
+        },
+        {
+          "name": "type",
+          "description": "Set text on the focused/first-editable field via the a11y text action (input_mode 'a11y').",
+          "params": {
+            "text": "string",
+            "timeout_ms": "int?"
+          },
+          "returns": "{typed:bool, found:bool, input_mode:'a11y'}",
+          "errors": [
+            "INVALID_ARGS",
+            "NEEDS_SETUP"
+          ],
+          "risk": "medium",
+          "timeoutMs": 120000,
+          "requires": "browser.open"
+        },
+        {
+          "name": "extract",
+          "description": "Visible text of the page as lines (a11y snapshot; only what is on screen).",
+          "params": {},
+          "returns": "{values:[string], count:int, truncated:bool, input_mode:'a11y'}",
+          "errors": [
+            "NEEDS_SETUP"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "browser.read"
+        },
+        {
+          "name": "page",
+          "description": "The browser package plus the visible-text sample (challenge scan included).",
+          "params": {},
+          "returns": "{package:string, challenge?:{kind,matched}}",
+          "errors": [
+            "NEEDS_SETUP"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "browser.read"
+        },
+        {
+          "name": "close",
+          "description": "Press back through the a11y global action (the user's browser stays theirs).",
+          "params": {},
+          "returns": "{closed:bool, input_mode:'a11y'}",
+          "errors": [
+            "NEEDS_SETUP"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "browser.open"
+        }
+      ]
+    },
+    {
+      "id": "browser.cdp",
+      "summary": "Chrome DevTools Protocol over the paired shell tier: `adb forward tcp:<p> localabstract:<socket>` through the shell transport, then a local WebSocket to the devtools endpoint. DRAFT — UNVERIFIED-on-hardware until spike S27 measures the route. Needs the shell tier.",
+      "permissions": [
+        {
+          "id": "browser.open",
+          "scope": {
+            "domains": "[string] (same semantics as browser.webview)"
+          }
+        },
+        {
+          "id": "browser.read",
+          "scope": {
+            "domains": "[string]"
+          }
+        }
+      ],
+      "androidAccess": [
+        "SHELL TIER (adb forward through the paired transport) + WebView/Chrome debugging enabled"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T3"
+      ],
+      "methods": [
+        {
+          "name": "status",
+          "description": "Route status: shell liveness and the honest draft verdict (verified_on_hardware:false until S27).",
+          "params": {},
+          "returns": "{shell_live:bool, route:string, verified_on_hardware:false, note:string}",
+          "errors": [
+            "PERMISSION_DENIED"
+          ],
+          "risk": "low",
+          "timeoutMs": 5000,
+          "requires": "browser.read"
+        },
+        {
+          "name": "navigate",
+          "description": "Page.navigate via CDP; title/visible sample scanned for challenges; URL allowlist still applies.",
+          "params": {
+            "url": "string",
+            "timeout_ms": "int?"
+          },
+          "returns": "{url, title?, input_mode:'cdp', challenge?:{kind,matched}}",
+          "errors": [
+            "INVALID_ARGS",
+            "SCOPE_VIOLATION",
+            "NEEDS_SETUP",
+            "CAPABILITY_UNAVAILABLE"
+          ],
+          "risk": "medium",
+          "timeoutMs": 120000,
+          "requires": "browser.open"
+        },
+        {
+          "name": "evaluate",
+          "description": "Runtime.evaluate with returnByValue (the CDP escape hatch; still grant-scoped by the shell tier).",
+          "params": {
+            "expression": "string",
+            "timeout_ms": "int?"
+          },
+          "returns": "{result:{...raw CDP RemoteObject}}",
+          "errors": [
+            "INVALID_ARGS",
+            "NEEDS_SETUP",
+            "CAPABILITY_UNAVAILABLE"
+          ],
+          "risk": "medium",
+          "timeoutMs": 120000,
+          "requires": "browser.open"
+        },
+        {
+          "name": "screenshot",
+          "description": "Page.captureScreenshot (PNG, base64).",
+          "params": {},
+          "returns": "{data_b64:string, format:'png'}",
+          "errors": [
+            "NEEDS_SETUP",
+            "CAPABILITY_UNAVAILABLE"
+          ],
+          "risk": "low",
+          "timeoutMs": 30000,
+          "requires": "browser.read"
+        },
+        {
+          "name": "cookies",
+          "description": "Network.getCookies of the debugged target.",
+          "params": {},
+          "returns": "{cookies:[...raw CDP cookies]}",
+          "errors": [
+            "NEEDS_SETUP",
+            "CAPABILITY_UNAVAILABLE"
+          ],
+          "risk": "medium",
+          "timeoutMs": 15000,
+          "requires": "browser.read"
+        },
+        {
+          "name": "close",
+          "description": "Page.close + the adb forward removed (run-terminal teardown also does this).",
+          "params": {},
+          "returns": "{closed:true}",
+          "errors": [
+            "NEEDS_SETUP",
+            "CAPABILITY_UNAVAILABLE"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "browser.open"
+        }
+      ]
+    },
+    {
+      "id": "vision",
+      "summary": "OCR, template match and QR decode over a screenshot region or a run-scoped image. Tier T4 contract on the wire: every result carries hint:true — hints, not proof. OCR text is never auto-evidenced (may contain secrets).",
+      "permissions": [
+        {
+          "id": "vision.read",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [
+        "T4 engines over the screenshot provider chain (a11y API 30+ → projection → shell)"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T4"
+      ],
+      "methods": [
+        {
+          "name": "ocr",
+          "description": "Recognize text (ML Kit Latin, bundled) in the current screen or an image file, optionally clipped to a region.",
+          "params": {
+            "source": "'screen' (default) | 'file'",
+            "path": "string? (required for source=file; run/task-scoped)",
+            "region": "{left,top,width,height}?"
+          },
+          "returns": "{hint:true, engine:string, source:string, width:int, height:int, duration_ms:int, lines:[{text, confidence?, box?}]}",
+          "errors": [
+            "INVALID_ARGS",
+            "SCOPE_VIOLATION",
+            "SCREENSHOT_BLOCKED",
+            "NEEDS_SETUP",
+            "CAPABILITY_UNAVAILABLE"
+          ],
+          "risk": "low",
+          "timeoutMs": 60000,
+          "requires": "vision.read"
+        },
+        {
+          "name": "template_match",
+          "description": "Zero-mean NCC of a needle image over the source (pure, dependency-free; coarse stride + refine). Not rotation/scale invariant — documented hint semantics.",
+          "params": {
+            "needle_path": "string (run/task-scoped image)",
+            "source": "'screen'|'file'",
+            "path": "string?",
+            "region": "{left,top,width,height}?",
+            "threshold": "double? (default 0.92, min 0.5)",
+            "stride": "int? (default 4, 1..32)"
+          },
+          "returns": "{hint:true, found:bool, score:double, box:{left,top,width,height}, threshold:double, stride:int, source:string, duration_ms:int}",
+          "errors": [
+            "INVALID_ARGS",
+            "SCOPE_VIOLATION",
+            "SCREENSHOT_BLOCKED"
+          ],
+          "risk": "low",
+          "timeoutMs": 60000,
+          "requires": "vision.read"
+        },
+        {
+          "name": "qr_decode",
+          "description": "Decode a QR code (ZXing core, bundled) from the screen or an image file.",
+          "params": {
+            "source": "'screen'|'file'",
+            "path": "string?",
+            "region": "{left,top,width,height}?"
+          },
+          "returns": "{hint:true, engine:string, source:string, found:bool, value?:string, duration_ms:int}",
+          "errors": [
+            "INVALID_ARGS",
+            "SCOPE_VIOLATION",
+            "SCREENSHOT_BLOCKED",
+            "NEEDS_SETUP"
+          ],
+          "risk": "low",
+          "timeoutMs": 60000,
+          "requires": "vision.read"
+        }
+      ]
+    },
+    {
+      "id": "contacts",
+      "summary": "Query and insert contacts (row-capped, name/phone/email fields). Lazy runtime permissions via the FixHub ask.",
+      "permissions": [
+        {
+          "id": "contacts.read",
+          "scope": {}
+        },
+        {
+          "id": "contacts.write",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [
+        "READ_CONTACTS (query) / WRITE_CONTACTS (insert) — lazily requested"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "query",
+          "description": "Query contacts by optional name filter (contains), capped.",
+          "params": {
+            "filter": "string?",
+            "limit": "int? (default 100, max 500)"
+          },
+          "returns": "{contacts:[{name,phone?,email?}], count:int}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL"
+          ],
+          "risk": "medium",
+          "timeoutMs": 10000,
+          "requires": "contacts.read"
+        },
+        {
+          "name": "insert",
+          "description": "Insert a contact (name required; phone/email optional).",
+          "params": {
+            "name": "string",
+            "phone": "string?",
+            "email": "string?"
+          },
+          "returns": "{id:long}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL"
+          ],
+          "risk": "medium",
+          "timeoutMs": 10000,
+          "requires": "contacts.write"
+        }
+      ]
+    },
+    {
+      "id": "calendar",
+      "summary": "Query and insert calendar events in a bounded window (31 days max). Lazy runtime permissions.",
+      "permissions": [
+        {
+          "id": "calendar.read",
+          "scope": {}
+        },
+        {
+          "id": "calendar.write",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [
+        "READ_CALENDAR (query) / WRITE_CALENDAR (insert) — lazily requested"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "query",
+          "description": "Events overlapping [from_ms, to_ms] (defaults: now -> +7 days; window <= 31 days).",
+          "params": {
+            "from_ms": "long?",
+            "to_ms": "long?",
+            "limit": "int?"
+          },
+          "returns": "{events:[{title,start_ms,end_ms,location?,description?}], count:int}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL"
+          ],
+          "risk": "medium",
+          "timeoutMs": 10000,
+          "requires": "calendar.read"
+        },
+        {
+          "name": "insert",
+          "description": "Insert an event into the primary writable calendar.",
+          "params": {
+            "title": "string",
+            "start_ms": "long",
+            "end_ms": "long",
+            "location": "string?",
+            "description": "string?"
+          },
+          "returns": "{id:long}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL"
+          ],
+          "risk": "medium",
+          "timeoutMs": 10000,
+          "requires": "calendar.write"
+        }
+      ]
+    },
+    {
+      "id": "media",
+      "summary": "Device-wide MediaStore rows (images/video/audio) — distinct from files.shared's user-picked-tree media ops. Byte-capped reads/inserts.",
+      "permissions": [
+        {
+          "id": "media",
+          "scope": {}
+        },
+        {
+          "id": "media.write",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [
+        "READ_MEDIA_IMAGES/VIDEO/AUDIO (API 33+) or READ_EXTERNAL_STORAGE (API 29..32) — lazily requested"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "list",
+          "description": "List media rows (newest first), optionally per kind.",
+          "params": {
+            "kind": "'image'|'video'|'audio'?",
+            "limit": "int?"
+          },
+          "returns": "{media:[{id,kind,display_name,size_bytes,added_ms}], count:int}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "media"
+        },
+        {
+          "name": "read",
+          "description": "Read one media item as base64 (10 MB cap).",
+          "params": {
+            "id": "long"
+          },
+          "returns": "{data_b64:string, size_bytes:long}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL"
+          ],
+          "risk": "medium",
+          "timeoutMs": 30000,
+          "requires": "media.write"
+        },
+        {
+          "name": "insert",
+          "description": "Insert bytes (base64) as an image/video/audio item (10 MB cap).",
+          "params": {
+            "kind": "'image'|'video'|'audio'",
+            "display_name": "string",
+            "data_b64": "string"
+          },
+          "returns": "{id:long}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL"
+          ],
+          "risk": "medium",
+          "timeoutMs": 30000,
+          "requires": "media.write"
+        },
+        {
+          "name": "delete",
+          "description": "Delete a media row.",
+          "params": {
+            "id": "long"
+          },
+          "returns": "{deleted:bool}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL"
+          ],
+          "risk": "medium",
+          "timeoutMs": 10000,
+          "requires": "media"
+        }
+      ]
+    },
+    {
+      "id": "location",
+      "summary": "One-shot location fixes (last-known marked stale; current waits up to 60 s). Background runs need 'Allow all the time' — honestly reported, never silently downgraded.",
+      "permissions": [
+        {
+          "id": "location",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [
+        "ACCESS_FINE_LOCATION / ACCESS_COARSE_LOCATION (lazy); ACCESS_BACKGROUND_LOCATION for last_known in background runs"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "last_known",
+          "description": "The most recent cached fix across providers (stale:true). Background runs need 'Allow all the time'.",
+          "params": {},
+          "returns": "{latitude,longitude,accuracy_m,altitude_m?,speed_mps?,time_ms,provider,stale:bool}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL",
+            "CAPABILITY_UNAVAILABLE"
+          ],
+          "risk": "medium",
+          "timeoutMs": 5000,
+          "requires": "location"
+        },
+        {
+          "name": "current",
+          "description": "One fresh fix within the timeout (falls back to last-known with stale:true).",
+          "params": {
+            "timeout_ms": "int? (default 15000, max 60000)"
+          },
+          "returns": "{latitude,longitude,accuracy_m,...,stale:bool}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL",
+            "TIMEOUT"
+          ],
+          "risk": "medium",
+          "timeoutMs": 60000,
+          "requires": "location"
+        }
+      ]
+    },
+    {
+      "id": "camera",
+      "summary": "One-shot photo capture (front or back camera) into a run-scoped file. No preview, no stealth — the shutter is visible.",
+      "permissions": [
+        {
+          "id": "camera",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [
+        "CAMERA (lazy)"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "capture_photo",
+          "description": "Capture one JPEG.",
+          "params": {
+            "front": "bool? (default false)"
+          },
+          "returns": "{path:string, width:int, height:int, size_bytes:long}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL",
+            "CAPABILITY_UNAVAILABLE"
+          ],
+          "risk": "medium",
+          "timeoutMs": 30000,
+          "requires": "camera"
+        }
+      ]
+    },
+    {
+      "id": "microphone",
+      "summary": "Duration-capped audio recording (max 60 s, default 10 s) into a run-scoped file. The recording indicator stays on.",
+      "permissions": [
+        {
+          "id": "microphone",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [
+        "RECORD_AUDIO (lazy)"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "record",
+          "description": "Record AAC audio for duration_ms (500..60000).",
+          "params": {
+            "duration_ms": "int?"
+          },
+          "returns": "{path:string, duration_ms:int, size_bytes:long}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL",
+            "CAPABILITY_UNAVAILABLE"
+          ],
+          "risk": "medium",
+          "timeoutMs": 60000,
+          "requires": "microphone"
+        }
+      ]
+    },
+    {
+      "id": "sensors",
+      "summary": "One-shot sensor reads (no permission, no continuous streams). list = what the device has; read = latest sample per sensor (bounded set).",
+      "permissions": [
+        {
+          "id": "sensors",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [
+        "none (sensor data needs no runtime permission)"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "list",
+          "description": "All sensors with vendor/type.",
+          "params": {},
+          "returns": "{sensors:[{name,vendor,type}], count:int}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL"
+          ],
+          "risk": "low",
+          "timeoutMs": 5000,
+          "requires": "sensors"
+        },
+        {
+          "name": "read",
+          "description": "Latest sample for the named sensors (all when omitted).",
+          "params": {
+            "names": "[string]?"
+          },
+          "returns": "{samples:[{name, values:[double]}]}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL"
+          ],
+          "risk": "low",
+          "timeoutMs": 10000,
+          "requires": "sensors"
+        }
+      ]
+    },
+    {
+      "id": "device.sms",
+      "summary": "Read the inbox (sender-scoped by the grant), send with premium/short-code rails and a per-run budget, wait_for a matching message. DANGEROUS; full flavor only; needs the device.sms grant AND the sms switch. Delivery receipts are never claimed.",
+      "permissions": [
+        {
+          "id": "device.sms.read",
+          "scope": {
+            "senders": "[string] (exact sender numbers; empty/absent = all)"
+          }
+        },
+        {
+          "id": "device.sms.send",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [
+        "SEND_SMS / READ_SMS (full flavor manifest only) — lazily requested"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "read_inbox",
+          "description": "Newest messages, optional contains-filter, scoped to the grant's senders list.",
+          "params": {
+            "filter": "string? (substring of body)",
+            "limit": "int?"
+          },
+          "returns": "{messages:[{sender,body,received_ms,read}], count:int}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL"
+          ],
+          "risk": "medium",
+          "timeoutMs": 10000,
+          "requires": "device.sms.read"
+        },
+        {
+          "name": "send",
+          "description": "Send one SMS (<=480 chars, <=3 parts; premium destinations and short codes refused).",
+          "params": {
+            "address": "string",
+            "body": "string",
+            "allow_short": "bool? (default false)"
+          },
+          "returns": "{sent:bool, delivered:false, error?:string}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL",
+            "SCOPE_VIOLATION",
+            "RATE_LIMITED",
+            "INSECURE_FEATURE_DISABLED"
+          ],
+          "risk": "high",
+          "timeoutMs": 30000,
+          "requires": "device.sms.send"
+        },
+        {
+          "name": "wait_for",
+          "description": "Poll the inbox for a match within the timeout.",
+          "params": {
+            "contains": "string?",
+            "from": "string?",
+            "timeout_ms": "int? (default 30000, max 300000)"
+          },
+          "returns": "{sender,body,received_ms}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL",
+            "TIMEOUT"
+          ],
+          "risk": "medium",
+          "timeoutMs": 300000,
+          "requires": "device.sms.read"
+        }
+      ]
+    },
+    {
+      "id": "device.telephony",
+      "summary": "Call state read and dialer-owned calls (ACTION_CALL — the user sees and can cancel the dialer). DANGEROUS; full flavor only; needs the grant AND the telephony switch; premium/short-code rails like device.sms.",
+      "permissions": [
+        {
+          "id": "device.telephony.read",
+          "scope": {}
+        },
+        {
+          "id": "device.telephony.place_call",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [
+        "READ_PHONE_STATE (state) / CALL_PHONE (place_call) — full flavor manifest only"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "call_state",
+          "description": "idle|ringing|offhook (+ the ringing number when known).",
+          "params": {},
+          "returns": "{state:string, number?:string}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL"
+          ],
+          "risk": "low",
+          "timeoutMs": 5000,
+          "requires": "device.telephony.read"
+        },
+        {
+          "name": "place_call",
+          "description": "ACTION_CALL through the dialer (verified:false — the dialer owns the call).",
+          "params": {
+            "number": "string",
+            "allow_short": "bool?"
+          },
+          "returns": "{placed:bool, verified:false}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL",
+            "SCOPE_VIOLATION",
+            "INSECURE_FEATURE_DISABLED"
+          ],
+          "risk": "high",
+          "timeoutMs": 15000,
+          "requires": "device.telephony.place_call"
+        }
+      ]
+    },
+    {
+      "id": "net.socket",
+      "summary": "Raw TCP client + one-shot UDP send/recv with the net.http-style domain allowlist, byte caps and run-scoped handles. Tasks initiate; listeners stay net.server's job.",
+      "permissions": [
+        {
+          "id": "net.socket",
+          "scope": {
+            "domains": "[string] (glob patterns like net.http)"
+          }
+        }
+      ],
+      "androidAccess": [
+        "INTERNET (the app's own; nothing new)"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "tcp_connect",
+          "description": "Open a TCP connection (<=8 handles per run).",
+          "params": {
+            "host": "string",
+            "port": "int (1..65535)",
+            "timeout_ms": "int?"
+          },
+          "returns": "{handle:string, host:string, port:int}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL",
+            "SCOPE_VIOLATION",
+            "RATE_LIMITED"
+          ],
+          "risk": "medium",
+          "timeoutMs": 30000,
+          "requires": "net.socket"
+        },
+        {
+          "name": "tcp_send",
+          "description": "Send base64 bytes (5 MB cap).",
+          "params": {
+            "handle": "string",
+            "data_b64": "string"
+          },
+          "returns": "{sent:int}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL"
+          ],
+          "risk": "medium",
+          "timeoutMs": 15000,
+          "requires": "net.socket"
+        },
+        {
+          "name": "tcp_recv",
+          "description": "Receive up to max_bytes within the timeout.",
+          "params": {
+            "handle": "string",
+            "max_bytes": "int?",
+            "timeout_ms": "int?"
+          },
+          "returns": "{data_b64:string, count:int, closed:bool} | {closed:true}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL",
+            "TIMEOUT"
+          ],
+          "risk": "medium",
+          "timeoutMs": 120000,
+          "requires": "net.socket"
+        },
+        {
+          "name": "tcp_close",
+          "description": "Close one handle.",
+          "params": {
+            "handle": "string"
+          },
+          "returns": "{closed:bool}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL"
+          ],
+          "risk": "low",
+          "timeoutMs": 5000,
+          "requires": "net.socket"
+        },
+        {
+          "name": "udp_send",
+          "description": "One-shot datagram (<=65527 bytes).",
+          "params": {
+            "host": "string",
+            "port": "int",
+            "data_b64": "string"
+          },
+          "returns": "{sent:int}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL",
+            "SCOPE_VIOLATION"
+          ],
+          "risk": "medium",
+          "timeoutMs": 15000,
+          "requires": "net.socket"
+        },
+        {
+          "name": "udp_recv",
+          "description": "Bounded recv on an ephemeral local port.",
+          "params": {
+            "port": "int",
+            "max_bytes": "int?",
+            "timeout_ms": "int?"
+          },
+          "returns": "{data_b64:string, count:int, from:string, port:int}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL",
+            "TIMEOUT"
+          ],
+          "risk": "medium",
+          "timeoutMs": 120000,
+          "requires": "net.socket"
+        }
+      ]
+    },
+    {
+      "id": "net.reverse",
+      "summary": "The device dials OUT to a control/reporting host (plan 6.5): nothing listens on the device. Token rides the first frame (never the URL); plain ws:// only for localhost, wss:// otherwise. Off by default: needs the net.reverse grant AND the net_reverse switch.",
+      "permissions": [
+        {
+          "id": "net.reverse",
+          "scope": {}
+        }
+      ],
+      "androidAccess": [
+        "INTERNET (the app's own)"
+      ],
+      "minSdk": 29,
+      "tiers": [
+        "T0"
+      ],
+      "methods": [
+        {
+          "name": "open",
+          "description": "Open the outbound WS; the token is sent as the first frame by the SDK.",
+          "params": {
+            "url": "string (ws://localhost... or wss://...)",
+            "token": "string",
+            "timeout_ms": "int?"
+          },
+          "returns": "{handle:string, token_required:true}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL",
+            "SCOPE_VIOLATION",
+            "INSECURE_FEATURE_DISABLED"
+          ],
+          "risk": "medium",
+          "timeoutMs": 30000,
+          "requires": "net.reverse"
+        },
+        {
+          "name": "send",
+          "description": "Send one text frame (5 MB cap).",
+          "params": {
+            "handle": "string",
+            "text": "string"
+          },
+          "returns": "{sent:bool}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL"
+          ],
+          "risk": "medium",
+          "timeoutMs": 15000,
+          "requires": "net.reverse"
+        },
+        {
+          "name": "recv",
+          "description": "One frame or closed.",
+          "params": {
+            "handle": "string",
+            "timeout_ms": "int?"
+          },
+          "returns": "{text:string, closed:bool} | {closed:true}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL"
+          ],
+          "risk": "medium",
+          "timeoutMs": 120000,
+          "requires": "net.reverse"
+        },
+        {
+          "name": "close",
+          "description": "Close the handle.",
+          "params": {
+            "handle": "string"
+          },
+          "returns": "{closed:bool}",
+          "errors": [
+            "INVALID_ARGS",
+            "PERMISSION_DENIED",
+            "NEEDS_SETUP",
+            "INTERNAL"
+          ],
+          "risk": "low",
+          "timeoutMs": 5000,
+          "requires": "net.reverse"
+        }
+      ]
+    }
+  ],
+  "hostEvents": {
+    "_note": "Sent with broker.emit(), not call(); see schemas/broker.schema.json#/$defs/Event",
+    "types": [
+      "log",
+      "progress",
+      "stage_begin",
+      "stage_end",
+      "evidence",
+      "result",
+      "next_run",
+      "heartbeat",
+      "incident"
+    ]
+  }
+}

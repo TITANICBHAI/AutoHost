@@ -1,0 +1,262 @@
+{
+  "_note": "Shared with the Kotlin CompactDump. 'expected' was reviewed by hand in tests/test_dump_golden.py.",
+  "cases": [
+    {
+      "name": "basic_screen",
+      "input": {
+        "nodes": [
+          {
+            "cls": "android.widget.FrameLayout",
+            "id": "",
+            "text": "",
+            "desc": "",
+            "bounds": [
+              0,
+              0,
+              1080,
+              2400
+            ],
+            "flags": [],
+            "depth": 0
+          },
+          {
+            "cls": "android.widget.TextView",
+            "id": "app:id/title",
+            "text": "Example",
+            "desc": "",
+            "bounds": [
+              40,
+              100,
+              600,
+              180
+            ],
+            "flags": [],
+            "depth": 1
+          },
+          {
+            "cls": "android.widget.Button",
+            "id": "app:id/btn",
+            "text": "Continue",
+            "desc": "",
+            "bounds": [
+              40,
+              300,
+              600,
+              400
+            ],
+            "flags": [
+              "clickable"
+            ],
+            "depth": 1
+          }
+        ],
+        "label": "Example",
+        "package": "app.example",
+        "activity": "MainActivity"
+      },
+      "filter": "default",
+      "expected": "App: Example (app.example)  Activity: MainActivity  Keyboard: hidden  Focused: ''\n1. FrameLayout: \"\" \"\" [] (0,0,1080,2400)\n  2. TextView: \"app:id/title\" \"Example\" [] (40,100,600,180)\n  3. Button: \"app:id/btn\" \"Continue\" [clickable] (40,300,600,400)"
+    },
+    {
+      "name": "password_and_focus",
+      "input": {
+        "nodes": [
+          {
+            "cls": "android.widget.EditText",
+            "id": "app:id/user",
+            "text": "alice",
+            "desc": "",
+            "bounds": [
+              40,
+              200,
+              900,
+              300
+            ],
+            "flags": [
+              "editable",
+              "focused"
+            ],
+            "depth": 0
+          },
+          {
+            "cls": "android.widget.EditText",
+            "id": "app:id/pw",
+            "text": "hunter2",
+            "desc": "",
+            "bounds": [
+              40,
+              320,
+              900,
+              420
+            ],
+            "flags": [
+              "editable"
+            ],
+            "depth": 0,
+            "password": true
+          }
+        ],
+        "package": "app.example",
+        "keyboard": "visible"
+      },
+      "filter": "default",
+      "expected": "App: app.example (app.example)  Activity: none  Keyboard: visible  Focused: 'alice'\n1. EditText: \"app:id/user\" \"alice\" [editable,focused] (40,200,900,300)\n2. EditText: \"app:id/pw\" \"\" [editable] (40,320,900,420)"
+    },
+    {
+      "name": "quotes_newlines_and_long_text",
+      "input": {
+        "nodes": [
+          {
+            "cls": "android.widget.TextView",
+            "id": "",
+            "text": "He said \"hi\"\nbye",
+            "desc": "",
+            "bounds": [
+              0,
+              0,
+              500,
+              100
+            ],
+            "flags": [],
+            "depth": 0
+          },
+          {
+            "cls": "android.widget.TextView",
+            "id": "",
+            "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "desc": "",
+            "bounds": [
+              0,
+              120,
+              500,
+              220
+            ],
+            "flags": [],
+            "depth": 0
+          },
+          {
+            "cls": "android.widget.TextView",
+            "id": "",
+            "text": "",
+            "desc": "Content description",
+            "bounds": [
+              0,
+              240,
+              500,
+              340
+            ],
+            "flags": [],
+            "depth": 0
+          }
+        ],
+        "package": "app.example"
+      },
+      "filter": "default",
+      "expected": "App: app.example (app.example)  Activity: none  Keyboard: hidden  Focused: ''\n1. TextView: \"\" \"He said \\\"hi\\\"\\nbye\" [] (0,0,500,100)\n2. TextView: \"\" \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\" [] (0,120,500,220)\n3. TextView: \"\" \"Content description\" [] (0,240,500,340)"
+    },
+    {
+      "name": "filter_drops_tiny_and_offscreen",
+      "input": {
+        "nodes": [
+          {
+            "cls": "android.widget.TextView",
+            "id": "",
+            "text": "tiny",
+            "desc": "",
+            "bounds": [
+              0,
+              0,
+              3,
+              3
+            ],
+            "flags": [],
+            "depth": 0
+          },
+          {
+            "cls": "android.widget.TextView",
+            "id": "",
+            "text": "offscreen",
+            "desc": "",
+            "bounds": [
+              0,
+              3000,
+              500,
+              3100
+            ],
+            "flags": [],
+            "depth": 0
+          },
+          {
+            "cls": "android.widget.TextView",
+            "id": "",
+            "text": "partly",
+            "desc": "",
+            "bounds": [
+              0,
+              2350,
+              500,
+              2450
+            ],
+            "flags": [],
+            "depth": 0
+          },
+          {
+            "cls": "android.widget.TextView",
+            "id": "",
+            "text": "visible",
+            "desc": "",
+            "bounds": [
+              0,
+              10,
+              500,
+              110
+            ],
+            "flags": [],
+            "depth": 0
+          }
+        ],
+        "package": "app.example"
+      },
+      "filter": "default",
+      "expected": "App: app.example (app.example)  Activity: none  Keyboard: hidden  Focused: ''\n1. TextView: \"\" \"partly\" [] (0,2350,500,2450)\n2. TextView: \"\" \"visible\" [] (0,10,500,110)"
+    },
+    {
+      "name": "filter_disabled_keeps_everything",
+      "input": {
+        "nodes": [
+          {
+            "cls": "android.widget.TextView",
+            "id": "",
+            "text": "tiny",
+            "desc": "",
+            "bounds": [
+              0,
+              0,
+              3,
+              3
+            ],
+            "flags": [],
+            "depth": 0
+          },
+          {
+            "cls": "android.widget.TextView",
+            "id": "",
+            "text": "offscreen",
+            "desc": "",
+            "bounds": [
+              0,
+              3000,
+              500,
+              3100
+            ],
+            "flags": [],
+            "depth": 0
+          }
+        ],
+        "package": "app.example"
+      },
+      "filter": null,
+      "expected": "App: app.example (app.example)  Activity: none  Keyboard: hidden  Focused: ''\n1. TextView: \"\" \"tiny\" [] (0,0,3,3)\n2. TextView: \"\" \"offscreen\" [] (0,3000,500,3100)"
+    }
+  ]
+}

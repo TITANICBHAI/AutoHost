@@ -1,0 +1,13 @@
+# The authoring loop: push a task, run it, follow the logs.
+name: author-run
+description: push → run → tail — the happy path of plan §13.3
+steps:
+  - tool: autohost_push_task
+    args: {dir: samples/hello}
+    expect_json_path: taskId
+  - tool: autohost_run_task
+    args: {task: app.autohost.sample.hello}
+    expect_json_path: runId
+  - tool: autohost_tail_logs
+    args: {run_id: run-123}
+    expect_contains: "events"

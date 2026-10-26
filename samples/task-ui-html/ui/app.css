@@ -1,0 +1,18 @@
+body {
+  font-family: system-ui, sans-serif;
+  margin: 2rem;
+  background: #fafcfc;
+  color: #102020;
+}
+h1 { font-weight: 600; }
+button {
+  font-size: 1rem;
+  padding: 0.6rem 1.2rem;
+  margin-right: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid #6f7b7d;
+  background: #0e7c86;
+  color: #fff;
+}
+button.danger { background: #c62828; border-color: #8e1b1b; }
+.hint { color: #6f7b7d; font-size: 0.9rem; }

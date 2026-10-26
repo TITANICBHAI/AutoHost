@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<!-- Gate 10-a fixture: a fully local login page. Submitting "succeeds" client-side by setting
+     a session cookie and revealing the signed-in block with #status=signed in. -->
+<html lang="en">
+<head><meta charset="utf-8"><title>AutoHost Local Login</title></head>
+<body>
+  <h1>Local test page</h1>
+  <form id="form" onsubmit="return login(event)">
+    <label for="username">Username</label>
+    <input id="username" name="username" autocomplete="off">
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password">
+    <button id="submit" type="submit">Sign in</button>
+  </form>
+  <div id="signed-in" style="display:none">
+    <p id="status">signed in</p>
+  </div>
+  <script>
+    var clicks = 0; // S25: real (trusted) clicks increment this; JS-dispatched ones may not.
+    function login(event) {
+      event.preventDefault();
+      clicks += 1;
+      document.cookie = "session=local-" + clicks + "; path=/";
+      document.getElementById("form").style.display = "none";
+      document.getElementById("signed-in").style.display = "block";
+      return false;
+    }
+  </script>
+</body>
+</html>

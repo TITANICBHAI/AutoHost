@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- P9-09: FileProvider paths for the device.app.manage installer-UI path. Only the app's own
+     task-data and cache dirs are exposed (never external storage; the pm path needs no provider). -->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <files-path name="taskdata" path="taskdata/" />
+    <cache-path name="shared" path="install/" />
+    <files-path name="files" path="." />
+</paths>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="16dp">
+    <EditText android:id="@id/fx_clip_source" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="source text" android:inputType="text" />
+    <Button android:id="@id/fx_clip_copy" android:layout_width="match_parent" android:layout_height="56dp" android:text="Copy" />
+    <Button android:id="@id/fx_clip_paste" android:layout_width="match_parent" android:layout_height="56dp" android:text="Paste below" />
+    <EditText android:id="@id/fx_clip_target" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="paste target" android:inputType="text" />
+    <TextView android:id="@id/fx_state" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="10sp" android:text="{}" />
+</LinearLayout>

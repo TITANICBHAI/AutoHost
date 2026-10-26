@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "id": "app.autohost.sample.ocr-demo",
+  "name": "OCR Demo",
+  "version": "1.0.0",
+  "description": "Gate 10-b reference: OCR reads a screenshot region, template match and QR decode demonstrate the T4 contract — every result carries hint:true (hints, not proof).",
+  "host_api": ">=1 <2",
+  "runtime": { "type": "python", "entry": "main.py" },
+  "needs": {
+    "capabilities": [ { "id": "vision.read" } ],
+    "optional": [ { "id": "device.screenshot" } ],
+    "apps": []
+  },
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "region": {
+        "type": "object",
+        "title": "Region to read (pixels)",
+        "properties": {
+          "left": { "type": "integer", "default": 0 },
+          "top": { "type": "integer", "default": 0 },
+          "width": { "type": "integer", "default": 400 },
+          "height": { "type": "integer", "default": 80 }
+        }
+      }
+    }
+  },
+  "profile_schema": { "type": "object", "properties": { "label": { "type": "string", "title": "Profile name" } } },
+  "triggers": { "manual": true, "schedule": { "allowed": false }, "events": [] },
+  "execution": { "ui_exclusive": false, "needs_unlocked_screen": true, "pausable": false, "timeout_minutes": 2, "idle_timeout_seconds": 60, "max_attempts": 1, "verification": "off", "min_interval_minutes": 1 },
+  "ui": { "mode": "auto" }
+}

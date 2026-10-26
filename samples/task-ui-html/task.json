@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "id": "app.autohost.sample.task-ui-html",
+  "name": "Task UI (HTML)",
+  "version": "1.0.0",
+  "description": "Shows the Tier C HTML task UI: a sandboxed WebView with the autohost bridge. No network, bundle assets only — the page calls @ui.handler functions in main.py.",
+  "host_api": ">=1 <2",
+  "runtime": { "type": "python", "entry": "main.py" },
+  "needs": {
+    "capabilities": [],
+    "optional": []
+  },
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "start_count": { "type": "integer", "title": "Start count", "default": 0, "minimum": 0 }
+    }
+  },
+  "triggers": { "manual": true },
+  "execution": { "ui_exclusive": false, "pausable": true, "timeout_minutes": 5, "idle_timeout_seconds": 120 },
+  "ui": { "mode": "html", "file": "ui/index.html" }
+}

@@ -1,0 +1,14 @@
+# Gate-5-f rehearsal: inspect the phone, try a selector, then run something.
+name: inspect-device
+description: look-before-writing — state, dump, selector try, screenshot, doctor
+steps:
+  - tool: autohost_get_device_state
+  - tool: autohost_dump_ui
+    expect_contains: "com.fixture"
+  - tool: autohost_try_selector
+    args: {selector: {id: btn}}
+    expect_contains: "btn"
+  - tool: autohost_screenshot
+    expect_contains: "shot"
+  - tool: autohost_diagnose
+    expect_not_contains: "isError"

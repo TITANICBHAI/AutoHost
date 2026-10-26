@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Nothing backs up: task data stays on the device (docs/ANDROID_MANIFEST.md §2). -->
+    <exclude domain="root" path="." />
+</full-backup-content>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- docs/ANDROID_MANIFEST.md §5: do NOT add android:isAccessibilityTool. No android:packageNames —
+     scoping is applied dynamically by the granted packages (A11yScope). -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeWindowsChanged|typeViewTextChanged|typeNotificationStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows|flagReportViewIds|flagIncludeNotImportantViews|flagRequestFilterKeyEvents"
+    android:canRetrieveWindowContent="true"
+    android:canPerformGestures="true"
+    android:canTakeScreenshot="true"
+    tools:targetApi="30"
+    android:canRequestFilterKeyEvents="true"
+    android:notificationTimeout="50"
+    android:description="@string/a11y_service_description"
+    android:settingsActivity="app.autohost.MainActivity" />

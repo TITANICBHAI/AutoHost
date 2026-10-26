@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_service_label">AutoHost automation service</string>
+    <string name="a11y_service_description">Lets your saved automations observe the screen and tap buttons in the apps you granted, only while a run is active. You can always stop a run from the notification.</string>
+</resources>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- navigation -->
+    <item name="fx_open_button" type="id" />
+    <item name="fx_open_delayed" type="id" />
+    <item name="fx_open_text" type="id" />
+    <item name="fx_open_list" type="id" />
+    <item name="fx_open_unbounded" type="id" />
+    <item name="fx_open_dialog" type="id" />
+    <item name="fx_open_permission" type="id" />
+    <item name="fx_open_keyboard" type="id" />
+    <item name="fx_open_dynamic" type="id" />
+    <item name="fx_open_secure" type="id" />
+    <item name="fx_open_canvas" type="id" />
+    <item name="fx_open_web" type="id" />
+    <item name="fx_open_toast" type="id" />
+    <item name="fx_open_clipboard" type="id" />
+    <item name="fx_open_notification" type="id" />
+    <item name="fx_open_crash" type="id" />
+    <item name="fx_open_locale" type="id" />
+    <item name="fx_state" type="id" />
+    <!-- button screen -->
+    <item name="fx_btn_continue" type="id" />
+    <item name="fx_btn_continue_es" type="id" />
+    <item name="fx_clicks" type="id" />
+    <!-- delayed -->
+    <item name="fx_btn_late" type="id" />
+    <item name="fx_late_status" type="id" />
+    <!-- text field -->
+    <item name="fx_text" type="id" />
+    <item name="fx_password" type="id" />
+    <item name="fx_multiline" type="id" />
+    <item name="fx_echo" type="id" />
+    <!-- list -->
+    <item name="fx_list" type="id" />
+    <item name="fx_item_text" type="id" />
+    <!-- unbounded -->
+    <item name="fx_unbounded_scroll" type="id" />
+    <!-- dialog -->
+    <item name="fx_btn_alert" type="id" />
+    <item name="fx_btn_popup" type="id" />
+    <item name="fx_btn_sheet" type="id" />
+    <item name="fx_dialog_result" type="id" />
+    <item name="fx_dialog_ok" type="id" />
+    <item name="fx_dialog_cancel" type="id" />
+    <!-- permission -->
+    <item name="fx_btn_request_permission" type="id" />
+    <item name="fx_permission_result" type="id" />
+    <!-- keyboard -->
+    <item name="fx_kb_field" type="id" />
+    <item name="fx_kb_hide" type="id" />
+    <!-- dynamic -->
+    <item name="fx_dynamic_tick" type="id" />
+    <item name="fx_dynamic_stop" type="id" />
+    <!-- secure -->
+    <item name="fx_secure_note" type="id" />
+    <!-- canvas -->
+    <item name="fx_canvas" type="id" />
+    <!-- web -->
+    <item name="fx_web" type="id" />
+    <!-- toast -->
+    <item name="fx_btn_toast" type="id" />
+    <!-- clipboard -->
+    <item name="fx_clip_source" type="id" />
+    <item name="fx_clip_copy" type="id" />
+    <item name="fx_clip_paste" type="id" />
+    <item name="fx_clip_target" type="id" />
+    <!-- notification -->
+    <item name="fx_btn_notify" type="id" />
+    <!-- crash -->
+    <item name="fx_btn_crash" type="id" />
+    <!-- locale -->
+    <item name="fx_locale_label" type="id" />
+</resources>

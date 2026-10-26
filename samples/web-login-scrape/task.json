@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "id": "app.autohost.sample.web-login-scrape",
+  "name": "Web Login Scrape",
+  "version": "1.0.0",
+  "description": "Gate 10-a reference: logs into a fully local task-bundle web page in the visible in-app browser, scrapes a value, and routes challenge pages to WAITING_USER (never bypassed). No network grant at all — the pages are task: bundle files.",
+  "host_api": ">=1 <2",
+  "runtime": { "type": "python", "entry": "main.py" },
+  "needs": {
+    "capabilities": [
+      { "id": "browser.open", "scope": { "domains": [] } },
+      { "id": "browser.read", "scope": { "domains": [] } }
+    ],
+    "optional": [],
+    "apps": []
+  },
+  "config_schema": {
+    "type": "object",
+    "required": ["username"],
+    "properties": {
+      "username": { "type": "string", "title": "Username", "default": "demo" },
+      "secret_name": { "type": "string", "title": "Profile secret field holding the password", "default": "demo_password" }
+    }
+  },
+  "profile_schema": { "type": "object", "properties": { "label": { "type": "string", "title": "Profile name" } }, "secret_fields": ["demo_password"] },
+  "triggers": { "manual": true, "schedule": { "allowed": false }, "events": [] },
+  "execution": { "ui_exclusive": false, "needs_unlocked_screen": true, "pausable": false, "timeout_minutes": 5, "idle_timeout_seconds": 120, "max_attempts": 1, "verification": "off", "min_interval_minutes": 1 },
+  "ui": { "mode": "auto" }
+}

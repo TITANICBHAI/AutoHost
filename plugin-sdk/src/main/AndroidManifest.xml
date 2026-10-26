@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- P11-02 (ADR-079): library manifest — nothing to declare; plugin APKs add their own service. -->
+<manifest />

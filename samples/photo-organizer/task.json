@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "id": "app.autohost.sample.photo-organizer",
+  "name": "Photo organizer (ported)",
+  "version": "1.0.0",
+  "description": "The P11-12 port exercise: a classic 'sort my camera photos into month folders' desktop script rewritten against the AutoHost SDK. Copies each MediaStore image into Photos/<YYYY-MM>/ (a copy, never a move) and reports the honest gaps in docs/PORT_EXERCISE.md.",
+  "host_api": ">=1 <2",
+  "runtime": { "type": "python", "entry": "main.py" },
+  "needs": {
+    "capabilities": [
+      { "id": "media" },
+      { "id": "media.write" },
+      { "id": "files.shared", "scope": { "trees": ["primary:Pictures"] } }
+    ]
+  },
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "max_items": { "type": "integer", "title": "Max photos per run", "default": 50, "minimum": 1, "maximum": 500 },
+      "delete_originals": { "type": "boolean", "title": "Delete originals after copying", "default": false }
+    }
+  },
+  "triggers": { "manual": true, "schedule": { "allowed": true, "default": { "type": "interval", "every_minutes": 1440 } }, "events": [] },
+  "execution": { "ui_exclusive": false, "pausable": true, "timeout_minutes": 10, "idle_timeout_seconds": 120, "max_attempts": 1 },
+  "ui": { "mode": "auto" }
+}

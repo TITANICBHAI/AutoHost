@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "app.autohost.sample.settings-reader",
+  "name": "Settings Reader",
+  "version": "1.0.0",
+  "description": "Opens Android Settings, enters the About screen, reads it, takes a screenshot if possible. Self-test for the UI providers.",
+  "host_api": ">=1 <2",
+  "runtime": { "type": "python", "entry": "main.py" },
+  "needs": {
+    "capabilities": [
+      { "id": "device.app.launch", "scope": { "packages": ["com.android.settings"] } },
+      { "id": "device.ui.observe", "scope": { "packages": ["com.android.settings"] } },
+      { "id": "device.ui.act", "scope": { "packages": ["com.android.settings"] } }
+    ],
+    "optional": [ { "id": "device.screenshot", "scope": { "packages": ["com.android.settings"] } } ],
+    "apps": [ { "package": "com.android.settings" } ]
+  },
+  "config_schema": { "type": "object", "properties": {} },
+  "profile_schema": { "type": "object", "properties": {} },
+  "triggers": { "manual": true, "schedule": { "allowed": false }, "events": [] },
+  "execution": { "ui_exclusive": true, "needs_unlocked_screen": true, "pausable": true, "timeout_minutes": 3, "idle_timeout_seconds": 60, "max_attempts": 1, "verification": "final" },
+  "ui": { "mode": "auto" }
+}

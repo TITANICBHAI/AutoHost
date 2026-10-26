@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Fixture form</title></head>
+<body>
+  <h3>Fixture web form</h3>
+  <form onsubmit="return false;">
+    <input type="text" id="fx_web_name" placeholder="name" style="display:block;width:80%;margin:8px 0"/>
+    <input type="password" id="fx_web_secret" placeholder="secret" style="display:block;width:80%;margin:8px 0"/>
+    <button id="fx_web_submit" onclick="document.getElementById('fx_web_result').textContent='submitted '+document.getElementById('fx_web_name').value">Submit</button>
+  </form>
+  <p id="fx_web_result"></p>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="16dp">
+
+        <Button android:id="@id/fx_open_button" android:layout_width="match_parent" android:layout_height="56dp" android:text="Button screen" />
+        <Button android:id="@id/fx_open_delayed" android:layout_width="match_parent" android:layout_height="56dp" android:text="Delayed button" />
+        <Button android:id="@id/fx_open_text" android:layout_width="match_parent" android:layout_height="56dp" android:text="Text fields" />
+        <Button android:id="@id/fx_open_list" android:layout_width="match_parent" android:layout_height="56dp" android:text="List screen" />
+        <Button android:id="@id/fx_open_unbounded" android:layout_width="match_parent" android:layout_height="56dp" android:text="Unbounded list" />
+        <Button android:id="@id/fx_open_dialog" android:layout_width="match_parent" android:layout_height="56dp" android:text="Dialogs" />
+        <Button android:id="@id/fx_open_permission" android:layout_width="match_parent" android:layout_height="56dp" android:text="Permission dialog" />
+        <Button android:id="@id/fx_open_keyboard" android:layout_width="match_parent" android:layout_height="56dp" android:text="Keyboard" />
+        <Button android:id="@id/fx_open_dynamic" android:layout_width="match_parent" android:layout_height="56dp" android:text="Dynamic content" />
+        <Button android:id="@id/fx_open_secure" android:layout_width="match_parent" android:layout_height="56dp" android:text="Secure screen" />
+        <Button android:id="@id/fx_open_canvas" android:layout_width="match_parent" android:layout_height="56dp" android:text="Canvas (no nodes)" />
+        <Button android:id="@id/fx_open_web" android:layout_width="match_parent" android:layout_height="56dp" android:text="WebView form" />
+        <Button android:id="@id/fx_open_toast" android:layout_width="match_parent" android:layout_height="56dp" android:text="Toast" />
+        <Button android:id="@id/fx_open_clipboard" android:layout_width="match_parent" android:layout_height="56dp" android:text="Clipboard" />
+        <Button android:id="@id/fx_open_notification" android:layout_width="match_parent" android:layout_height="56dp" android:text="Notification" />
+        <Button android:id="@id/fx_open_crash" android:layout_width="match_parent" android:layout_height="56dp" android:text="Crash" />
+        <Button android:id="@id/fx_open_locale" android:layout_width="match_parent" android:layout_height="56dp" android:text="Locale variants" />
+
+        <TextView android:id="@id/fx_state"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textSize="10sp" android:text="{}" />
+    </LinearLayout>
+</ScrollView>

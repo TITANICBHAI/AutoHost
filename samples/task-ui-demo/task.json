@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "id": "app.autohost.sample.task-ui-demo",
+  "name": "Task UI Demo",
+  "version": "1.0.0",
+  "description": "Shows the Tier B declarative task UI: widgets, bindings, and @ui.handler actions. Open the UI tab — every button calls a handler in main.py.",
+  "host_api": ">=1 <2",
+  "runtime": { "type": "python", "entry": "main.py" },
+  "needs": {
+    "capabilities": [],
+    "optional": [
+      { "id": "notify.post" }
+    ]
+  },
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "greeting_name": { "type": "string", "title": "Who to greet", "default": "world" },
+      "quiet": { "type": "boolean", "title": "Quiet mode", "default": false }
+    }
+  },
+  "triggers": { "manual": true },
+  "execution": { "ui_exclusive": false, "pausable": true, "timeout_minutes": 5, "idle_timeout_seconds": 120 },
+  "ui": { "mode": "declarative", "file": "ui/main.json" }
+}

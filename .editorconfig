@@ -1,0 +1,25 @@
+# AutoHost — ktlint reads this file (official Kotlin style, android mode).
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+max_line_length = 120
+
+[*.{yml,yaml,json}]
+indent_size = 2
+
+[*.{cmd,bat}]
+end_of_line = crlf
+
+[*.md]
+# Two trailing spaces are a hard line break in Markdown.
+trim_trailing_whitespace = false
+
+[*.{py,pyi}]
+# Python SDK follows PEP 8; ktlint does not process these files.
+indent_size = 4

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<!-- Tier C task UI (plan §10.1). Served from the task bundle by AutoHost's sandboxed WebView:
+     no network, no files outside this folder, only this task's handlers on the bridge.
+     The CSP below is defense-in-depth; the host enforces the hard boundary itself. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'self'">
+  <link rel="stylesheet" href="app.css">
+  <title>Task UI (HTML)</title>
+</head>
+<body>
+  <h1>Clicks: <span id="count">…</span></h1>
+  <p class="hint">Rendered by AutoHost from this task's bundle. Latest run: <span id="run">?</span></p>
+  <button id="plus">+1</button>
+  <button id="plus5">+5</button>
+  <button id="reset" class="danger">Reset</button>
+  <script src="app.js"></script>
+</body>
+</html>

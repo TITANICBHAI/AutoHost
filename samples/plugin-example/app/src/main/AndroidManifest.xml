@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- P11-02 (ADR-079): the example capability plugin. The service is exported so the host can
+     bind it cross-APK; the intent action is what the host's <queries> entry looks for. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:label="AutoHost Example Plugin"
+        android:allowBackup="false">
+
+        <service
+            android:name=".ExamplePluginService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="app.autohost.plugin.CAPABILITY_PROVIDER" />
+            </intent-filter>
+        </service>
+    </application>
+
+</manifest>

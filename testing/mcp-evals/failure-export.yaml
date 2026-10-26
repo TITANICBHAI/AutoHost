@@ -1,0 +1,16 @@
+# Failure debugging: read the run, pull the bundle, see the reason code.
+name: failure-export
+description: get_run shows FAILED with a reason; export_run yields the .aarun path
+steps:
+  - tool: autohost_push_task
+    args: {dir: samples/hello}
+    expect_json_path: taskId
+  - tool: autohost_run_task
+    args: {task: app.autohost.sample.hello}
+    expect_json_path: runId
+  - tool: autohost_get_run
+    args: {run_id: run-123}
+    expect_contains: "EXCEPTION"
+  - tool: autohost_export_run
+    args: {run_id: run-123, dir: /tmp/mcp-eval}
+    expect_contains: ".aarun"

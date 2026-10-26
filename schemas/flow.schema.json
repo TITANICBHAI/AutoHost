@@ -1,0 +1,778 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autohost.app/schemas/flow.schema.json",
+  "title": "AutoHost flow (declarative runtime)",
+  "type": "object",
+  "required": [
+    "schema",
+    "steps"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": 1
+    },
+    "name": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "env": {
+      "type": "object",
+      "additionalProperties": {
+        "type": [
+          "string",
+          "number",
+          "boolean"
+        ]
+      }
+    },
+    "onFlowStart": {
+      "$ref": "#/$defs/steps"
+    },
+    "onFlowComplete": {
+      "$ref": "#/$defs/steps"
+    },
+    "steps": {
+      "$ref": "#/$defs/steps"
+    }
+  },
+  "$defs": {
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/step"
+      }
+    },
+    "step": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "propertyNames": {
+        "enum": [
+          "launchApp",
+          "stopApp",
+          "openLink",
+          "tapOn",
+          "longPressOn",
+          "inputText",
+          "eraseText",
+          "pressKey",
+          "scroll",
+          "scrollUntilVisible",
+          "swipe",
+          "hideKeyboard",
+          "waitFor",
+          "waitUntil",
+          "waitForAnimationToEnd",
+          "assertVisible",
+          "assertNotVisible",
+          "copyTextFrom",
+          "setClipboard",
+          "takeScreenshot",
+          "notify",
+          "runFlow",
+          "repeat",
+          "retry",
+          "log",
+          "setResult",
+          "nextRun",
+          "ask",
+          "defineVariables"
+        ]
+      },
+      "description": "Exactly one command per step. Common modifiers inside the command object: optional, label, timeout, when, waitToSettle, retryTapIfNoChange.",
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "tapOn"
+            ]
+          },
+          "then": {
+            "properties": {
+              "tapOn": {
+                "$ref": "#/$defs/selectorBody"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "longPressOn"
+            ]
+          },
+          "then": {
+            "properties": {
+              "longPressOn": {
+                "$ref": "#/$defs/selectorBody"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "assertVisible"
+            ]
+          },
+          "then": {
+            "properties": {
+              "assertVisible": {
+                "$ref": "#/$defs/selectorBody"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "assertNotVisible"
+            ]
+          },
+          "then": {
+            "properties": {
+              "assertNotVisible": {
+                "$ref": "#/$defs/selectorBody"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "scrollUntilVisible"
+            ]
+          },
+          "then": {
+            "properties": {
+              "scrollUntilVisible": {
+                "$ref": "#/$defs/selectorBody"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "waitUntil"
+            ]
+          },
+          "then": {
+            "properties": {
+              "waitUntil": {
+                "$ref": "#/$defs/waitUntilBody"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "launchApp"
+            ]
+          },
+          "then": {
+            "properties": {
+              "launchApp": {
+                "$ref": "#/$defs/launchAppBody"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "setResult"
+            ]
+          },
+          "then": {
+            "properties": {
+              "setResult": {
+                "$ref": "#/$defs/setResultBody"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "selector": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "mode": {
+                  "enum": [
+                    "eq",
+                    "contains",
+                    "starts_with",
+                    "ends_with",
+                    "regex"
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ]
+            }
+          ]
+        },
+        "id": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "mode": {
+                  "enum": [
+                    "eq",
+                    "contains",
+                    "starts_with",
+                    "ends_with",
+                    "regex"
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ]
+            }
+          ]
+        },
+        "desc": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "mode": {
+                  "enum": [
+                    "eq",
+                    "contains",
+                    "starts_with",
+                    "ends_with",
+                    "regex"
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ]
+            }
+          ]
+        },
+        "class": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "mode": {
+                  "enum": [
+                    "eq",
+                    "contains",
+                    "starts_with",
+                    "ends_with",
+                    "regex"
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ]
+            }
+          ]
+        },
+        "package": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "mode": {
+                  "enum": [
+                    "eq",
+                    "contains",
+                    "starts_with",
+                    "ends_with",
+                    "regex"
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ]
+            }
+          ]
+        },
+        "index": {
+          "type": "integer"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "checked": {
+          "type": "boolean"
+        },
+        "selected": {
+          "type": "boolean"
+        },
+        "focused": {
+          "type": "boolean"
+        },
+        "clickable": {
+          "type": "boolean"
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "below": {
+          "$ref": "#/$defs/selector"
+        },
+        "above": {
+          "$ref": "#/$defs/selector"
+        },
+        "leftOf": {
+          "$ref": "#/$defs/selector"
+        },
+        "rightOf": {
+          "$ref": "#/$defs/selector"
+        },
+        "childOf": {
+          "$ref": "#/$defs/selector"
+        },
+        "containsChild": {
+          "$ref": "#/$defs/selector"
+        },
+        "containsDescendants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/selector"
+          }
+        },
+        "bounds": {
+          "type": "object",
+          "properties": {
+            "left": {
+              "type": "integer"
+            },
+            "top": {
+              "type": "integer"
+            },
+            "right": {
+              "type": "integer"
+            },
+            "bottom": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    "when": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "visible": {
+          "$ref": "#/$defs/selector"
+        },
+        "notVisible": {
+          "$ref": "#/$defs/selector"
+        },
+        "true": {
+          "type": "string"
+        },
+        "minApi": {
+          "type": "integer"
+        }
+      }
+    },
+    "selectorBody": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Selector keys at the top of the command body, plus command modifiers.",
+      "properties": {
+        "text": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "mode": {
+                  "enum": [
+                    "eq",
+                    "contains",
+                    "starts_with",
+                    "ends_with",
+                    "regex"
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ]
+            }
+          ]
+        },
+        "id": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "mode": {
+                  "enum": [
+                    "eq",
+                    "contains",
+                    "starts_with",
+                    "ends_with",
+                    "regex"
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ]
+            }
+          ]
+        },
+        "desc": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "mode": {
+                  "enum": [
+                    "eq",
+                    "contains",
+                    "starts_with",
+                    "ends_with",
+                    "regex"
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ]
+            }
+          ]
+        },
+        "class": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "mode": {
+                  "enum": [
+                    "eq",
+                    "contains",
+                    "starts_with",
+                    "ends_with",
+                    "regex"
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ]
+            }
+          ]
+        },
+        "package": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "mode": {
+                  "enum": [
+                    "eq",
+                    "contains",
+                    "starts_with",
+                    "ends_with",
+                    "regex"
+                  ]
+                }
+              },
+              "required": [
+                "value"
+              ]
+            }
+          ]
+        },
+        "index": {
+          "type": "integer"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "checked": {
+          "type": "boolean"
+        },
+        "selected": {
+          "type": "boolean"
+        },
+        "focused": {
+          "type": "boolean"
+        },
+        "clickable": {
+          "type": "boolean"
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "below": {
+          "$ref": "#/$defs/selector"
+        },
+        "above": {
+          "$ref": "#/$defs/selector"
+        },
+        "leftOf": {
+          "$ref": "#/$defs/selector"
+        },
+        "rightOf": {
+          "$ref": "#/$defs/selector"
+        },
+        "childOf": {
+          "$ref": "#/$defs/selector"
+        },
+        "containsChild": {
+          "$ref": "#/$defs/selector"
+        },
+        "containsDescendants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/selector"
+          }
+        },
+        "bounds": {
+          "type": "object",
+          "properties": {
+            "left": {
+              "type": "integer"
+            },
+            "top": {
+              "type": "integer"
+            },
+            "right": {
+              "type": "integer"
+            },
+            "bottom": {
+              "type": "integer"
+            }
+          }
+        },
+        "optional": {
+          "type": "boolean"
+        },
+        "label": {
+          "type": "string"
+        },
+        "timeout": {
+          "type": "number",
+          "minimum": 0
+        },
+        "when": {
+          "$ref": "#/$defs/when"
+        },
+        "waitToSettle": {
+          "type": "boolean"
+        },
+        "retryTapIfNoChange": {
+          "type": "boolean"
+        },
+        "direction": {
+          "enum": [
+            "up",
+            "down",
+            "left",
+            "right"
+          ]
+        }
+      }
+    },
+    "waitUntilBody": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "visible": {
+          "$ref": "#/$defs/selector"
+        },
+        "notVisible": {
+          "$ref": "#/$defs/selector"
+        },
+        "timeout": {
+          "type": "number",
+          "minimum": 0
+        },
+        "optional": {
+          "type": "boolean"
+        },
+        "label": {
+          "type": "string"
+        }
+      }
+    },
+    "launchAppBody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "package"
+      ],
+      "properties": {
+        "package": {
+          "type": "string",
+          "minLength": 1
+        },
+        "clearState": {
+          "type": "boolean"
+        },
+        "optional": {
+          "type": "boolean"
+        },
+        "label": {
+          "type": "string"
+        }
+      }
+    },
+    "setResultBody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "data": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

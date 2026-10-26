@@ -1,20 +1,23 @@
-# Phase 0 spike workspace
+# spikes/ — Phase 0 throwaway code
+Purpose: measure the riskiest assumptions on real hardware (plan §18 Phase 0). Nothing here ships.
+Deleted at Gate 1 (task P1-xx / gate G1 step "spikes/ deleted").
+Results go to `docs/SPIKES.md` with numbers, device, API level and commit.
 
-This directory is reserved for throwaway feasibility experiments. It is not a
-production Android module and must be removed before Phase 1.
+| Folder | Spike | Needs device? |
+|---|---|---|
+| s1-python-runtime/ | Chaquopy in two worker processes, AIDL round trip, kill, vendored import | Yes (build runs in CI; run on phone) |
+| s2-accessibility/ | Read/click/set_text/scroll, MediaProjection + auto-accept, launch chain | Yes (phone steps) |
+| s3-background-survival/ | Exact alarm to foreground service, keep-awake, Doze, reboot, 6 h run | Yes (long run) |
+| s4-shell-tier/ | adb tcpip loopback client, secure-settings grant, UiAutomation exclusivity | Yes (PC + USB) |
+| s5-text-input-ime/ | IME commit of Unicode/password text, background clipboard | Yes |
 
-## Planned areas
+Status of every spike: NOT STARTED — waiting for device facts (see docs/PROGRESS.md, Open questions).
 
-- `s1-python/` — Chaquopy, worker-process, AIDL, writable-import, and ABI checks.
-- `s2-accessibility/` — accessibility reads/actions, screenshot consent, and app-launch checks.
-- `s3-background/` — alarm, foreground-service, keep-awake, and recovery checks.
-- `s4-shell/` — ADB transport, shell commands, secure-settings, and UiAutomation checks.
-- `s5-ime/` — text commit, clipboard, and IME-selection checks.
-
-Create an area's files only when its prerequisites and authorization are
-available. Keep measurements and verdicts in `plan/docs/SPIKES.md`; record
-device/API details and unverified paths in `plan/docs/DEVICES.md`.
-
-Do not put production code, credentials, personal screenshots, or copied
-AGPL/GPL code here. The clean-room and attribution requirements in
-`plan/docs/REFERENCES.md` apply to every spike.
+## Phone session script (owner)
+Do these when asked, one at a time. Report back each result in one line.
+1. Settings > About phone: write down model, Android version, build number. Tap Build number 7 times, then Developer options > enable USB debugging.
+2. Connect USB to the PC, accept the RSA prompt on the phone, then run `adb shell getprop ro.product.cpu.abilist` and `adb shell getprop ro.product.model`. Send the output.
+3. Install a debug APK when the agent gives you a link (`adb install -r <file>`), open it and tap Run.
+4. Settings > Accessibility > AutoHost: enable it when asked. If the toggle is greyed out, tell me; that is a known Android 13+ restriction and not expected on Android 10.
+5. For the screenshot spike, approve the screen-capture dialog when it appears, and say if the dialog looks different from what you expect.
+Never paste credentials or personal screenshots into the chat.
