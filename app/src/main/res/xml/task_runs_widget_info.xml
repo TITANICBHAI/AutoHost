@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- P7-09: home widget metadata. Rows of tasks (name, last status, Run button); the content
-     itself is rendered by TaskRunsWidget (Glance). updatePeriodMs is the 30-minute floor —
+     itself is rendered by TaskRunsWidget (Glance). updatePeriodMillis is the 30-minute floor —
      run-status changes refresh the widget from the run collector, not from this timer. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="250dp"
     android:minHeight="110dp"
     android:targetCellWidth="4"
     android:targetCellHeight="2"
-    android:updatePeriodMs="1800000"
+    android:updatePeriodMillis="1800000"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:description="@string/widget_description"
