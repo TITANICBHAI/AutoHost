@@ -91,7 +91,7 @@ class GrantService(private val index: PermissionIndex) {
                 )
             }
         }
-        return rows.sortedBy { it.capability to it.change }
+        return rows.sortedWith(compareBy<ImportReport.GrantDiffRow> { it.capability }.thenBy { it.change })
     }
 
     private fun classifyScopeChange(oldScope: JsonObject, newScope: JsonObject): String {

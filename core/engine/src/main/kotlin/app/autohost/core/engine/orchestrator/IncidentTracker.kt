@@ -1,6 +1,6 @@
 package app.autohost.core.engine.orchestrator
 
-import app.autohost.core.broker.AuditRecord
+import app.autohost.core.broker.interceptor.AuditRecord
 import app.autohost.core.common.Clock
 import java.util.concurrent.ConcurrentHashMap
 

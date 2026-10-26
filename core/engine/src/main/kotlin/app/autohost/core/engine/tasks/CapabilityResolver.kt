@@ -75,7 +75,7 @@ class CapabilityResolver(
                             id = id,
                             status = "DENIED",
                             required = required,
-                            detail = "disabled by the global \"$family\" switch (Settings → Developer & security)",
+                            detail = "disabled by the global \"$feature\" switch (Settings → Developer & security)",
                             fixAction = "OPEN_INSECURE_SWITCH",
                         )
                         return
@@ -122,6 +122,7 @@ class CapabilityResolver(
             // package may be a ${config.*} placeholder; unresolved stays literal and simply won't be installed
             val packageName = resolvePackage(app.packageName, config)
             val info = probe.appInfo(packageName)
+            val minVersionCode = app.minVersionCode?.toLong()
             rows += when {
                 info == null -> ImportReport.CompatRow(
                     kind = "app",
@@ -131,12 +132,12 @@ class CapabilityResolver(
                     detail = "not installed",
                     fixAction = "OPEN_STORE",
                 )
-                app.minVersionCode != null && (info.versionCode ?: 0L) < app.minVersionCode -> ImportReport.CompatRow(
+                minVersionCode != null && (info.versionCode ?: 0L) < minVersionCode -> ImportReport.CompatRow(
                     kind = "app",
                     id = packageName,
                     status = "NEEDS_SETUP",
                     required = true,
-                    detail = "installed version ${info.versionCode} is below required ${app.minVersionCode}",
+                    detail = "installed version ${info.versionCode} is below required $minVersionCode",
                     fixAction = "OPEN_STORE",
                 )
                 else -> ImportReport.CompatRow(

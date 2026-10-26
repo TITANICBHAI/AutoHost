@@ -1,5 +1,6 @@
 package app.autohost.core.broker.interceptor
 
+import app.autohost.core.broker.BrokerInterceptor
 import app.autohost.core.broker.PipelineCall
 import app.autohost.core.model.Envelope
 import kotlinx.serialization.Serializable

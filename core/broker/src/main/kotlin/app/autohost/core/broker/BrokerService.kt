@@ -71,11 +71,16 @@ class BrokerService(
         if (tokens.resolve(token) == null) return buildJsonObject { putJsonObject("capabilities") { } }
         val capabilities = buildJsonObject {
             for (capabilityId in registry.capabilityIds().sorted()) {
-                val best = registry.providers(capabilityId).firstOrNull { it.availability(env) }
+                val candidates = registry.providers(capabilityId).map { provider ->
+                    provider to provider.availability(env)
+                }
+                val best = candidates.firstOrNull { it.second is Availability.Available }
+                    ?: candidates.firstOrNull { it.second is Availability.NeedsSetup }
+                    ?: candidates.firstOrNull { it.second is Availability.Unsupported }
                 putJsonObject(capabilityId) {
-                    put("tier", best?.tier ?: "")
-                    put("provider", best?.providerId ?: "")
-                    when (val availability = best?.availability(env)) {
+                    put("tier", best?.first?.tier ?: "")
+                    put("provider", best?.first?.providerId ?: "")
+                    when (val availability = best?.second) {
                         is Availability.Available -> put("available", true)
                         is Availability.NeedsSetup -> {
                             put("available", false)

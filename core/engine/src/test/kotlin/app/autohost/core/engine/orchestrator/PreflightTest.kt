@@ -52,7 +52,7 @@ class PreflightTest {
         assertEquals(Preflight.Outcome.Wait("SCREEN_OFF", Preflight.SCREEN_RETRY_MS), outcome)
     }
 
-    @Test fun `dismissible keyguard waits; secure lock needs the user`() {
+    @Test fun `dismissible keyguard waits and secure lock needs the user`() {
         assertEquals(
             Preflight.Outcome.Wait("KEYGUARD_DISMISSIBLE", Preflight.KEYGUARD_RETRY_MS),
             Preflight.evaluate(manifest, null, facts(unlocked = false, secure = false)),

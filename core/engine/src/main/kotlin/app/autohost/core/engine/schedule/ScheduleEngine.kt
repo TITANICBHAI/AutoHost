@@ -55,9 +55,11 @@ class ScheduleEngine(private val clock: Clock) {
 
     fun nextFire(rule: ScheduleRule, afterMs: Long, state: ScheduleState = ScheduleState()): Long? {
         val limits = rule.limits
-        if (limits.maxTotalRuns != null && state.runsTotal >= limits.maxTotalRuns) return null
-        if (limits.stopAfterConsecutiveFailures != null &&
-            state.consecutiveFailures >= limits.stopAfterConsecutiveFailures
+        val maxTotalRuns = limits.maxTotalRuns
+        if (maxTotalRuns != null && state.runsTotal >= maxTotalRuns) return null
+        val stopAfterConsecutiveFailures = limits.stopAfterConsecutiveFailures
+        if (stopAfterConsecutiveFailures != null &&
+            state.consecutiveFailures >= stopAfterConsecutiveFailures
         ) {
             return null
         }
@@ -183,21 +185,23 @@ class ScheduleEngine(private val clock: Clock) {
         return null
     }
 
-    private fun dayCandidates(rule: ScheduleRule, day: LocalDate, zone: ZoneId): List<Long> = when (rule.type) {
+    private fun dayCandidates(rule: ScheduleRule, day: LocalDate, zone: ZoneId): List<Long> {
+        return when (rule.type) {
         "daily" -> rule.times.filter { isHhMm(it) }.sorted().map { at(day, it, zone) }
         "weekly" -> {
             if (day.dayOfWeek.value !in rule.days) emptyList()
             else rule.times.filter { isHhMm(it) }.sorted().map { at(day, it, zone) }
         }
         "window" -> {
+            val everyMinutes = rule.everyMinutes
             if (day.dayOfWeek.value !in rule.days || !isHhMm(rule.start) || !isHhMm(rule.end) ||
-                rule.everyMinutes == null
+                everyMinutes == null
             ) {
                 emptyList()
             } else {
                 val first = at(day, rule.start!!, zone)
                 val last = at(day, rule.end!!, zone)
-                val step = rule.everyMinutes * 60_000L
+                val step = everyMinutes * 60_000L
                 generateSequence(first) { it + step }.takeWhile { it < last }.toList()
             }
         }
@@ -216,6 +220,7 @@ class ScheduleEngine(private val clock: Clock) {
             out.sorted()
         }
         else -> emptyList()
+        }
     }
 
     private fun at(day: LocalDate, hhmm: String, zone: ZoneId): Long {

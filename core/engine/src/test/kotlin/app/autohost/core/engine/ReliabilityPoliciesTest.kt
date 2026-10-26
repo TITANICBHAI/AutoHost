@@ -1,6 +1,6 @@
 package app.autohost.core.engine
 
-import app.autohost.core.broker.AuditRecord
+import app.autohost.core.broker.interceptor.AuditRecord
 import app.autohost.core.common.FakeClock
 import app.autohost.core.engine.orchestrator.IdleWatchdogPolicy
 import app.autohost.core.engine.orchestrator.Incident
@@ -9,7 +9,7 @@ import app.autohost.core.engine.orchestrator.RetentionRules
 import app.autohost.core.engine.orchestrator.RetentionPolicy
 import app.autohost.core.engine.orchestrator.ResumePolicy
 import app.autohost.core.engine.orchestrator.RunDirStat
-import app.autohost.core.model.TaskManifest
+import app.autohost.core.model.Execution
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -52,25 +52,25 @@ class ReliabilityPoliciesTest {
 
     @Test
     fun `resume policy starts attempt two by default`() {
-        val decision = ResumePolicy.decide(TaskManifest.Execution(maxAttempts = 3), 1)
+        val decision = ResumePolicy.decide(Execution(maxAttempts = 3), 1)
         assertEquals(ResumePolicy.Decision.Resume(2), decision)
     }
 
     @Test
     fun `resume policy stops when attempts are exhausted`() {
-        val decision = ResumePolicy.decide(TaskManifest.Execution(maxAttempts = 2), 2)
+        val decision = ResumePolicy.decide(Execution(maxAttempts = 2), 2)
         assertEquals(ResumePolicy.Decision.Stop("ATTEMPTS_EXHAUSTED"), decision)
     }
 
     @Test
     fun `resume policy honours auto_resume false`() {
-        val decision = ResumePolicy.decide(TaskManifest.Execution(maxAttempts = 3, autoResume = false), 1)
+        val decision = ResumePolicy.decide(Execution(maxAttempts = 3, autoResume = false), 1)
         assertEquals(ResumePolicy.Decision.Stop("AUTO_RESUME_DISABLED"), decision)
     }
 
     @Test
     fun `resume policy treats maxAttempts below one as a single attempt`() {
-        val decision = ResumePolicy.decide(TaskManifest.Execution(maxAttempts = 0), 1)
+        val decision = ResumePolicy.decide(Execution(maxAttempts = 0), 1)
         assertTrue(decision is ResumePolicy.Decision.Stop)
     }
 

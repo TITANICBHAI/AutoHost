@@ -35,9 +35,9 @@ class ScheduleEngineTest {
     }
 
     private fun jsonValue(v: Any?): String = when (v) {
-        is String -> '"' + v + '"'
+        is String -> "\"$v\""
         is Number, is Boolean -> v.toString()
-        is Map<*, *> -> v.entries.joinToString(",", "{", "}") { (k, mv) -> '"' + k + '":' + jsonValue(mv) }
+        is Map<*, *> -> v.entries.joinToString(",", "{", "}") { (k, mv) -> "\"$k\":${jsonValue(mv)}" }
         is List<*> -> v.joinToString(",", "[", "]") { jsonValue(it) }
         else -> "null"
     }

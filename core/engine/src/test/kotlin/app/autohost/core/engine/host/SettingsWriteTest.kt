@@ -7,6 +7,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -50,7 +52,7 @@ class SettingsWriteTest {
                 put("confirm", JsonPrimitive("true"))
             },
         )
-        assertEquals(ErrorCode.SCOPE_VIOLATION, envelope.errorOrNull()?.codeAsEnum())
+        assertEquals(ErrorCode.SCOPE_VIOLATION.name, envelope.error?.code)
         assertTrue(writer.written.isEmpty())
     }
 
@@ -65,7 +67,7 @@ class SettingsWriteTest {
                 put("value", JsonPrimitive("7"))
             },
         )
-        assertEquals(ErrorCode.SCOPE_VIOLATION, envelope.errorOrNull()?.codeAsEnum())
+        assertEquals(ErrorCode.SCOPE_VIOLATION.name, envelope.error?.code)
         assertTrue(writer.written.isEmpty())
     }
 
@@ -104,7 +106,7 @@ class SettingsWriteTest {
                 put("value", JsonPrimitive("v"))
             },
         )
-        assertEquals(ErrorCode.NEEDS_SETUP, envelope.errorOrNull()?.codeAsEnum())
+        assertEquals(ErrorCode.NEEDS_SETUP.name, envelope.error?.code)
     }
 
     @Test fun `policy verdicts pin the denylist and caps`() {

@@ -22,7 +22,7 @@ class GrantBuilder(
         val grants = LinkedHashMap<String, JsonObject>()
 
         fun grant(need: CapabilityNeed) {
-            val scope = ScopeTemplating.apply(need.scope ?: buildJsonObject(), config, profile)
+            val scope = ScopeTemplating.apply(need.scope ?: buildJsonObject {}, config, profile)
             when {
                 index.isPermission(need.id) -> grants[need.id] = scope
                 index.isCapability(need.id) ->
@@ -39,11 +39,11 @@ class GrantBuilder(
         manifest.needs.optional.forEach(::grant)
 
         // Implicit grants for every run (HANDOFF §3) — never narrower than what the task asked for.
-        for (permission in IMPLICIT) grants.putIfAbsent(permission, buildJsonObject())
+        for (permission in IMPLICIT) grants.putIfAbsent(permission, buildJsonObject {})
 
         // Dev-mode grant-all until the Phase 2 permission review exists. Explicit task scopes stay intact.
         if (devMode) {
-            for (permission in index.allPermissions()) grants.putIfAbsent(permission, buildJsonObject())
+            for (permission in index.allPermissions()) grants.putIfAbsent(permission, buildJsonObject {})
         }
         return grants
     }

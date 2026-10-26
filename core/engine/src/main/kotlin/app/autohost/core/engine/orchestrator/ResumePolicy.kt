@@ -1,6 +1,6 @@
 package app.autohost.core.engine.orchestrator
 
-import app.autohost.core.model.TaskManifest
+import app.autohost.core.model.Execution
 
 /**
  * P5-05 (plan §12.3): the auto-resume decision for an INTERRUPTED run. A resume is a new attempt of
@@ -17,7 +17,7 @@ object ResumePolicy {
         data class Stop(val reason: String) : Decision
     }
 
-    fun decide(execution: TaskManifest.Execution, finishedAttempt: Int): Decision {
+    fun decide(execution: Execution, finishedAttempt: Int): Decision {
         if (!execution.autoResume) return Decision.Stop("AUTO_RESUME_DISABLED")
         val maxAttempts = execution.maxAttempts.coerceAtLeast(1)
         if (finishedAttempt >= maxAttempts) return Decision.Stop("ATTEMPTS_EXHAUSTED")

@@ -12,7 +12,7 @@ data class ReconcileInput(
     val armedFireId: String?,
     val armedAtMs: Long?,
     val nextFireAtMs: Long?,
-    val graceMs: Long = DEFAULT_GRACE_MS,
+    val graceMs: Long = ReconcilePolicy.DEFAULT_GRACE_MS,
     val exactAlarmsAllowed: Boolean,
     val backendKind: String, // alarm | work | job | auto-resolved
 )

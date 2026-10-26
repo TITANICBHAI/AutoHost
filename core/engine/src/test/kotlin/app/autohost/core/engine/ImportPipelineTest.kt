@@ -8,6 +8,7 @@ import app.autohost.core.engine.tasks.ImportScanner
 import app.autohost.core.engine.tasks.ScanReport
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.nio.file.Files
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream

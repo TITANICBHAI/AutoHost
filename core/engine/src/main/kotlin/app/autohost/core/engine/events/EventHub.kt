@@ -37,7 +37,7 @@ class EventHub(private val clock: Clock, private val bufferLimit: Int = DEFAULT_
     }
 
     data class Subscription(val kinds: Set<String>?, internal val id: Long, private val hub: EventHub) {
-        fun dispose() = hub.unsubscribe(id)
+        fun dispose(): Unit = hub.unsubscribe(id)
     }
 
     private val lock = Any()
@@ -53,7 +53,9 @@ class EventHub(private val clock: Clock, private val bufferLimit: Int = DEFAULT_
         Subscription(kinds, id, this)
     }
 
-    private fun unsubscribe(id: Long) = synchronized(lock) { subscribers.remove(id) }
+    private fun unsubscribe(id: Long) {
+        synchronized(lock) { subscribers.remove(id) }
+    }
 
     /** Fan-out to matching subscribers (in registration order) and buffer the event. */
     fun dispatch(event: TriggerEvent) {

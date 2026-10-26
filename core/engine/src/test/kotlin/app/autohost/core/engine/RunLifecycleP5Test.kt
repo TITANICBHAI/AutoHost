@@ -7,12 +7,13 @@ import app.autohost.core.common.FakeClock
 import app.autohost.core.engine.orchestrator.InMemoryRunStore
 import app.autohost.core.engine.orchestrator.RunOrchestrator
 import app.autohost.core.engine.orchestrator.RunRecord
-import app.autohost.core.engine.orchestrator.RunStatus
 import app.autohost.core.engine.orchestrator.StartRequest
 import app.autohost.core.engine.tasks.GrantBuilder
 import app.autohost.core.model.BrokerEvent
 import app.autohost.core.model.CapabilityNeed
+import app.autohost.core.model.Execution
 import app.autohost.core.model.Needs
+import app.autohost.core.model.RunStatus
 import app.autohost.core.model.RuntimeSpec
 import app.autohost.core.model.TaskManifest
 import app.autohost.runtime.api.RuntimeRegistry
@@ -57,7 +58,7 @@ class RunLifecycleP5Test {
                 ),
             ),
         ),
-        execution = TaskManifest.Execution(idleTimeoutSeconds = idleSeconds),
+        execution = Execution(idleTimeoutSeconds = idleSeconds),
     )
 
     private fun request(idleSeconds: Int = 300, checkpoint: kotlinx.serialization.json.JsonObject? = null) = StartRequest(
@@ -162,7 +163,7 @@ class RunLifecycleP5Test {
         )
         advanceUntilIdle()
         assertEquals(RunStatus.FAILED, h.record(second.runId)?.status)
-        assertTrue(h.orchestrator.resume(second.runId, null).isErr)
+        assertTrue(h.orchestrator.resume(second.runId, null).errorOrNull() != null)
     }
 
     @Test

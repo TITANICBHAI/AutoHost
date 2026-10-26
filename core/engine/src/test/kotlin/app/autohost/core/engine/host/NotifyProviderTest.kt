@@ -89,7 +89,7 @@ class NotifyProviderTest {
         assertTrue(bad(buildJsonObject { put("title", ""); put("text", "") }))
         assertTrue(bad(buildJsonObject {
             put("title", "t")
-            put("actions", buildJsonArray { add("not-an-object") })
+            put("actions", buildJsonArray { add(JsonPrimitive("not-an-object")) })
         }))
         assertFalse(
             runBlocking { p.invoke(ctx(), "nope", buildJsonObject { put("title", "t") }) }.ok,

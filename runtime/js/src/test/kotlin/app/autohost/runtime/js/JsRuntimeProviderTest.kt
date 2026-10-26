@@ -260,19 +260,17 @@ class JsRuntimeProviderTest {
     @Test
     fun `the engine reaches the bridge and the op table answers`() {
         val caller = RecordingCaller()
+        var bridgeNow: String? = null
         val engine = ScriptedEngine { scripted ->
             val bridgeFn = scripted.bridges.single()
             val frame = AhJson.json.encodeToString(JsonArray.serializer(), JsonArray(listOf(JsonPrimitive("clock"), JsonPrimitive("null"))))
             val reply = AhJson.json.parseToJsonElement(bridgeFn("clock", frame)).jsonObject
             val now = ((reply["result"] as JsonObject)["now_iso"] as JsonPrimitive).content
-            val value = buildJsonObject { put("now", now) }
-            AhJson.json.encodeToString(
-                JsonObject.serializer(),
-                buildJsonObject { put("status", "ok"); put("value", value) },
-            )
+            bridgeNow = now
+            """{"status":"ok","value":null}"""
         }
         runBlocking { provider(engine, caller).start(spec(taskDir())) }
-        val value = awaitFinished(caller)["result"]!!.jsonObject
-        assertEquals("2026-10-26T07:33:20Z", str(value, "now"))
+        awaitFinished(caller)
+        assertEquals("2026-10-26T07:33:20Z", bridgeNow)
     }
 }

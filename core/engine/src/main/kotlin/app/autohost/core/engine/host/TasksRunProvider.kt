@@ -100,7 +100,7 @@ class TasksRunProvider(private val runner: ChainRunner) : CapabilityProvider {
     }
 
     /** Chain depth of the current run, embedded by the runner at start time. */
-    private fun ctx.runChainDepth(): Int = grants[PERMISSION]?.get("__chain_depth")?.let {
+    private fun CallContext.runChainDepth(): Int = grants[PERMISSION]?.get("__chain_depth")?.let {
         (it as? JsonPrimitive)?.content?.toIntOrNull()
     } ?: 0
 

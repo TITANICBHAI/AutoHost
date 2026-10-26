@@ -67,7 +67,7 @@ class FakeRuntimeProvider : RuntimeProvider {
     val specs = mutableListOf<RunSpec>()
     val handles = mutableListOf<FakeRunHandle>()
     var startError: Throwable? = null
-    var deathListener: ((String) -> Unit)? = null
+    var recordedDeathListener: ((String) -> Unit)? = null
 
     override suspend fun start(spec: RunSpec): RunHandle {
         startError?.let { throw it }
@@ -78,7 +78,7 @@ class FakeRuntimeProvider : RuntimeProvider {
     }
 
     override fun setDeathListener(listener: ((String) -> Unit)?) {
-        deathListener = listener
+        recordedDeathListener = listener
     }
 }
 
@@ -264,7 +264,7 @@ class RunOrchestratorTest {
         h.orchestrator.onEvent(token, BrokerEvent(type = "heartbeat"))
         advanceUntilIdle()
 
-        h.provider.deathListener?.invoke(record.runId)
+        h.provider.recordedDeathListener?.invoke(record.runId)
 
         val run = h.record(record.runId)!!
         assertEquals(RunStatus.INTERRUPTED, run.status)

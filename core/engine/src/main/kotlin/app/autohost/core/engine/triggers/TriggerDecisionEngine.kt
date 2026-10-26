@@ -40,7 +40,8 @@ object TriggerDecisionEngine {
         nowMs: Long,
         debounceElapsed: Boolean = false,
     ): Decision {
-        if (rule.maxLaunchCount != null && state.launchCount >= rule.maxLaunchCount) {
+        val maxLaunchCount = rule.maxLaunchCount
+        if (maxLaunchCount != null && state.launchCount >= maxLaunchCount) {
             return Decision.LimitReached
         }
         if (rule.cooldownSeconds > 0) {

@@ -111,8 +111,10 @@ class BundleExtractor(
         if (!File(staging, entryPath).isFile) {
             throw BundleException("runtime entry \"$entryPath\" is missing from the bundle", "ENTRY_MISSING")
         }
-        if (m.ui.file != null && !File(staging, m.ui.file).isFile) {
-            throw BundleException("ui file \"${m.ui.file}\" is missing from the bundle", "UI_FILE_MISSING")
+        m.ui?.file?.let { uiFile ->
+            if (!File(staging, uiFile).isFile) {
+                throw BundleException("ui file \"$uiFile\" is missing from the bundle", "UI_FILE_MISSING")
+            }
         }
         val digest = sha.digest().joinToString("") { "%02x".format(it) }
         return Staged(staging, digest, text, taskId, version, entryPath)
@@ -124,7 +126,10 @@ class BundleExtractor(
         if (destination.exists()) {
             throw BundleException("version ${staged.version} of ${staged.taskId} is already installed", "VERSION_EXISTS")
         }
-        destination.parentFile?.mkdirs() || throw BundleException("cannot create task dir", "IO")
+        val parent = destination.parentFile ?: throw BundleException("cannot create task dir", "IO")
+        if (!parent.exists() && !parent.mkdirs()) {
+            throw BundleException("cannot create task dir", "IO")
+        }
         if (!staged.dir.renameTo(destination)) {
             // cross-device fallback: copy then clean
             staged.dir.copyRecursively(destination, overwrite = true)

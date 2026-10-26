@@ -30,7 +30,7 @@ import kotlinx.serialization.json.put
 import java.util.concurrent.ConcurrentHashMap
 
 /** Everything the orchestrator needs to launch one run. */
-class StartRequest(
+data class StartRequest(
     val taskId: String,
     val taskName: String,
     val manifest: TaskManifest,

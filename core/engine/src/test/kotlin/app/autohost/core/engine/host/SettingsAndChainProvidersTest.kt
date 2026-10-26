@@ -21,7 +21,7 @@ class SettingsAndChainProvidersTest {
     // ---- device.settings ----------------------------------------------------------------------
 
     @Test fun `settings read returns the value or an honest absence`() = runBlocking {
-        val provider = SystemSettingsProvider { table, key -> if (table == "secure" && key == "k") "v" else null }
+        val provider = SystemSettingsProvider(reader = { table, key -> if (table == "secure" && key == "k") "v" else null })
         val hit = provider.invoke(ctx(), "read", buildJsonObject { put("table", "secure"); put("key", "k") })
         assertEquals("v", hit.result!!.jsonObject["value"]!!.jsonPrimitive.content)
         val miss = provider.invoke(ctx(), "read", buildJsonObject { put("table", "system"); put("key", "nope") })
@@ -30,7 +30,7 @@ class SettingsAndChainProvidersTest {
     }
 
     @Test fun `settings read_many returns only existing keys`() = runBlocking {
-        val provider = SystemSettingsProvider { _, key -> if (key == "a") "1" else null }
+        val provider = SystemSettingsProvider(reader = { _, key -> if (key == "a") "1" else null })
         val result = provider.invoke(ctx(), "read_many", buildJsonObject {
             put("table", "global")
             put("keys", JsonArray(listOf(JsonPrimitive("a"), JsonPrimitive("b"))))
@@ -41,7 +41,7 @@ class SettingsAndChainProvidersTest {
     }
 
     @Test fun `settings table and key are validated`() = runBlocking {
-        val provider = SystemSettingsProvider { _, _ -> null }
+        val provider = SystemSettingsProvider(reader = { _, _ -> null })
         assertEquals(ErrorCode.INVALID_ARGS.name, provider.invoke(ctx(), "read", buildJsonObject { put("table", "x"); put("key", "k") }).error?.code)
         assertEquals(ErrorCode.INVALID_ARGS.name, provider.invoke(ctx(), "read", buildJsonObject { put("table", "system"); put("key", "") }).error?.code)
     }

@@ -55,7 +55,7 @@ class StateProvider(private val checkpoints: CheckpointStore? = null) : Capabili
             Envelope.ok()
         }
         "stage_end" -> {
-            update(ctx.runId) { it.minus("stage").minus("stage_status") }
+            update(ctx.runId) { JsonObject(it.minus("stage").minus("stage_status")) }
             Envelope.ok()
         }
         else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown state method '$method'")

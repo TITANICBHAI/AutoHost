@@ -3,6 +3,7 @@ package app.autohost.core.engine.tasks
 import app.autohost.core.common.AhJson
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import java.io.File
 
 /**
  * P2-05: manifest schema migrations (plan §8.5) + semver comparison + removal policy.

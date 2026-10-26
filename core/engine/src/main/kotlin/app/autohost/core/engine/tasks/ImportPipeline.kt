@@ -169,7 +169,15 @@ class ImportPipeline(
     }
 
     private fun failure(source: String, bundleName: String, rule: String, message: String) =
-        ImportReport(source = source, bundleName = bundleName, sha256 = "", errors = listOf(ImportReport.Issue("", rule, message)))
+        ImportReport(
+            source = source,
+            bundleName = bundleName,
+            sha256 = "",
+            taskId = null,
+            taskName = null,
+            version = null,
+            errors = listOf(ImportReport.Issue("", rule, message)),
+        )
 
     private fun manifestSummary(manifest: app.autohost.core.model.TaskManifest): String =
         "${manifest.runtime.type} · ${manifest.needs.capabilities.size} capabilities · ${manifest.needs.apps.size} apps"

@@ -176,7 +176,7 @@ class BundleExtractorTest {
 
     @Test
     fun `oversized entries are rejected`() {
-        val big = ByteArray(BundleExtractor.MAX_ENTRY_BYTES + 1) { 0 }
+        val big = ByteArray((BundleExtractor.MAX_ENTRY_BYTES + 1).toInt()) { 0 }
         val zip = zipOf(
             "task.json" to manifest.encodeToByteArray(),
             "main.py" to big,
