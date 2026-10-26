@@ -13,8 +13,8 @@ android {
     defaultConfig {
         minSdk = 29
         ndk {
-            // Phone ABIs plus x86_64 for emulators (docs/DEVICES.md records the verified set).
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+            // 64-bit phone ABI plus x86_64 for emulators. Chaquopy Python 3.13 is 64-bit only.
+            abiFilters += listOf("arm64-v8a", "x86_64")
         }
     }
 

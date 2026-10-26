@@ -1,2 +1,3 @@
 - [GitHub push setup](github-push-setup.md) — Keep Replit-to-GitHub pushes configured with only the GitHub token as a required secret.
 - [Replit verification workflows](replit-verification-workflows.md) — Bootstrap tools in project scripts, use separate Replit console workflows, and keep GitHub push isolated.
+- [Android target-device compatibility](android-target-devices.md) — Realme C3 reports Android 11/API 30 and arm64; user selected Python 3.13 without 32-bit ARM.
