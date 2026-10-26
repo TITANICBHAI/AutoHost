@@ -10,7 +10,7 @@ autohost_prepare_android_build_env
 
 echo "== AutoHost core debug APK and fixture build =="
 echo "Started: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
- "$AUTOHOST_GRADLE_BIN" :app:assembleCoreDebug :testing:fixture-app:assembleDebug \
+"$AUTOHOST_GRADLE_BIN" :app:assembleCoreDebug :testing:fixture-app:assembleDebug \
   --console=plain --stacktrace
 
 apk_path="app/build/outputs/apk/core/debug/app-core-debug.apk"

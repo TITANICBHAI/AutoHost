@@ -15,6 +15,17 @@ run() {
   "$@"
 }
 
+check_generated_file_unchanged() {
+  local path="$1"
+  printf '\n==> compare %s with the Git index\n' "$path"
+  if git show ":$path" | cmp -s - "$path"; then
+    echo "generated file is unchanged"
+  else
+    echo "ERROR: Generated file differs from the Git index: $path" >&2
+    return 1
+  fi
+}
+
 echo "== AutoHost Python verification =="
 echo "Started: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 "$PYTHON_BIN" --version
@@ -33,9 +44,9 @@ run "$PYTHON_BIN" tools/sync_sdk.py --check
 echo
 echo "== Golden-vector drift checks =="
 run "$PYTHON_BIN" tools/gen_flow_vectors.py
-run git diff --exit-code -- testing/golden/flow_vectors.json
+check_generated_file_unchanged testing/golden/flow_vectors.json
 run "$PYTHON_BIN" tools/gen_schedule_vectors.py
-run git diff --exit-code -- testing/golden/schedule_vectors.json
+check_generated_file_unchanged testing/golden/schedule_vectors.json
 
 echo
 echo "== Licence and MCP checks =="
