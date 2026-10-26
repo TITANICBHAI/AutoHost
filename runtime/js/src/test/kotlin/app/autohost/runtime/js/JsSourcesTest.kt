@@ -90,6 +90,4 @@ class JsSourcesTest {
         val loader = JsSources.moduleLoaderFor(dir)!!
         assertNull("over-capped lib dir refuses everything", loader("./lib/m0.js"))
     }
-
-    private fun fail(message: String): Nothing = org.junit.Assert.fail(message)
 }

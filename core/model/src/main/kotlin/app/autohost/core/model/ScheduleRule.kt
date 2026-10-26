@@ -68,10 +68,10 @@ data class ScheduleRule(
                 if (times.isEmpty()) problems += "$type needs a non-empty times list"
                 times.forEach { if (!isHhMm(it)) problems += "times entry '$it' must be HH:MM" }
             }
-            "cron" -> if (cron == null || runCatching { CronSpec.parse(cron) }.isFailure) {
+            "cron" -> if (cron?.let { runCatching { CronSpec.parse(it) }.isSuccess } != true) {
                 problems += "cron must be a restricted 5-field expression"
             }
-            "once" -> if (at == null || runCatching { parseIsoToMs(at) }.isFailure) {
+            "once" -> if (at?.let { runCatching { parseIsoToMs(it) }.isSuccess } != true) {
                 problems += "once at must be an ISO-8601 timestamp with offset"
             }
             "window" -> {

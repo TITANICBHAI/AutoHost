@@ -22,18 +22,18 @@ sealed interface AhResult<out T> {
         is Err -> throw IllegalStateException("AhResult is Err: ${error.code} ${error.message}")
     }
 
-    inline fun <R> map(transform: (T) -> R): AhResult<R> = when (this) {
+    fun <R> map(transform: (T) -> R): AhResult<R> = when (this) {
         is Ok -> Ok(transform(value))
         is Err -> this
     }
 
-    inline fun <R> flatMap(transform: (T) -> AhResult<R>): AhResult<R> = when (this) {
+    fun <R> flatMap(transform: (T) -> AhResult<R>): AhResult<R> = when (this) {
         is Ok -> transform(value)
         is Err -> this
     }
 
     /** Runs [block] when this is [Err] (side effects such as logging), then returns this unchanged. */
-    inline fun onErr(block: (AhError) -> Unit): AhResult<T> {
+    fun onErr(block: (AhError) -> Unit): AhResult<T> {
         if (this is Err) block(error)
         return this
     }

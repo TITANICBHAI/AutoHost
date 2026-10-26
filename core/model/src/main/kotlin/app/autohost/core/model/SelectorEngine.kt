@@ -59,9 +59,9 @@ object SelectorEngine {
     internal fun boundsHold(node: Bounds, b: BoundsFilter): Boolean {
         val (l, t, r, bt) = listOf(b.left ?: Int.MIN_VALUE, b.top ?: Int.MIN_VALUE, b.right ?: Int.MAX_VALUE, b.bottom ?: Int.MAX_VALUE)
         return if (b.mode == "overlaps") {
-            node.bounds.l < r && node.bounds.r > l && node.bounds.t < bt && node.bounds.b > t
+            node.l < r && node.r > l && node.t < bt && node.b > t
         } else {
-            node.bounds.l >= l && node.bounds.t >= t && node.bounds.r <= r && node.bounds.b <= bt
+            node.l >= l && node.t >= t && node.r <= r && node.b <= bt
         }
     }
 

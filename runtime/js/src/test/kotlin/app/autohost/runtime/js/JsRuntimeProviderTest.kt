@@ -23,7 +23,6 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -133,9 +132,9 @@ class JsRuntimeProviderTest {
         )
 
     private fun finished(caller: RecordingCaller): JsonObject {
-        val event = caller.events.lastOrNull {
+        val event = checkNotNull(caller.events.lastOrNull {
             (it.second)["type"]?.let { t -> (t as? JsonPrimitive)?.content } == "finished"
-        } ?: fail("no finished event among ${caller.events.size}")
+        }) { "no finished event among ${caller.events.size}" }
         return event.second["data"]!!.jsonObject
     }
 

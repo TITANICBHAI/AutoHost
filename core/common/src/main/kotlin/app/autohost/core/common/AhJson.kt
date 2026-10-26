@@ -1,5 +1,6 @@
 package app.autohost.core.common
 
+import app.autohost.core.model.ErrorCode
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -19,10 +20,15 @@ object AhJson {
         prettyPrint = false
     }
 
-    fun parseObject(text: String): AhResult<JsonObject> = try {
-        AhResult.ok(json.parseToJsonElement(text).let { it as? JsonObject ?: return AhResult.err(ErrorCode.INVALID_ARGS, "expected a JSON object") })
-    } catch (e: Exception) {
-        AhResult.err(ErrorCode.INVALID_ARGS, "malformed JSON: ${e.message}")
+    fun parseObject(text: String): AhResult<JsonObject> {
+        return try {
+            val element = json.parseToJsonElement(text)
+            val obj = element as? JsonObject
+                ?: return AhResult.err(ErrorCode.INVALID_ARGS, "expected a JSON object")
+            AhResult.ok(obj)
+        } catch (e: Exception) {
+            AhResult.err(ErrorCode.INVALID_ARGS, "malformed JSON: ${e.message}")
+        }
     }
 
     /** Lenient decode for envelope/args arriving over Binder: blank means "empty object". */
@@ -35,11 +41,15 @@ object AhJson {
         }
     }
 
-    fun parseArray(text: String): AhResult<JsonArray> = try {
-        val element = json.parseToJsonElement(text)
-        AhResult.ok(element as? JsonArray ?: return AhResult.err(ErrorCode.INVALID_ARGS, "expected a JSON array"))
-    } catch (e: Exception) {
-        AhResult.err(ErrorCode.INVALID_ARGS, "malformed JSON: ${e.message}")
+    fun parseArray(text: String): AhResult<JsonArray> {
+        return try {
+            val element = json.parseToJsonElement(text)
+            val array = element as? JsonArray
+                ?: return AhResult.err(ErrorCode.INVALID_ARGS, "expected a JSON array")
+            AhResult.ok(array)
+        } catch (e: Exception) {
+            AhResult.err(ErrorCode.INVALID_ARGS, "malformed JSON: ${e.message}")
+        }
     }
 
     /** Human-stable compact rendering used in logs and dumps. */

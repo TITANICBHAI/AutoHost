@@ -10,7 +10,6 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonElement
@@ -19,7 +18,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.io.File
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -109,20 +107,15 @@ class JsRuntimeProvider(
         // The engine runs on a dedicated daemon thread: script evaluation blocks, and blocking a
         // dispatcher pool thread for a whole run is not acceptable. The coroutine only awaits.
         val engineThread = Thread({
-            val future = CompletableFuture<String>()
-            try {
-                future.complete(
-                    engine.runEntry(
-                        preludeSource = JsPrelude.source(),
-                        entrySource = entrySource,
-                        entryName = entryFile.name,
-                        moduleLoader = JsSources.moduleLoaderFor(taskPath),
-                    ),
+            val outcome = runCatching {
+                engine.runEntry(
+                    preludeSource = JsPrelude.source(),
+                    entrySource = entrySource,
+                    entryName = entryFile.name,
+                    moduleLoader = JsSources.moduleLoaderFor(taskPath),
                 )
-            } catch (e: Throwable) {
-                future.completeExceptionally(e)
             }
-            outcomeDeferred.complete(future.getOrNull())
+            outcomeDeferred.complete(outcome.getOrNull())
         }, "autohost-js-${spec.runId}")
         engineThread.isDaemon = true
 
@@ -227,7 +220,7 @@ class JsRuntimeProvider(
             stack?.let { put("traceback", it) }
         }
 
-    private fun heartbeatLoop(runToken: String) {
+    private suspend fun heartbeatLoop(runToken: String) {
         while (true) {
             emitEvent(runToken, buildJsonObject { put("type", "heartbeat") })
             delay(heartbeatIntervalMs)

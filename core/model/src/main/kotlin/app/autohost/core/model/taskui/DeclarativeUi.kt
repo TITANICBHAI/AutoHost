@@ -139,7 +139,7 @@ data class DeclarativeUi(val version: Int, val title: String?, val body: List<Ui
                                     "$path.items[$i].children", depth + 1),
                             )
                         },
-                        whenExpr = whenExpr,
+                        whenVisible = whenExpr,
                     )
                 }
                 "text" -> UiWidget.Text(value = str("value"),
