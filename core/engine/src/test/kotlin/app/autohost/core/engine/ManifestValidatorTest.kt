@@ -191,15 +191,18 @@ class ManifestValidatorTest {
             "samples/http-check", "samples/press-button-flow",
         )
         val dir = System.getProperty("user.dir")
+        val repoRoot = generateSequence(java.io.File(dir).absoluteFile) { it.parentFile }
+            .firstOrNull { java.io.File(it, "samples").isDirectory }
+            ?: throw AssertionError("samples directory not found from $dir")
         var checked = 0
         for (sample in samplesRoots) {
-            val file = java.io.File(dir, "$sample/task.json")
-            if (!file.isFile) continue // samples live at repo root when tests run from there
+            val file = java.io.File(repoRoot, "$sample/task.json")
+            if (!file.isFile) continue
             val (manifest, result) = ManifestValidator.validateJson(file.readText())
             assertTrue("$sample: ${result.errors}", result.ok)
             assertNotNull(manifest)
             checked += 1
         }
-        assertTrue("no samples found from $dir", checked >= 3)
+        assertTrue("no samples found from $repoRoot", checked >= 3)
     }
 }

@@ -20,6 +20,7 @@ import app.autohost.core.model.RunPaths
 import app.autohost.core.model.TriggerInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
@@ -69,7 +70,9 @@ class RunOrchestrator(
     private val lastActivity = ConcurrentHashMap<String, Long>()
     private val idleWarned = ConcurrentHashMap.newKeySet<String>()
 
-    private val monitorScope = CoroutineScope(scope.coroutineContext + Job())
+    private val monitorScope = CoroutineScope(
+        scope.coroutineContext + SupervisorJob(scope.coroutineContext[Job]),
+    )
 
     init {
         // Heartbeat-loss watchdog: only RUNNING runs are judged; STARTING gets generous start time.

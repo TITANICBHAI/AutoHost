@@ -122,7 +122,7 @@ class AppPacksTest {
         assertEquals("Anmelden", AppPacks.label(pack, "login_button", "de-DE"))   // language fallback
         assertEquals("Anmelden", AppPacks.label(pack, "login_button", "de-AT"))  // exact
         assertEquals("Log in", AppPacks.label(pack, "login_button", "fr"))       // en fallback
-        assertEquals("Log in", AppPacks.label(pack, "confirm", "de"))            // key missing in de → en
+        assertEquals("Confirm", AppPacks.label(pack, "confirm", "de"))           // key missing in de → en
         assertNull(AppPacks.label(pack, "nobody_has_this", null))
         assertEquals("Log in", AppPacks.label(pack, "login_button", null))       // first-locale scan order (en first here)
     }

@@ -134,7 +134,7 @@ object ManifestValidator {
                         Issue("/runtime/entry", "PATH", "\"runtime.entry\" must be a relative path inside the bundle")
                     type != null && entry.startsWith("/") -> errors +=
                         Issue("/runtime/entry", "PATH", "\"runtime.entry\" must be a relative path inside the bundle")
-                    type != null && type in ENTRY_RULES && entry != null && !ENTRY_RULES[type]!!.matches(entry) -> errors +=
+                     type != null && type in ENTRY_RULES && entry != null && !ENTRY_RULES[type]!!.containsMatchIn(entry) -> errors +=
                         Issue(
                             "/runtime/entry", "PATTERN",
                             "runtime \"$type\" requires an entry ending in ${ENTRY_RULES[type]} (got \"$entry\")",

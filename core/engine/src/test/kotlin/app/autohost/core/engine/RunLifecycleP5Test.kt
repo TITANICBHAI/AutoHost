@@ -20,7 +20,7 @@ import app.autohost.runtime.api.RuntimeRegistry
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
@@ -107,10 +107,10 @@ class RunLifecycleP5Test {
     fun `pause flips the record to PAUSED and resume back to RUNNING`() = runTest {
         val h = harness()
         val record = h.orchestrator.start(request()).getOrNull()!!
-        advanceUntilIdle()
+        runCurrent()
         val token = h.provider.specs.first().runToken
         h.orchestrator.onEvent(token, BrokerEvent(type = "heartbeat"))
-        advanceUntilIdle()
+        runCurrent()
 
         assertTrue(h.orchestrator.requestPause(record.runId))
         assertEquals(RunStatus.PAUSED, h.record(record.runId)?.status)
@@ -123,18 +123,18 @@ class RunLifecycleP5Test {
         val h = harness()
         val checkpoint = buildJsonObject { put("stage:one", "done") }
         val record = h.orchestrator.start(request(checkpoint = checkpoint)).getOrNull()!!
-        advanceUntilIdle()
+        runCurrent()
         val token = h.provider.specs.first().runToken
 
         h.orchestrator.onEvent(
             token,
             BrokerEvent(type = "finished", data = buildJsonObject { put("status", "WAITING_USER"); put("reason", "CAPTCHA") }),
         )
-        advanceUntilIdle()
+        runCurrent()
         assertEquals(RunStatus.WAITING_USER, h.record(record.runId)?.status)
 
         val resumed = h.orchestrator.resume(record.runId, checkpoint)
-        advanceUntilIdle()
+        runCurrent()
         val updated = resumed.getOrNull()!!
         assertEquals(RunStatus.STARTING, updated.status)
         val spec = h.provider.specs.last()
@@ -147,21 +147,21 @@ class RunLifecycleP5Test {
     fun `INTERRUPTED run can be resumed but a FAILED run cannot`() = runTest {
         val h = harness()
         val record = h.orchestrator.start(request()).getOrNull()!!
-        advanceUntilIdle()
+        runCurrent()
         val token = h.provider.specs.first().runToken
 
         h.orchestrator.onWorkerDeath(record.runId)
-        advanceUntilIdle()
+        runCurrent()
         assertEquals(RunStatus.INTERRUPTED, h.record(record.runId)?.status)
         assertTrue(h.orchestrator.resume(record.runId, null).isOk)
 
         val second = h.orchestrator.start(request()).getOrNull()!!
-        advanceUntilIdle()
+        runCurrent()
         h.orchestrator.onEvent(
             h.provider.specs.last().runToken,
             BrokerEvent(type = "finished", data = buildJsonObject { put("status", "FAILED"); put("reason", "EXCEPTION") }),
         )
-        advanceUntilIdle()
+        runCurrent()
         assertEquals(RunStatus.FAILED, h.record(second.runId)?.status)
         assertTrue(h.orchestrator.resume(second.runId, null).errorOrNull() != null)
     }
@@ -171,10 +171,10 @@ class RunLifecycleP5Test {
         val h = harness()
         h.orchestrator.idleLimitMs = { 100_000L }
         val record = h.orchestrator.start(request(idleSeconds = 100)).getOrNull()!!
-        advanceUntilIdle()
+        runCurrent()
         val token = h.provider.specs.first().runToken
         h.orchestrator.onEvent(token, BrokerEvent(type = "heartbeat")) // baseline activity
-        advanceUntilIdle()
+        runCurrent()
 
         // the worker heartbeat thread keeps emitting; the script never makes a broker call again.
         // The idle monitor polls every 2 s (virtual delay) against the fake clock (advance).
@@ -183,7 +183,7 @@ class RunLifecycleP5Test {
             h.orchestrator.onEvent(token, BrokerEvent(type = "heartbeat")) // not activity (P5-07)
             advanceTimeBy(2_000)
         }
-        advanceUntilIdle()
+        runCurrent()
 
         val run = h.record(record.runId)!!
         assertEquals(RunStatus.FAILED, run.status)
@@ -198,7 +198,7 @@ class RunLifecycleP5Test {
         val h = harness()
         h.orchestrator.idleLimitMs = { 100_000L }
         val record = h.orchestrator.start(request(idleSeconds = 100)).getOrNull()!!
-        advanceUntilIdle()
+        runCurrent()
         val token = h.provider.specs.first().runToken
 
         repeat(10) {
@@ -206,7 +206,7 @@ class RunLifecycleP5Test {
             h.clock.advance(10_000)
             advanceTimeBy(2_000)
         }
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(RunStatus.RUNNING, h.record(record.runId)?.status)
     }

@@ -22,7 +22,7 @@ import app.autohost.runtime.api.RuntimeRegistry
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
@@ -153,7 +153,7 @@ class RunOrchestratorTest {
     fun `given task when started then starting and spec carries grants and implicit`() = runTest {
         val h = harness()
         val record = h.orchestrator.start(request()).getOrNull()!!
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(RunStatus.STARTING, h.record(record.runId)?.status)
         assertEquals(1, h.provider.specs.size)
@@ -173,11 +173,11 @@ class RunOrchestratorTest {
     fun `given heartbeat when emitted then run becomes running`() = runTest {
         val h = harness()
         val record = h.orchestrator.start(request()).getOrNull()!!
-        advanceUntilIdle()
+        runCurrent()
         val token = h.provider.specs.first().runToken
 
         h.orchestrator.onEvent(token, BrokerEvent(type = "heartbeat"))
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(RunStatus.RUNNING, h.record(record.runId)?.status)
     }
@@ -186,7 +186,7 @@ class RunOrchestratorTest {
     fun `given finished succeeded then terminal and token revoked`() = runTest {
         val h = harness()
         val record = h.orchestrator.start(request()).getOrNull()!!
-        advanceUntilIdle()
+        runCurrent()
         val token = h.provider.specs.first().runToken
 
         h.orchestrator.onEvent(
@@ -199,7 +199,7 @@ class RunOrchestratorTest {
                 },
             ),
         )
-        advanceUntilIdle()
+        runCurrent()
 
         val run = h.record(record.runId)!!
         assertEquals(RunStatus.SUCCEEDED, run.status)
@@ -211,7 +211,7 @@ class RunOrchestratorTest {
     fun `given failed outcome then status failed with reason and message`() = runTest {
         val h = harness()
         val record = h.orchestrator.start(request()).getOrNull()!!
-        advanceUntilIdle()
+        runCurrent()
         val token = h.provider.specs.first().runToken
 
         h.orchestrator.onEvent(
@@ -225,7 +225,7 @@ class RunOrchestratorTest {
                 },
             ),
         )
-        advanceUntilIdle()
+        runCurrent()
 
         val run = h.record(record.runId)!!
         assertEquals(RunStatus.FAILED, run.status)
@@ -237,19 +237,19 @@ class RunOrchestratorTest {
     fun `given cancel while running then handle cancelled and killed after deadline`() = runTest {
         val h = harness()
         val record = h.orchestrator.start(request()).getOrNull()!!
-        advanceUntilIdle()
+        runCurrent()
         val token = h.provider.specs.first().runToken
         h.orchestrator.onEvent(token, BrokerEvent(type = "heartbeat"))
-        advanceUntilIdle()
+        runCurrent()
         val handle = h.provider.handles.first()
 
         assertTrue(h.orchestrator.cancel(record.runId))
-        advanceUntilIdle()
+        runCurrent()
         assertTrue(handle.cancelled)
         assertFalse(handle.killed) // deadline not reached
 
         advanceTimeBy(RunOrchestrator.CANCEL_KILL_DELAY_MS + 1_000)
-        advanceUntilIdle()
+        runCurrent()
         assertTrue(handle.killed)
         assertEquals(RunStatus.CANCELLED, h.record(record.runId)?.status)
         assertNull(h.tokens.resolve(token))
@@ -259,10 +259,10 @@ class RunOrchestratorTest {
     fun `given worker death while running then interrupted and token revoked`() = runTest {
         val h = harness()
         val record = h.orchestrator.start(request()).getOrNull()!!
-        advanceUntilIdle()
+        runCurrent()
         val token = h.provider.specs.first().runToken
         h.orchestrator.onEvent(token, BrokerEvent(type = "heartbeat"))
-        advanceUntilIdle()
+        runCurrent()
 
         h.provider.recordedDeathListener?.invoke(record.runId)
 
@@ -275,16 +275,16 @@ class RunOrchestratorTest {
     fun `given heartbeat stops when watchdog ticks with stale clock then interrupted`() = runTest {
         val h = harness()
         val record = h.orchestrator.start(request()).getOrNull()!!
-        advanceUntilIdle()
+        runCurrent()
         val token = h.provider.specs.first().runToken
         h.orchestrator.onEvent(token, BrokerEvent(type = "heartbeat"))
-        advanceUntilIdle()
+        runCurrent()
 
         // The watchdog compares the orchestrator's monotonic clock; advance it past the threshold, then let
         // the virtual delay in the watchdog loop fire.
         h.clock.advance(30_000)
         advanceTimeBy(3_000)
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(RunStatus.INTERRUPTED, h.record(record.runId)?.status)
     }
@@ -299,7 +299,7 @@ class RunOrchestratorTest {
             AppDispatchers(dispatcher, dispatcher, dispatcher), backgroundScope,
         )
         val record = orchestrator.start(request()).getOrNull()!!
-        advanceUntilIdle()
+        runCurrent()
         val run = store.get(record.runId)!!
         assertEquals(RunStatus.FAILED, run.status)
         assertEquals("NO_RUNTIME", run.reason)
@@ -318,7 +318,7 @@ class RunOrchestratorTest {
             AppDispatchers(dispatcher, dispatcher, dispatcher), backgroundScope,
         )
         orchestrator.start(request())
-        advanceUntilIdle()
+        runCurrent()
         val run = store.runs.value.first()
         assertEquals(RunStatus.FAILED, run.status)
         assertEquals("START_FAILED", run.reason)
@@ -328,13 +328,13 @@ class RunOrchestratorTest {
     fun `given progress stage and result events then record reflects them`() = runTest {
         val h = harness()
         val record = h.orchestrator.start(request()).getOrNull()!!
-        advanceUntilIdle()
+        runCurrent()
         val token = h.provider.specs.first().runToken
 
         h.orchestrator.onEvent(token, BrokerEvent(type = "stage_begin", stage = "find_button"))
         h.orchestrator.onEvent(token, BrokerEvent(type = "progress", data = buildJsonObject { put("progress", 0.5) }))
         h.orchestrator.onEvent(token, BrokerEvent(type = "result", data = buildJsonObject { put("code", "OK") }))
-        advanceUntilIdle()
+        runCurrent()
 
         val run = h.record(record.runId)!!
         assertEquals("find_button", run.stage)
@@ -346,7 +346,7 @@ class RunOrchestratorTest {
     fun `given unknown token when event emitted then dropped without crash`() = runTest {
         val h = harness()
         h.orchestrator.onEvent("bogus-token", BrokerEvent(type = "heartbeat"))
-        advanceUntilIdle()
+        runCurrent()
         assertTrue(h.provider.specs.isEmpty())
     }
 }
