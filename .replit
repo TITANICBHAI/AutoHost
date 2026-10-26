@@ -8,28 +8,7 @@ packages = ["gradle", "jdk17", "libyaml"]
 expertMode = true
 
 [workflows]
-runButton = "Project"
-
-[[workflows.workflow]]
-name = "Project"
-mode = "parallel"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Push to GitHub"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "AutoHost Python verification"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "AutoHost JVM tests"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "AutoHost debug APK build"
+runButton = "AutoHost Python verification"
 
 [[workflows.workflow]]
 name = "Push to GitHub"
