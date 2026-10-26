@@ -126,8 +126,8 @@ Tasks 1/213 · Gate items 0/70 · Capabilities 0/46 · WIP 0 · Blocked 1
   - evidence: interceptor chain Audit→Auth→Provider→Grant→Scope (BrokerPipeline, BrokerService, BrokerBinder); BrokerPipelineTest covers unknown token, not-granted, out-of-scope, unavailable, success, audit — awaiting Gradle/device verification
 - [ ] **P1-08** (WRITTEN) `runtime:python`: Chaquopy, worker services, PyBridge, WorkerGraph [L]
   - evidence: `runtime:python` — Chaquopy 3.13 block, PythonRuntimeProvider, PyBridge, BaseTaskWorkerService + TaskWorkerService0..3 (`:w0..:w3` processes) + UiHandlerWorkerService — awaiting Gradle/device verification
-- [ ] **P1-09** (WRITTEN) Python SDK v0 (ctx, log, errors, device.app, device.ui basics) + stubs wired [M]
-  - evidence: `sdk-python/autohost` — _ctx/_core/_log/_envelope, device/, ui, errors + .pyi stubs; SDK test suite green (95 tests) — awaiting owner's device session
+- [ ] **P1-09** (WRITTEN) Python SDK v0 (ctx, log, errors, device.app, device.ui basics) + stubs wired [M] (FAILING: test environment lacks PyYAML)
+  - evidence: `sdk-python/autohost` — _ctx/_core/_log/_envelope, device/, ui, errors + .pyi stubs; prior session reported 95 tests green. Latest local run 2026-10-26: `cd sdk-python && python3 -m unittest discover -s tests -t tests -p "test_*.py"` ran 415 tests and failed with 2 errors because `yaml`/PyYAML is unavailable (Python 3.12.12, Replit Linux). Rerun after adding the test dependency; phone verification remains pending.
 - [ ] **P1-10** (WRITTEN) Run lifecycle v0 (start/finish/fail/cancel-kill/heartbeat) [L]
   - evidence: `core/engine/orchestrator` — RunOrchestrator (start/finish/fail/cancel-kill/heartbeat→INTERRUPTED), RunStateMachine, InMemoryRunStore, HeartbeatMonitor + RunOrchestratorTest/RunStateMachineTest; SDK `_runtime.py` — awaiting Gradle/device verification
 - [ ] **P1-11** (WRITTEN) RunForegroundService + notification with Stop (version-guarded `startForeground`) [M]
@@ -217,8 +217,8 @@ Tasks 1/213 · Gate items 0/70 · Capabilities 0/46 · WIP 0 · Blocked 1
   - evidence: Dev API v0 methods (ping/system, ui snapshot/find/click, app.launch, tasks.*, runs.*) via AppDevApiBackend + AppGraph.callAsDevApi; DevApiTest — awaiting Gradle/device verification
 - [ ] **P2-23** (WRITTEN) `autohost` CLI v0 (push, run, logs, ui dump) [M]
   - evidence: `autohost` CLI v0 (push/run/logs/ui dump) in `sdk-python/autohost_cli`; test_cli.py green — awaiting owner's device session
-- [ ] **P2-24** (WRITTEN) CI validates samples against schemas [S]
-  - evidence: .github/workflows/ci.yml validates samples against the schemas (jsonschema_mini) + tests/test_schemas.py (29 tests green)
+- [ ] **P2-24** (WRITTEN) CI validates samples against schemas [S] (FAILING: test environment lacks PyYAML)
+  - evidence: `.github/workflows/ci.yml` runs `python3 -m unittest discover -s tests -p "test_*.py"`. Prior session reported 29 tests green. Latest local run 2026-10-26 ran 35 tests and failed with 1 error because `yaml`/PyYAML is unavailable (Python 3.12.12, Replit Linux); rerun after adding the test dependency.
 
 ### Gate (see docs/GATES.md)
 - [ ] **G2-a** Two tasks × two profiles stay separate — `docs/GATES.md#g2-a`
@@ -392,8 +392,8 @@ Tasks 1/213 · Gate items 0/70 · Capabilities 0/46 · WIP 0 · Blocked 1
   - evidence: autohost_cli/__main__.py += pull-run (saves <runId>.aarun), screenshot, enable-shell (prints adb tcpip steps), grant-secure-settings (prints the pm grant + what it changes), docs --pack, mcp; client.py += screenshot/export_run/health_checks/triggers_*/save_bundle
 - [ ] **P5-13** (WRITTEN) `autohost mcp` server + tools [L]
   - evidence: autohost_cli/mcp_server.py — line-delimited JSON-RPC over stdio (initialize/tools/list/tools/call/ping), the ten §5.6 tools (get_device_state, dump_ui, try_selector, screenshot, push_task, run_task, get_run, tail_logs, export_run, diagnose), DevApiError → isError results; test_mcp_server.py (14 tests)
-- [ ] **P5-14** (WRITTEN) MCP eval scenarios [M]
-  - evidence: testing/mcp-evals/{inspect-device,author-run,failure-export}.yaml + tools/mcp_eval.py (drives McpServer.handle with a scripted client; expect_contains/expect_not_contains/expect_json_path); all 3 PASS; exit code CI-gateable
+- [ ] **P5-14** (WRITTEN) MCP eval scenarios [M] (FAILING: test environment lacks PyYAML)
+  - evidence: `testing/mcp-evals/{inspect-device,author-run,failure-export}.yaml` + `tools/mcp_eval.py` (drives McpServer.handle with a scripted client; expect_contains/expect_not_contains/expect_json_path); prior session reported all 3 PASS. Latest local run 2026-10-26 failed at import because `yaml`/PyYAML is unavailable (Python 3.12.12, Replit Linux); rerun after adding the test dependency.
 - [ ] **P5-15** (WRITTEN) Generated artifacts pipeline + drift test [L]
   - evidence: tools/gen_artifacts.py generates docs/CAPABILITIES.md + sdk-python/autohost/_capabilities_gen.py from schemas/capability-specs.w1.json; --check drift mode; test_gen_artifacts.py asserts in-sync + detects a doctored spec
 - [ ] **P5-16** (WRITTEN) Skill-format agent pack generator [M]
@@ -677,8 +677,8 @@ Tasks 1/213 · Gate items 0/70 · Capabilities 0/46 · WIP 0 · Blocked 1
 - Not covered by this work: anything that needs Android (accessibility, screenshots, IME, alarms, Chaquopy, the broker AIDL). These remain gated on a phone and on a Kotlin build, neither of which is available here.
 
 ## Cross-cutting
-- [ ] **X-01** CI green on every commit (check, lint, schemas, progress --check) [M]
-  - evidence:
+- [ ] **X-01** CI green on every commit (check, lint, schemas, progress --check) [M] (FAILING: latest GitHub Actions run failed)
+  - evidence: GitHub Actions run `40296709326` on `main` / commit `7cc51cd` (2026-10-26) failed in both jobs: `python-suites` failed at SDK + sim; `jvm-tests` failed at All JVM unit tests. Locally, Python SDK + sim ran 415 tests with 2 errors (missing PyYAML); schema suite ran 35 with 1 error (missing PyYAML); progress check, generated-artifact drift, SDK-copy drift, both golden-vector checks, and licence check passed; MCP eval failed at import (missing PyYAML). Latest CI run: https://github.com/TITANICBHAI/AutoHost/actions/runs/40296709326. Local environment: Replit Linux, Python 3.12.12; Java/Gradle were not installed during that run. Rerun the full workflow after fixing CI dependencies and JVM build setup.
 - [ ] **X-02** THIRD_PARTY_NOTICES + licence CI check [M]
   - evidence:
 - [ ] **X-03** Security test suite (canary secret, scope leakage, token, switches) [L]
