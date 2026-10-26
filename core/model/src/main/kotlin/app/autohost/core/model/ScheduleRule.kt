@@ -11,7 +11,7 @@ import kotlinx.serialization.json.Json
  * ```
  * { "id": "sch_..", "task": "app.autohost.sample.x", "type": "interval|daily|weekly|cron|once|window",
  *   "every_minutes": 30, "from": "fixed|previous_end", "times": ["09:00"], "days": [1..7],  // ISO, 1=Mon
- *   "cron": "*/10 9-17 * * 1-5", "at": "<ISO-8601 with offset>", "start": "09:00", "end": "17:00",
+ *   "cron": "0,10,20,30,40,50 9-17 * * 1-5", "at": "<ISO-8601 with offset>", "start": "09:00", "end": "17:00",
  *   "timezone": "UTC", "anchor": "<ISO>", "profile_ids": ["p1"], "fanout": {...}, "limits": {...},
  *   "conditions": {...}, "misfire": "skip|run_once|{catch_up}", "enabled": true }
  * ```
