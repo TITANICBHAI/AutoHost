@@ -420,6 +420,9 @@ class BridgeTest(unittest.TestCase):
         bridge.listen_port, bridge.http_port = listen_port, http_port
         thread = threading.Thread(target=bridge.serve_forever, daemon=True)
         thread.start()
+        if not self.wait_for(lambda: bridge.state != "off"):
+            bridge.stop()
+            raise RuntimeError("bridge listener did not start")
         proxy = bridge_mod.start_http_proxy(bridge, http_port)
         return bridge, listen_port, http_port, proxy
 

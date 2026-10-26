@@ -81,6 +81,7 @@ data class DeclarativeUi(val version: Int, val title: String?, val body: List<Ui
         private val ROUTES = setOf("overview", "config", "profiles", "history")
         private val LOG_SOURCES = setOf("console", "run")
         private val NAME_RE = Regex("[a-zA-Z][a-zA-Z0-9_]*")
+        private val TABLE_BINDING = Regex("\\{\\{\\s*([a-zA-Z][a-zA-Z0-9_.]*)\\s*\\}\\}")
 
         fun parse(doc: JsonObject): DeclarativeUi {
             val version = doc["version"]?.jsonPrimitive?.intOrNull
@@ -194,7 +195,11 @@ data class DeclarativeUi(val version: Int, val title: String?, val body: List<Ui
                                 ?: throw UiDocError("$path.rows[$r]", "table row must be an array")
                             cells.map { c -> c.jsonPrimitive.content }
                         } to null
-                        is JsonPrimitive -> emptyList<List<String>>() to rowsElement.content
+                        is JsonPrimitive -> {
+                            val binding = TABLE_BINDING.matchEntire(rowsElement.content.trim())?.groupValues?.get(1)
+                                ?: throw UiDocError("$path.rows", "table rows string must be a single binding expression")
+                            emptyList<List<String>>() to binding
+                        }
                         null -> emptyList<List<String>>() to null
                         else -> throw UiDocError("$path.rows", "table rows must be an array or a binding string")
                     }

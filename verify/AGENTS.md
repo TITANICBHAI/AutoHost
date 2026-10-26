@@ -52,11 +52,12 @@ The docs decide *what* to build and what "done" means. You decide *how*, and you
 
 ## 2. Your machine — verify locally first, GitHub Actions is a mirror
 
-You have **Gradle, the Android SDK, JDK, Kotlin, Python** (and `node`, which the JS sim tests use). That is strictly more than the sandbox the code was written in. Use it:
+Verify the actual tools on the current machine before running checks. The repository scripts bootstrap their required Gradle/JDK/Android SDK or Python test environment; do not assume a previous agent's toolchain state:
 
-- **Run every verification locally.** `.github/workflows/ci.yml` lists the exact steps (python-suites + jvm-tests jobs) — those same commands are yours to run. Do not push to GitHub to find out whether something passes; push when you already know it does.
+- **Run every available verification locally** using `HANDOFF.md` §5 and the repository scripts. Do not push to GitHub to find out whether something passes; push only after local evidence exists.
+- **Workflow inventory is checkout-specific.** ADR-085 records that the current checkout has no `.github/workflows/ci.yml`; do not cite it as an active workflow or claim a CI run until the file is restored and executed.
 - **GitHub Actions is used only where the plan/owner assigns it**: X-01 (CI green on every commit) and the Gate 11-e CI run URL. Everything else: local.
-- Known CI nit: the `branches:` filter at the top of `ci.yml` is malformed (`ain]` — should be `[main]`). Fix it the first time you touch CI.
+- Emulator work you can run yourself (instrumented tests, API-30 a11y screenshot, G3-h) counts as executed — label it per `docs/DEVICES.md` (`UNVERIFIED-on-hardware` where only a real phone proves it).
 - Emulator work you can run yourself (instrumented tests, API-30 a11y screenshot, G3-h) counts as executed — label it per `docs/DEVICES.md` (`UNVERIFIED-on-hardware` where only a real phone proves it).
 - Device-gated items (real-phone spikes, vendor battery matrix, hardware gates) stay `PENDING-DEVICE` with the exact steps written out, so the owner can execute them when the phone is available.
 
@@ -65,11 +66,11 @@ You have **Gradle, the Android SDK, JDK, Kotlin, Python** (and `node`, which the
 The moment any verification finishes — **pass or fail**:
 
 1. **Document it NOW** on the task's/gate's line in `docs/PROGRESS.md`: what ran, the command, exit status, key numbers/log lines, artifact paths, and environment (JDK, API level, device vs emulator). Failures are documented exactly like passes — plus the hypothesis and the next action.
-2. **If it PASSED: tick the box** (`- [ ]` → `- [x]`). **If it FAILED: keep the box unticked**, tag it `(FAILING: short reason)`, and then immediately either fix-and-rerun or switch to the next independent verification (loop back to the failure afterwards). A failure is an event to record, never something to hide or defer.
+2. **If it PASSED: tick the box** (`- [ ]` → `- [x]`) with the required evidence, regardless of whether earlier-phase gates remain open. **If it FAILED: keep the box unticked**, tag it `(FAILING: short reason)`, and then immediately either fix-and-rerun or switch to the next independent verification (loop back to the failure afterwards). A failure is an event to record, never something to hide or defer.
 3. After any tick batch: `python tools/progress.py` (regenerates the dashboard) then `python tools/progress.py --check` (must pass).
 4. **Never batch documentation at the end of a session; never end a session with an undocumented run.**
 
-**Known tracker conflict, resolve once, then follow it:** `tools/progress.py --check` currently errors `GATE_SKIPPED` if you tick P1+ tasks while earlier phases' device gates are open — and those gates cannot close without the phone. The owner's directive is tick-immediately, so: tick + evidence anyway, then record **ADR-084** in `docs/DECISIONS.md` ("verification-epoch ticking: device-gate order no longer blocks task ticks; device gates stay unticked until hardware") and adjust `tools/progress.py` to match (tiny change, add a test, keep `--check` enforcing evidence-on-tick). Until that lands, a verified-but-untickable task carries its evidence line plus a `(VERIFIED-JVM)` / `(VERIFIED-PY)` tag so the state is never lost.
+**Tracker policy — resolved by ADR-084:** verification status is evidence-driven, not gated by earlier phase order. Independently passed tasks may be ticked with evidence while earlier real-device gates remain open; each gate itself remains unticked until its specified procedure and evidence are complete. `tools/progress.py --check` continues to reject missing evidence on tick and validates tracker consistency.
 
 ## 4. Working loop
 
@@ -127,7 +128,7 @@ gradle test                                        # all JVM unit tests
 gradle :app:assembleCoreDebug :testing:fixture-app:assembleDebug
 gradle connectedCoreDebugAndroidTest               # instrumented (device/emulator attached)
 
-# CI mirror (only this goes to GitHub Actions): .github/workflows/ci.yml
+# GitHub workflow mirror (verify the current checkout; ADR-085 records the missing ci.yml)
 ```
 
 ## 9. When to ask the human

@@ -39,7 +39,7 @@ You do not decide *what* to build — the docs do. You decide *how to implement 
 **Precedence:** `plan.md` defines behaviour; `docs/*` define file-level structure and presentation. If two documents disagree, do not guess: record it in `docs/DECISIONS.md`, fix whichever is wrong, and continue.
 
 ## 3. Non-negotiable rules
-1. **One phase at a time.** Do not tick tasks in phase N+1 until every gate item of phase N is ticked *with evidence*. `python tools/progress.py --check` enforces this.
+1. **Separate implementation order from verification tracking.** Implementation follows phase scope and dependencies. During the verification epoch, follow `HANDOFF.md` §5 and tick each independently verified task immediately with its evidence, even if an earlier real-device gate remains open. A gate stays unticked until its own required evidence exists; `python tools/progress.py --check` enforces evidence-on-tick, not phase order.
 2. **Fail closed.** Unknown state, missing capability, ungranted permission, stale node, malformed input → typed error with an actionable message. Never guess, never continue silently.
 3. **No app-specific or service-specific code** outside `samples/` and `testing/`.
 4. **`Build.VERSION.SDK_INT` is read only in `ApiGate` and provider `availability()`.** Version-dependent behaviour is an ordered provider chain (plan §3.5). API-specific calls live in tiny `*ApiNN` objects.
@@ -63,7 +63,7 @@ You do not decide *what* to build — the docs do. You decide *how to implement 
 - Don't commit keystores, `local.properties`, real credentials, or personal screenshots.
 
 ## 5. Working loop
-1. Pick the next unticked task in the current phase of `docs/PROGRESS.md` (lowest ID not blocked).
+1. During the verification epoch, follow `HANDOFF.md` §5's check order, then take the lowest-ID unticked, unblocked independent item in `docs/PROGRESS.md`. Never infer device-gate success from code or non-device tests.
 2. Read its docs. Write tests first where logic is pure (selectors, schedule engine, validators, redactor, policies, state machines).
 3. Implement in the modules/files named in `docs/REPO_LAYOUT.md`. If you must deviate, log an ADR.
 4. Run `./gradlew check` (plus instrumented tests / device steps if device-touching).

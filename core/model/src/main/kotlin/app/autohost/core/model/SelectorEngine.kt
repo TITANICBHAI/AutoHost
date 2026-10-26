@@ -22,6 +22,9 @@ object SelectorEngine {
 
     fun findFirst(nodes: List<UiNode>, selector: Selector): UiNode? = findAll(nodes, selector).firstOrNull()
 
+    /** Matching candidates before deepest-match filtering, used to detect ambiguous selector labels. */
+    internal fun findRawMatches(nodes: List<UiNode>, selector: Selector): List<UiNode> = raw(nodes, selector)
+
     /** Matches without the deepest-node rule, ordering or nth: used for relation anchors and nested selectors. */
     private fun raw(nodes: List<UiNode>, selector: Selector): List<UiNode> {
         val pool: List<UiNode> = selector.within?.let { w ->

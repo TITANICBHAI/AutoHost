@@ -42,7 +42,7 @@ class DeclarativeUiTest {
         )
         assertEquals(1, doc.version)
         assertEquals("Demo", doc.title)
-        assertEquals(10, doc.body.size)
+        assertEquals(9, doc.body.size)
         val card = doc.body[1] as UiWidget.Card
         val button = card.children[3] as UiWidget.Button
         val call = button.action as UiAction.Call
@@ -51,8 +51,8 @@ class DeclarativeUiTest {
         val select = card.children[2] as UiWidget.Select
         assertEquals(1, select.defaultIndex)
         assertEquals("Slow", select.options[1].label)
-        assertTrue((doc.body[6] as UiWidget.Button).action is UiAction.Run)
-        val confirm = (doc.body[7] as UiWidget.Button).action as UiAction.Confirm
+        assertTrue((doc.body[4] as UiWidget.Button).action is UiAction.Run)
+        val confirm = (doc.body[5] as UiWidget.Button).action as UiAction.Confirm
         assertTrue(confirm.action is UiAction.Call)
     }
 

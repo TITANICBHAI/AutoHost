@@ -211,8 +211,8 @@ class ScheduleEngineTest {
     @Test fun `missed fires enumeration is bounded and rule-faithful`() {
         val r = rule("type" to "interval", "every_minutes" to 30, "anchor" to "2026-10-25T00:00:00Z")
         val missed = MisfireResolver.missedFires(engine, r, T0 - 4 * H, T0 - 10 * M)
-        assertEquals(7, missed.size) // 13:00..14:30 window (T0-2h .. T0-30m ... adjusted below)
-        assertEquals(T0 - 4 * H + 30 * M, missed.first())
+        assertEquals(8, missed.size) // 11:00..14:30, including the persisted next fire.
+        assertEquals(T0 - 4 * H, missed.first())
     }
 
     @Test fun `reconcile policy arm-only when alarm missing but schedule healthy`() {

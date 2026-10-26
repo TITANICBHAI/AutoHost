@@ -162,16 +162,6 @@ def validate(items, text):
             warns.append(f"{i.id}: ticked but still tagged (WIP)/(BLOCKED)")
     phases = sorted({i.phase for i in items if i.phase is not None})
     for k in phases:
-        active = [i for i in items if i.phase == k and i.done]
-        if not active:
-            continue
-        for j in phases:
-            if j >= k:
-                break
-            open_gates = [g.id for g in items if g.phase == j and g.kind == "gate" and not g.done]
-            if open_gates:
-                errors.append(f"GATE_SKIPPED: phase {k} has ticked items but phase {j} gates are open: {', '.join(open_gates)}")
-                break
         gates = [i for i in items if i.phase == k and i.kind == "gate" and i.done]
         open_tasks = [i.id for i in items if i.phase == k and i.kind == "task" and not i.done]
         if gates and open_tasks:

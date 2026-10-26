@@ -20,7 +20,8 @@ class SelectorEngineP3Test {
 
     @Test fun `bounds inside keeps only fully contained nodes`() {
         val f = BoundsFilter(left = 0, top = 0, right = 1080, bottom = 300)
-        assertEquals(listOf(0, 1), idx(Selector(terms = listOf(SelectorTerm(bounds = f)))))
+        // findAll keeps deepest matches; the fully-contained parent is suppressed by its child.
+        assertEquals(listOf(1, 3), idx(Selector(terms = listOf(SelectorTerm(bounds = f)))))
     }
 
     @Test fun `bounds overlaps matches any intersection`() {

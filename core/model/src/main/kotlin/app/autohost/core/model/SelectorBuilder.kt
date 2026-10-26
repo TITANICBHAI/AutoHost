@@ -74,7 +74,7 @@ object SelectorBuilder {
     }
 
     private fun unique(s: Selector, node: UiNode, all: List<UiNode>): Boolean {
-        val matches = SelectorEngine.findAll(all, s)
+        val matches = SelectorEngine.findRawMatches(all, s)
         return matches.size == 1 && matches.first().index == node.index
     }
 

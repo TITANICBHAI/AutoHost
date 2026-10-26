@@ -147,13 +147,13 @@ class PluginHostTest {
         assertTrue(ok.ok)
         assertEquals(123L, (ok.result as? JsonObject)?.get("now")?.jsonPrimitive?.content?.toLong())
         val unknown = provider.invoke(ctx, "nope", kotlinx.serialization.json.JsonObject(emptyMap()))
-        assertEquals(app.autohost.core.model.ErrorCode.INVALID_ARGS, unknown.error?.code)
+        assertEquals(app.autohost.core.model.ErrorCode.INVALID_ARGS.name, unknown.error?.code)
         val crashed = PluginProvider("p", PluginHost.parseDescribe(describeOk)!![0], FakeBinder(describe = describeOk, invokeThrows = true))
             .invoke(ctx, "now", kotlinx.serialization.json.JsonObject(emptyMap()))
-        assertEquals(app.autohost.core.model.ErrorCode.CAPABILITY_UNAVAILABLE, crashed.error?.code)
+        assertEquals(app.autohost.core.model.ErrorCode.CAPABILITY_UNAVAILABLE.name, crashed.error?.code)
         val malformed = PluginProvider("p", PluginHost.parseDescribe(describeOk)!![0], FakeBinder(describe = describeOk, envelope = "not-an-envelope"))
             .invoke(ctx, "now", kotlinx.serialization.json.JsonObject(emptyMap()))
-        assertEquals(app.autohost.core.model.ErrorCode.INTERNAL, malformed.error?.code)
+        assertEquals(app.autohost.core.model.ErrorCode.INTERNAL.name, malformed.error?.code)
         assertTrue(malformed.error?.reason == "PLUGIN_ENVELOPE_MALFORMED")
     }
 

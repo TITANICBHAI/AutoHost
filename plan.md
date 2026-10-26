@@ -20,7 +20,7 @@
 4. **§18 is your work queue.** Everything else is reference.
 
 ### 0.2 Working agreement
-- Work **one phase at a time**. Do not start phase N+1 until phase N's gate has been demonstrated. Record evidence (command, test name, screenshot path, device used) in `docs/PROGRESS.md`. A green build alone never passes a gate; gates specify behaviours to demonstrate on a real device.
+- Work **one implementation phase at a time**. Do not begin new implementation scope for phase N+1 until phase N's gate has been demonstrated. This does not block the later verification epoch from testing already-written work: independently passed tasks may be ticked with evidence while earlier device gates remain open (ADR-084). Record evidence (command, test name, screenshot path, device used) in `docs/PROGRESS.md`. A green build alone never passes a gate; gates specify behaviours to demonstrate on a real device.
 - **Spikes first (Phase 0).** The riskiest assumptions are tested on the user's real device(s) before architecture hardens. A failed spike triggers its listed fallback, not a redesign.
 - **Thin vertical slice first (Phase 1):** a Python script that clicks something in another app, with live logs and a working Stop, before building libraries, schedules, profiles or fancy UI.
 - **Fail closed.** Unknown state, missing capability, ungranted permission, stale node, malformed manifest → a typed error with an actionable message. Never guess, never silently continue.

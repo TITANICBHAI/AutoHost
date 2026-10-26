@@ -17,8 +17,8 @@ object MisfireResolver {
     }
 
     /**
-     * All rule fires in (persisted nextFireAt, horizon] — bounded so pathological rules cannot
-     * spin (plan §11.3 reconcile). The caller passes the engine so the rule computes the fires.
+     * All rule fires in [persisted nextFireAt, horizon] — bounded so pathological rules cannot
+     * spin (plan §11.3 reconcile). The caller passes the engine so the rule computes later fires.
      */
     fun missedFires(
         engine: ScheduleEngine,
@@ -29,7 +29,7 @@ object MisfireResolver {
         max: Int = MAX_CATCH_UP_SCAN,
     ): List<Long> {
         if (horizonMs <= nextFireAtMs) return emptyList()
-        val out = mutableListOf<Long>()
+        val out = mutableListOf(nextFireAtMs)
         var cursor = nextFireAtMs
         val working = state
         while (out.size < max) {

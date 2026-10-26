@@ -35,23 +35,22 @@ Treat the rest of this file as a starting map, not authority over newer reposito
 - Verify tool availability (`gradle`, JDK, Android SDK / `adb`, Python, and Node where needed)
   rather than assuming the environment matches a previous agent's machine.
 
-There is a known policy conflict to resolve, not ignore: root `AGENTS.md`, `docs/PROGRESS.md`,
-and `tools/progress.py` enforce strict phase/gate ordering. `verify/AGENTS.md` §3 records the
-owner's contrary tick-immediately directive and calls for ADR-084 plus a small tracker change
-and regression test, preserving evidence-on-tick. As of the source review for this prompt,
-ADR-084 was absent and `tools/progress.py` still emitted `GATE_SKIPPED`. Re-check both before
-acting. If still unresolved, follow `verify/AGENTS.md` §3: record ADR-084 and make the narrow
-change with a regression test; do not bypass `--check`, weaken evidence validation, or mark
-device gates passed without hardware. Make the root rules, tracker, and verifier agree.
+The verification tick policy is resolved by ADR-084: independently passed tasks may be ticked
+with evidence while earlier device gates remain open; gates themselves stay unticked until their
+required evidence exists. Keep `tools/progress.py --check` enforcing evidence-on-tick. Do not
+weaken evidence validation or mark device gates passed without hardware. ADR-085 records that
+`.github/workflows/ci.yml` is absent from the current checkout; verify current workflow files
+before using any CI references in the dated handoff.
 
 ## Verification order and evidence
 
 1. Follow the exact first-build and per-module order in `HANDOFF.md` §5; use §6 for likely
    first-build failures. Fix the smallest real compatibility/build defect rather than redesigning.
-2. Run sandbox-runnable suites locally, using `.github/workflows/ci.yml` for the canonical CI
-   commands. This includes Python SDK and schema suites, tracker checks, generated-artifact and
-   SDK drift checks, golden-vector checks, licence checks, MCP evaluations, and the JVM tests
-   and debug assemblies listed in the handoff.
+2. Run sandbox-runnable suites locally using the repository scripts and the exact order in
+   `HANDOFF.md` §5. This includes Python SDK and schema suites, tracker checks, generated-artifact
+   and SDK drift checks, golden-vector checks, licence checks, MCP evaluations, and the JVM tests
+   and debug assemblies listed in the handoff. Re-check the current workflow files rather than
+   assuming a CI workflow exists.
 3. Continue to the next independent verification when blocked. Device-only work stays
    `PENDING-DEVICE:` with the exact procedure and required evidence recorded; never infer a pass
    from code, a simulator, or an emulator when the gate requires the owner's phone.

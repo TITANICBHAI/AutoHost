@@ -38,7 +38,7 @@ class SelectorBenchTest {
         val nodes = syntheticTree(size)
         val selector = Selector(
             terms = listOf(
-                SelectorTerm(cls = Match(listOf("Button"), "eq", true)),
+                SelectorTerm(cls = Match(listOf("android.widget.Button"), "eq", true)),
                 SelectorTerm(text = Match(listOf("item"), "contains", false)),
             ),
         )

@@ -52,7 +52,7 @@ object ReconcilePolicy {
         if (next > input.nowMs) {
             return if (input.armedFireId == null) ReconcileDecision.Rearm else ReconcileDecision.Healthy
         }
-        // nextFireAt is in the past: missed fires are those in (next, now - grace]
+        // nextFireAt is past the grace horizon: replay that persisted due fire and later fires.
         val horizon = input.nowMs - input.graceMs
         val missed = MisfireResolver.missedFires(engine, rule, next, horizon, state)
         if (missed.isEmpty()) {

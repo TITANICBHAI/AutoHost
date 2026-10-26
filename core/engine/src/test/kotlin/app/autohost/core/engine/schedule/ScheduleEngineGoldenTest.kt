@@ -126,7 +126,7 @@ class ScheduleEngineGoldenTest {
                     val outcome = engine.evaluateConditions(
                         conditions,
                         ConditionEnv(
-                            nowMs = env.getValue("now_ms").jsonPrimitive.long,
+                            nowMs = env["now_ms"]?.jsonPrimitive?.long ?: 0L,
                             charging = env["charging"]?.jsonPrimitive?.booleanOrNull ?: false,
                             batteryPct = env["battery_pct"]?.jsonPrimitive?.int ?: 100,
                             unmetered = env["unmetered"]?.jsonPrimitive?.booleanOrNull ?: true,

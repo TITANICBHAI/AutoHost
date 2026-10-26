@@ -205,6 +205,7 @@ class RunLifecycleP5Test {
 
         repeat(10) {
             h.orchestrator.onEvent(token, BrokerEvent(type = "log", message = "tick"))
+            h.orchestrator.onEvent(token, BrokerEvent(type = "heartbeat"))
             h.clock.advance(10_000)
             advanceTimeBy(2_000)
         }
