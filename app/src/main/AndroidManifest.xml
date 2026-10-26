@@ -293,13 +293,6 @@
             android:process=":ui"
             android:exported="false" />
 
-        <!-- P9-08: the experimental exclusive UiAutomation runner (plan §5.4). Started through the
-             shell tier with `am instrument -e port <p> …`; NEVER active while the accessibility
-             service is connected (ADR-068, G9-e). targetPackage defaults to this package. -->
-        <instrumentation
-            android:name="app.autohost.shell.UiAutomationRunner"
-            android:targetPackage="app.autohost" />
-
         <!-- P9-09: APK sharing for the installer-UI path (device.app.manage install mode
              "installer"); paths in res/xml/file_paths.xml. -->
         <provider
@@ -312,6 +305,13 @@
                 android:resource="@xml/file_paths" />
         </provider>
     </application>
+
+    <!-- P9-08: the experimental exclusive UiAutomation runner (plan §5.4). Started through the
+         shell tier with `am instrument -e port <p> …`; NEVER active while the accessibility
+         service is connected (ADR-068, G9-e). targetPackage defaults to this package. -->
+    <instrumentation
+        android:name="app.autohost.shell.UiAutomationRunner"
+        android:targetPackage="app.autohost" />
 
     <queries>
         <intent>
