@@ -1,0 +1,30 @@
+modules = ["python-3.12", "nodejs-20", "web"]
+
+[nix]
+channel = "stable-25_05"
+
+[agent]
+expertMode = true
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Push to GitHub"
+
+[[workflows.workflow]]
+name = "Push to GitHub"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash scripts/push-to-github.sh"
+
+[workflows.workflow.metadata]
+outputType = "console"

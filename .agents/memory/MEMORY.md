@@ -1,0 +1,1 @@
+- [GitHub push setup](github-push-setup.md) — Keep Replit-to-GitHub pushes configured with only the GitHub token as a required secret.
