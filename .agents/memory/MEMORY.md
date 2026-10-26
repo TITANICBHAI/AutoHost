@@ -1,2 +1,2 @@
 - [GitHub push setup](github-push-setup.md) — Keep Replit-to-GitHub pushes configured with only the GitHub token as a required secret.
-- [Replit verification workflows](replit-verification-workflows.md) — Keep one-shot console checks separate from the default workflow and avoid root Python scaffolding side effects.
+- [Replit verification workflows](replit-verification-workflows.md) — Bootstrap tools in project scripts, use separate Replit console workflows, and keep GitHub push isolated.

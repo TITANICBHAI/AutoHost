@@ -14,3 +14,9 @@ Avoid calling the Python package installer at the repository root when it has no
 **Why:** A root install created generic project metadata rather than a focused dependency declaration.
 
 **How to apply:** Declare test-only dependencies under the relevant Python project and clean up any installer-generated root scaffolding before finishing.
+
+For AutoHost, Replit verification workflows should bootstrap their required tools from project scripts instead of failing when tools are absent. Android workflows prepare a compatible JDK, Gradle, Android SDK packages, and accepted SDK licenses; Python verification creates an isolated cached environment and installs the declared test requirements. Use Replit console workflows as the routine entry points rather than relying on GitHub Actions for every check, and keep GitHub push isolated from the default run.
+
+**Why:** The user explicitly corrected that the workflows must set up their own build and test prerequisites and run from Replit's console.
+
+**How to apply:** Keep each console workflow pointed at its project bootstrap/test script, avoid separate manual dependency-install commands, and preserve a safe default run that does not push to GitHub.

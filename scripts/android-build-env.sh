@@ -225,7 +225,7 @@ autohost_install_android_command_line_tools() {
 autohost_accept_and_install_android_sdk() {
   local sdk_root="$1"
   local cache_root="$2"
-  local sdkmanager licenses_status
+  local sdkmanager android_cli licenses_status
 
   sdkmanager="$(autohost_install_android_command_line_tools "$sdk_root" "$cache_root")"
   if [[ ! -x "$sdkmanager" ]]; then
@@ -247,10 +247,29 @@ autohost_accept_and_install_android_sdk() {
   fi
 
   echo "Installing Android API 36, Build Tools 36.0.0, and Platform Tools..."
-  "$sdkmanager" --sdk_root="$sdk_root" \
-    "platforms;android-36" \
-    "build-tools;36.0.0" \
-    "platform-tools"
+  android_cli="$sdk_root/cmdline-tools/latest/bin/android"
+  if [[ -x "$android_cli" ]]; then
+    set +o pipefail
+    if yes | "$android_cli" --no-metrics --sdk="$sdk_root" sdk install \
+      "platforms/android-36" \
+      "build-tools/36.0.0" \
+      "platform-tools"; then
+      licenses_status=0
+    else
+      licenses_status=$?
+    fi
+    set -o pipefail
+    if (( licenses_status != 0 )); then
+      echo "ERROR: Android CLI SDK package installation failed (exit $licenses_status)." >&2
+      return "$licenses_status"
+    fi
+  else
+    # Compatibility path for command-line tools packages without the new Android CLI.
+    "$sdkmanager" --sdk_root="$sdk_root" \
+      "platforms;android-36" \
+      "build-tools;36.0.0" \
+      "platform-tools"
+  fi
 
   if [[ ! -f "$sdk_root/platforms/android-36/android.jar" ]]; then
     echo "ERROR: Android API 36 was not installed at $sdk_root/platforms/android-36." >&2
@@ -258,6 +277,10 @@ autohost_accept_and_install_android_sdk() {
   fi
   if [[ ! -x "$sdk_root/build-tools/36.0.0/aapt" ]]; then
     echo "ERROR: Android Build Tools 36.0.0 were not installed correctly." >&2
+    return 1
+  fi
+  if [[ ! -s "$sdk_root/licenses/android-sdk-license" ]]; then
+    echo "ERROR: Android SDK license acceptance was not recorded." >&2
     return 1
   fi
 }
