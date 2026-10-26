@@ -1,0 +1,3 @@
+# Simulator-only YAML parsing for flow fixtures and parity tests.
+# The AutoHost SDK itself remains stdlib-only.
+PyYAML>=6.0,<7

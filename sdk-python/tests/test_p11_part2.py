@@ -363,6 +363,7 @@ class FakePhone(threading.Thread):
         self.token = token
         self.reply = reply
         self.errors: list[str] = []
+        self.release_after_reply = threading.Event()
 
     def run(self):
         try:
@@ -390,13 +391,22 @@ class FakePhone(threading.Thread):
             sock.sendall(bridge_mod.encode_text(json.dumps({
                 "jsonrpc": "2.0", "id": request.get("id"), "result": self.reply,
             }).encode(), mask=True))
-            time.sleep(0.2)
+            self.release_after_reply.wait(timeout=5)
             sock.close()
         except Exception as exc:  # noqa: BLE001 — the test asserts on this list
             self.errors.append(str(exc))
 
 
 class BridgeTest(unittest.TestCase):
+    @staticmethod
+    def wait_for(predicate, timeout: float = 5) -> bool:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return True
+            time.sleep(0.02)
+        return predicate()
+
     def start_bridge(self, token: str) -> tuple[bridge_mod.Bridge, int, int, int]:
         bridge = bridge_mod.Bridge(0, 0, token)
         listen_sock = socket.socket()
@@ -415,13 +425,11 @@ class BridgeTest(unittest.TestCase):
 
     def test_end_to_end_round_trip_with_first_frame_token(self):
         bridge, listen_port, http_port, proxy = self.start_bridge("tok-1")
+        phone = FakePhone(listen_port, "tok-1", {"status": "ok"})
         try:
-            phone = FakePhone(listen_port, "tok-1", {"status": "ok"})
             phone.start()
-            deadline = time.time() + 5
-            while time.time() < deadline and bridge.state != "connected":
-                time.sleep(0.05)
-            self.assertEqual("connected", bridge.state)
+            self.assertTrue(self.wait_for(lambda: bridge.state == "connected"),
+                            f"bridge did not connect; state={bridge.state!r}")
             body = json.dumps({"jsonrpc": "2.0", "id": 3, "method": "system.ping"}).encode()
             request = urllib.request.Request(f"http://127.0.0.1:{http_port}/rpc", data=body,
                                              headers={"Content-Type": "application/json"}, method="POST")
@@ -430,7 +438,9 @@ class BridgeTest(unittest.TestCase):
             self.assertEqual(3, payload["id"])
             self.assertEqual({"status": "ok"}, payload["result"])
             self.assertEqual(1, bridge.handshakes)
+            self.assertEqual("connected", bridge.state)
         finally:
+            phone.release_after_reply.set()
             bridge.stop()
             proxy.shutdown()
             proxy.server_close()
@@ -440,7 +450,8 @@ class BridgeTest(unittest.TestCase):
         try:
             phone = FakePhone(listen_port, "WRONG", {})
             phone.start()
-            time.sleep(0.4)
+            self.assertTrue(self.wait_for(lambda: bridge.auth_failures == 1),
+                            f"wrong token was not processed; state={bridge.state!r}")
             body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "system.ping"}).encode()
             request = urllib.request.Request(f"http://127.0.0.1:{http_port}/rpc", data=body, method="POST")
             try:
