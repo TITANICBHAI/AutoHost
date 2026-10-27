@@ -50,7 +50,8 @@ class WsClientProvider(private val socketFactory: SocketFactory) : CapabilityPro
 
     private val handles = ConcurrentHashMap<String, WsSession>()
 
-    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope = when (method) {
+    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope {
+        return when (method) {
         "connect" -> {
             val url = (args["url"] as? JsonPrimitive)?.content
                 ?: return Envelope.err(ErrorCode.INVALID_ARGS, "\"url\" is required")
@@ -109,7 +110,8 @@ class WsClientProvider(private val socketFactory: SocketFactory) : CapabilityPro
             handles.remove(session.handle)
             Envelope.ok(buildJsonObject { put("closed", true) })
         }
-        else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown net.ws method '$method'")
+            else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown net.ws method '$method'")
+        }
     }
 
     private inline fun withSession(args: JsonObject, block: (WsSession) -> Envelope): Envelope {
@@ -147,94 +149,98 @@ internal class WsSession(val handle: String, private val connection: WsClientPro
     @Volatile
     private var closed = false
 
-    fun sendText(text: String): Boolean = try {
-        synchronized(connection.output) {
-            val payload = text.encodeToByteArray()
-            val header = when {
-                payload.size < 126 -> byteArrayOf(0x81.toByte(), MASKED or payload.size.toByte())
-                payload.size < 65536 -> byteArrayOf(
-                    0x81.toByte(), MASKED or 126.toByte(),
-                    ((payload.size shr 8) and 0xFF).toByte(), (payload.size and 0xFF).toByte(),
-                )
-                else -> return false // v1 frame cap; provider validated already
+    fun sendText(text: String): Boolean {
+        return try {
+            synchronized(connection.output) {
+                val payload = text.encodeToByteArray()
+                val header = when {
+                    payload.size < 126 -> byteArrayOf(0x81.toByte(), (MASKED.toInt() or payload.size).toByte())
+                    payload.size < 65536 -> byteArrayOf(
+                        0x81.toByte(), (MASKED.toInt() or 126).toByte(),
+                        ((payload.size shr 8) and 0xFF).toByte(), (payload.size and 0xFF).toByte(),
+                    )
+                    else -> return false // v1 frame cap; provider validated already
+                }
+                connection.output.write(header)
+                connection.output.write(payload)
+                connection.output.flush()
+                true
             }
-            connection.output.write(header)
-            connection.output.write(payload)
-            connection.output.flush()
-            true
+        } catch (e: Exception) {
+            false
         }
-    } catch (e: Exception) {
-        false
     }
 
     /** Blocking one-frame read with a deadline; server pings are answered, closes are reported. */
-    fun recvFrame(timeoutMs: Long): Frame = try {
-        val deadline = System.currentTimeMillis() + timeoutMs
-        val input = connection.input
-        while (!closed) {
-            val remaining = deadline - System.currentTimeMillis()
-            if (remaining <= 0) return Frame.TimedOut
-            // soTimeout governs the blocking read; poll in slices so close() can interrupt.
-            connection.setTimeoutMs(minOf(remaining, POLL_SLICE_MS))
-            val byte0 = try {
-                input.read()
-            } catch (e: java.net.SocketTimeoutException) {
-                continue
-            }
-            if (byte0 < 0) {
-                closed = true
-                return Frame.Closed
-            }
-            val opcode = byte0 and 0x0F
-            val byte1 = input.read()
-            if (byte1 < 0) {
-                closed = true
-                return Frame.Closed
-            }
-            var length = (byte1 and 0x7F).toLong()
-            if (length == 126L) {
-                length = ((input.read() and 0xFF).toLong() shl 8) or (input.read() and 0xFF).toLong()
-            } else if (length == 127L) {
-                for (i in 0 until 8) input.read() // v1: no 64-bit frames; treat as too large below
-                return Frame.TooLarge
-            }
-            if (length > WsClientProvider.MAX_FRAME_CHARS) return Frame.TooLarge
-            val mask = ByteArray(4)
-            if (input.read(mask) < 0) {
-                closed = true
-                return Frame.Closed
-            }
-            val payload = ByteArray(length.toInt())
-            var read = 0
-            while (read < length) {
-                val n = input.read(payload, read, (length - read).toInt())
-                if (n < 0) {
+    fun recvFrame(timeoutMs: Long): Frame {
+        return try {
+            val deadline = System.currentTimeMillis() + timeoutMs
+            val input = connection.input
+            while (!closed) {
+                val remaining = deadline - System.currentTimeMillis()
+                if (remaining <= 0) return Frame.TimedOut
+                // soTimeout governs the blocking read; poll in slices so close() can interrupt.
+                connection.setTimeoutMs(minOf(remaining, POLL_SLICE_MS))
+                val byte0 = try {
+                    input.read()
+                } catch (e: java.net.SocketTimeoutException) {
+                    continue
+                }
+                if (byte0 < 0) {
                     closed = true
                     return Frame.Closed
                 }
-                read += n
-            }
-            when (opcode) {
-                0x1 -> return Frame.Text(String(payload))
-                0x8 -> { // close
+                val opcode = byte0 and 0x0F
+                val byte1 = input.read()
+                if (byte1 < 0) {
                     closed = true
-                    runCatching { connection.output.write(byteArrayOf(0x88.toByte(), 0)) }
                     return Frame.Closed
                 }
-                0x9 -> { // ping → pong (control frames are not delivered to the task)
-                    runCatching {
-                        connection.output.write(byteArrayOf(0x8A.toByte(), length.toByte()))
-                        connection.output.write(payload)
+                var length = (byte1 and 0x7F).toLong()
+                if (length == 126L) {
+                    length = ((input.read() and 0xFF).toLong() shl 8) or (input.read() and 0xFF).toLong()
+                } else if (length == 127L) {
+                    for (i in 0 until 8) input.read() // v1: no 64-bit frames; treat as too large below
+                    return Frame.TooLarge
+                }
+                if (length > WsClientProvider.MAX_FRAME_CHARS) return Frame.TooLarge
+                val mask = ByteArray(4)
+                if (input.read(mask) < 0) {
+                    closed = true
+                    return Frame.Closed
+                }
+                val payload = ByteArray(length.toInt())
+                var read = 0
+                while (read < length) {
+                    val n = input.read(payload, read, (length - read).toInt())
+                    if (n < 0) {
+                        closed = true
+                        return Frame.Closed
                     }
+                    read += n
                 }
-                0xA -> {} // pong — ignore
-                else -> {} // binary (0x2) etc. are skipped in v1 (text-frame contract)
+                when (opcode) {
+                    0x1 -> return Frame.Text(String(payload))
+                    0x8 -> { // close
+                        closed = true
+                        runCatching { connection.output.write(byteArrayOf(0x88.toByte(), 0)) }
+                        return Frame.Closed
+                    }
+                    0x9 -> { // ping → pong (control frames are not delivered to the task)
+                        runCatching {
+                            connection.output.write(byteArrayOf(0x8A.toByte(), length.toByte()))
+                            connection.output.write(payload)
+                        }
+                    }
+                    0xA -> {} // pong — ignore
+                    else -> {} // binary (0x2) etc. are skipped in v1 (text-frame contract)
+                }
             }
+            Frame.Closed
+        } catch (e: Exception) {
+            closed = true
+            Frame.Closed
         }
-        Frame.Closed
-    } catch (e: Exception) {
-        closed = true
-        Frame.Closed
     }
 
     fun close() {

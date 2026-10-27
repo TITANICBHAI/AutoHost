@@ -27,6 +27,7 @@ dependencies {
     implementation(project(":core:broker"))
     implementation(project(":core:model"))
     implementation(project(":core:common"))
+    implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.junit)
     testImplementation(testFixtures(project(":core:common")))

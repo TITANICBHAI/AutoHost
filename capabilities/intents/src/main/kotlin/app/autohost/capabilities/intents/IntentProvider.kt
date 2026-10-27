@@ -51,6 +51,7 @@ class IntentProvider(private val dispatch: Dispatch = AndroidDispatch) : Capabil
                         dispatch.startActivity { intent ->
                             intent.action = android.content.Intent.ACTION_VIEW
                             intent.data = android.net.Uri.parse(url)
+                            intent
                         },
                         unverified = true,
                     )
@@ -63,6 +64,7 @@ class IntentProvider(private val dispatch: Dispatch = AndroidDispatch) : Capabil
                     IntentPolicy.Verdict.Allow -> dispatchResult(
                         dispatch.startActivity { intent ->
                             intent.action = IntentPolicy.SETTINGS_PAGES[page]
+                            intent
                         },
                         unverified = true,
                     )
@@ -84,6 +86,7 @@ class IntentProvider(private val dispatch: Dispatch = AndroidDispatch) : Capabil
                             }
                             if (data != null) intent.data = android.net.Uri.parse(data)
                             applyExtras(intent, args["extras"])
+                            intent
                         },
                         unverified = true,
                     )
@@ -97,6 +100,7 @@ class IntentProvider(private val dispatch: Dispatch = AndroidDispatch) : Capabil
                         dispatch.broadcast { intent ->
                             intent.action = action
                             applyExtras(intent, args["extras"])
+                            intent
                         },
                         unverified = true,
                     )

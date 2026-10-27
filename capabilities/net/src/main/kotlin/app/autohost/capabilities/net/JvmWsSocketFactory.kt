@@ -2,6 +2,8 @@ package app.autohost.capabilities.net
 
 import java.net.Socket
 import java.net.URI
+import java.net.InetSocketAddress
+import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLSocketFactory
 
 /**
@@ -17,14 +19,26 @@ class JvmWsSocketFactory : WsClientProvider.SocketFactory {
             uri.scheme == "wss" -> 443
             else -> 80
         }
-        val socket = if (uri.scheme == "wss") {
-            SSLSocketFactory.getDefault().createSocket(uri.host, port)
-        } else {
-            Socket(uri.host, port)
+        val rawSocket = Socket()
+        val socket = try {
+            rawSocket.connect(
+                InetSocketAddress(uri.host, port),
+                timeoutMs.toInt().coerceAtLeast(1),
+            )
+            val connected = if (uri.scheme == "wss") {
+                (SSLSocketFactory.getDefault() as SSLSocketFactory)
+                    .createSocket(rawSocket, uri.host, port, true) as SSLSocket
+            } else {
+                rawSocket
+            }
+            connected.tcpNoDelay = true
+            connected.soTimeout = timeoutMs.toInt().coerceAtLeast(1)
+            if (connected is SSLSocket) connected.startHandshake()
+            connected
+        } catch (e: Exception) {
+            runCatching { rawSocket.close() }
+            throw e
         }
-        socket.tcpNoDelay = true
-        socket.soTimeout = timeoutMs.toInt().coerceAtLeast(1)
-        socket.connectTimeout = timeoutMs.toInt()
         val output = socket.getOutputStream()
         WsHandshake.send(output, uri, subprotocols)
         val input = socket.getInputStream()

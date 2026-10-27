@@ -48,7 +48,7 @@ object NotificationBridge {
         this.clock = clock
     }
 
-    internal fun onConnected(current: Array<StatusBarNotification>) {
+    internal fun onConnected(current: List<StatusBarNotification>) {
         connected = true
         val snapshot = current.mapNotNull { extract(it) }.associateBy { it.key }
         _active.value = snapshot

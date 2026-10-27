@@ -17,18 +17,22 @@ class AutoHostNotificationListener : NotificationListenerService() {
     override fun onListenerConnected() {
         super.onListenerConnected()
         NotificationBridge.init(app.autohost.core.common.SystemClockImpl())
-        NotificationBridge.onConnected(activeNotifications.orEmpty())
+        NotificationBridge.onConnected(activeNotifications?.filterNotNull().orEmpty())
         // The listener is the only component allowed to press/dismiss; it publishes the handlers.
         AutoHostNotificationListenerHandlers.press = { key, index -> pressByKey(key, index) }
         AutoHostNotificationListenerHandlers.dismiss = { key -> dismissByKey(key) }
     }
 
-    private fun pressByKey(key: String, index: Int): Boolean = try {
+    private fun pressByKey(key: String, index: Int): Boolean {
         val sbn = activeNotifications.orEmpty().firstOrNull { it.key == key } ?: return false
         val action = sbn.notification?.actions?.getOrNull(index) ?: return false
-        action.actionIntent?.send() == true
-    } catch (e: RuntimeException) {
-        false
+        val pendingIntent = action.actionIntent ?: return false
+        return try {
+            pendingIntent.send()
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 
     private fun dismissByKey(key: String): Boolean = try {
