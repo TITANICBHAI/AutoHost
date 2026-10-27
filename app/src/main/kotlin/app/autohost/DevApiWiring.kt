@@ -121,7 +121,7 @@ class AppDevApiBackend(
     private val graph: AppGraph,
 ) : DevApiBackend {
     override fun systemInfo(): JsonObject = buildJsonObject {
-        put("app", graph.app.packageName)
+        put("app", graph.application.packageName)
         put("flavor", app.autohost.BuildConfig.FLAVOR)
         put("version", BuildConfig.VERSION_NAME)
         put("api", Build.VERSION.SDK_INT)
@@ -247,7 +247,7 @@ class AppDevApiBackend(
     }
 
     override fun healthRun(only: List<String>?): JsonObject {
-        val env = AndroidHealthEnv.build(graph.app, graph.a11yConnected(), true, graph.devApiEnabled)
+        val env = AndroidHealthEnv.build(graph.application, graph.a11yConnected(), true, graph.devApiEnabled)
         val grouped = graph.healthRegistry.runGrouped(env)
         fun rows(list: List<app.autohost.core.engine.health.HealthCheck.Outcome>) = kotlinx.serialization.json.JsonArray(
             list.map { outcome ->

@@ -39,12 +39,12 @@ class A11yBrowserLink(private val clock: app.autohost.core.common.Clock) :
             val snapshot = app.autohost.capabilities.a11y.SimpleA11yReader({ service }, clock).read(null)
             val index = snapshot.nodes.indexOfFirst { node ->
                 node.text?.contains(text, ignoreCase = true) == true ||
-                    node.contentDesc?.contains(text, ignoreCase = true) == true
+                    node.desc.contains(text, ignoreCase = true)
             }
             if (index >= 0) {
                 val info = snapshot.infoAt(index) ?: return HostAct(false, true, "a11y")
                 val outcome = NodeActions.click(service, info)
-                return HostAct(outcome == NodeActions.ClickOutcome.CLICKED, true, "a11y")
+                return HostAct(outcome.verified, true, "a11y")
             }
             runCatching { Thread.sleep(150) }
         }
@@ -54,7 +54,7 @@ class A11yBrowserLink(private val clock: app.autohost.core.common.Clock) :
     override fun typeIntoFocused(text: String, timeoutMs: Long): HostAct {
         val service = service() ?: return HostAct(false, false, "a11y")
         val snapshot = app.autohost.capabilities.a11y.SimpleA11yReader({ service }, clock).read(null)
-        val index = snapshot.nodes.indexOfFirst { it.editable == true }
+        val index = snapshot.nodes.indexOfFirst { it.has("editable") }
         if (index < 0) return HostAct(false, false, "a11y")
         val info = snapshot.infoAt(index) ?: return HostAct(false, true, "a11y")
         val applied = NodeActions.setText(info, text)

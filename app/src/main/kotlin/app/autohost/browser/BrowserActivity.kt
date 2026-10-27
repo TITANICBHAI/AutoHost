@@ -6,7 +6,9 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.Gravity
+import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -17,6 +19,8 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicReference
 
@@ -58,8 +62,9 @@ class BrowserActivity : Activity() {
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val chrome = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setGravity(Gravity.CENTER_VERTICAL); setBackgroundColor(Color.DKGRAY); setPadding(pad / 2, pad / 4, pad / 2, pad / 4) }
         statusLine = TextView(this).apply {
-            setTextColor(Color.WHITE); textSize = 12f; setPadding(pad / 2, 0, pad / 2, 0); weightSum = 1f
+            setTextColor(Color.WHITE); textSize = 12f; setPadding(pad / 2, 0, pad / 2, 0)
         }
+        chrome.weightSum = 1f
         chrome.addView(statusLine, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         chrome.addView(Button(this).apply {
             text = "Close"
@@ -255,7 +260,7 @@ class BrowserActivity : Activity() {
 
     /** DOWN → two MOVE frames → UP through the real touch pipeline. */
     private fun injectTap(view: View, x: Float, y: Float): Boolean {
-        val now = SystemClockUptime()
+        val now = SystemClock.uptimeMillis()
         val down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, x, y, 0)
         val move1 = MotionEvent.obtain(now, now + 20, MotionEvent.ACTION_MOVE, x, y, 0)
         val move2 = MotionEvent.obtain(now, now + 40, MotionEvent.ACTION_MOVE, x + 0.5f, y + 0.5f, 0)

@@ -31,7 +31,7 @@ import kotlinx.serialization.json.JsonPrimitive
  *  - setInterruptHandler: quickjs-kt has no poll handler — a 200 ms watcher thread polls the
  *    check and calls [QuickJs.interruptEvaluation] when it flips true (cancel + run deadline).
  *  - runEntry: prelude script → entry re-exported as a module (`import * as ns from
- *    "__autohost_entry__"` with the loader serving the real entry source, so its `./lib/*.js`
+ *    "__autohost_entry__"` with the loader serving the real entry source, so its `./lib/` + `*.js`
  *    imports resolve through [moduleLoader] with containment from JsSources) → the namespace
  *    lands in `__autohost_exports` → `JSON.stringify(__autohost_run_main())` returned verbatim.
  *  - A script-level failure returns the outcome JSON from the prelude; only engine-internal

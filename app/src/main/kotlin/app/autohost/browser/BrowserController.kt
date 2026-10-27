@@ -82,10 +82,10 @@ class BrowserController(
     }
 
     override fun navigate(runId: String, pageId: String, target: BrowserPolicy.UrlVerdict.Allowed, timeoutMs: Long): WebViewBrowserProvider.HostPage {
-        val session = pages(runId)[pageId]
+        val session = pageSessions(runId)[pageId]
             ?: throw WebViewBrowserProvider.HostException(app.autohost.core.model.ErrorCode.NOT_FOUND, "unknown page_id '$pageId'")
         val resolved = resolve(session, target)
-        return launchAndAwait(pages(runId), session, resolved, timeoutMs, recordUrl = true)
+        return launchAndAwait(pageSessions(runId), session, resolved, timeoutMs, recordUrl = true)
     }
 
     override fun click(runId: String, pageId: String, selector: String, timeoutMs: Long): HostAct =
@@ -121,7 +121,7 @@ class BrowserController(
         }
 
     override fun close(runId: String, pageId: String) {
-        pages(runId).remove(pageId)?.let { session ->
+        pageSessions(runId).remove(pageId)?.let { session ->
             profileLock.withLock { session.activity?.finishFromHost() }
             loadLatches.remove(pageId)
         }
@@ -147,7 +147,7 @@ class BrowserController(
         }
     }
 
-    fun pageSession(runId: String, pageId: String): PageSession? = pages(runId)[pageId]
+    fun pageSession(runId: String, pageId: String): PageSession? = pageSessions(runId)[pageId]
 
     /** The activity calls back here when a load settles (any thread). */
     fun onLoadSettled(pageId: String, url: String, title: String?, loadState: String, bodySample: String?, inputMode: String) {
@@ -167,7 +167,7 @@ class BrowserController(
         return latch
     }
 
-    private fun pages(runId: String): MutableMap<String, PageSession> = runs.computeIfAbsent(runId) { ConcurrentHashMap() }
+    private fun pageSessions(runId: String): MutableMap<String, PageSession> = runs.computeIfAbsent(runId) { ConcurrentHashMap() }
 
     /** profileLock is held for the whole activity launch — the WebView must be created under the suffix. */
     fun acquireProfile(profile: String): AutoCloseable {
@@ -242,7 +242,7 @@ class BrowserController(
     }
 
     private fun <T> withActivity(runId: String, pageId: String, block: (BrowserActivity) -> T): T {
-        val session = pages(runId)[pageId]
+        val session = pageSessions(runId)[pageId]
             ?: throw WebViewBrowserProvider.HostException(app.autohost.core.model.ErrorCode.NOT_FOUND, "unknown page_id '$pageId'")
         val activity = session.activity
             ?: throw WebViewBrowserProvider.HostException(app.autohost.core.model.ErrorCode.CAPABILITY_UNAVAILABLE, "the browser surface is not open (open a page first)", reason = "BROWSER_SURFACE_CLOSED")

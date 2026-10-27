@@ -51,13 +51,14 @@ class RunTaskReceiver : BroadcastReceiver() {
                 }
             }
             is ExternalRunRequest.Outcome.Accepted -> {
+                val triggerName = outcome.triggerName
                 val pending = goAsync()
                 graph.appScope.launch {
                     try {
                         // P8-03: the trigger form fires every enabled `external` rule with that name.
-                        if (outcome.triggerName != null) {
+                        if (triggerName != null) {
                             val matched = graph.triggerController.externalFire(
-                                outcome.triggerName,
+                                triggerName,
                                 outcome.payload,
                             )
                             resultCode = if (matched) {

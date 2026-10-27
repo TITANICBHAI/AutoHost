@@ -107,10 +107,10 @@ import app.autohost.core.model.TaskManifest
  * Manual wiring for the main process (no DI framework, AGENTS.md §4). Constructed once in `AutoHostApp`;
  * UI, services and receivers read it from `(application as AutoHostApp).graph`.
  */
-class AppGraph(private val app: Application) {
+class AppGraph(val application: Application) {
 
     /** Application context for app-module helpers that need assets/cache (e.g. New-from-template, P2-20). */
-    val appContext: android.content.Context get() = app
+    val appContext: android.content.Context get() = application
 
     val clock: Clock = AndroidClock()
     val dispatchers: AppDispatchers = AppDispatchers.real()
@@ -145,7 +145,7 @@ class AppGraph(private val app: Application) {
      * volatile — the call hot path never touches the DB.
      */
     val insecureSwitches: app.autohost.security.InsecureSwitchStore =
-        app.autohost.security.InsecureSwitchStore(app)
+        app.autohost.security.InsecureSwitchStore(application)
     private val basePermissionIndex: PermissionIndex by lazy {
         PermissionIndex.loadFromResources(AppGraph::class.java.classLoader)
     }
@@ -169,7 +169,7 @@ class AppGraph(private val app: Application) {
 
     // runtimes (declared before the orchestrator that consumes them)
     val runtimes = RuntimeRegistry()
-    private val pythonRuntime = PythonRuntimeProvider(app, binder)
+    private val pythonRuntime = PythonRuntimeProvider(application, binder)
 
     /** P6-06: declarative flows run in-process — no `:w*` worker (plan §7.9, Gate 6-a). */
     val flowRuntime = FlowRuntimeProvider(
@@ -184,8 +184,8 @@ class AppGraph(private val app: Application) {
         dispatchers = dispatchers,
         scope = appScope,
         apiLevel = ApiGate.sdkInt,
-        viewportWidth = app.resources.displayMetrics.widthPixels,
-        viewportHeight = app.resources.displayMetrics.heightPixels,
+        viewportWidth = application.resources.displayMetrics.widthPixels,
+        viewportHeight = application.resources.displayMetrics.heightPixels,
     )
 
     /**
@@ -211,7 +211,7 @@ class AppGraph(private val app: Application) {
         secretOf = { _ -> null }, // fail closed until SecretsProvider ships (same as flows/Python)
         redact = { text -> redactor.redact(text) },
         lowRam = runCatching {
-            (app.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager)
+            (application.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager)
                 .isLowRamDevice
         }.getOrDefault(false),
     )
@@ -220,7 +220,7 @@ class AppGraph(private val app: Application) {
     val recorder = RecorderController(
         clock = clock,
         scope = appScope,
-        devRoot = { app.getExternalFilesDir("dev") },
+        devRoot = { application.getExternalFilesDir("dev") },
     )
 
     /**
@@ -256,12 +256,12 @@ class AppGraph(private val app: Application) {
 
     private val crashReconciler by lazy { CrashReconciler(this) }
 
-    fun runsRoot(): File = File(app.filesDir, "runs").apply { mkdirs() }
+    fun runsRoot(): File = File(application.filesDir, "runs").apply { mkdirs() }
 
     // ---- Phase 4: locks + scheduler + self-heal (plan §11) ----
     val resourceLocks = ResourceLocks(clock)
     val scheduleEngine = ScheduleEngine(clock)
-    val selfHeal: SecureSettingsSelfHeal by lazy { SecureSettingsSelfHeal(app) }
+    val selfHeal: SecureSettingsSelfHeal by lazy { SecureSettingsSelfHeal(application) }
 
     /** The scheduler backend preference (`auto` | `alarm` | `work` | `job`), user-settable in Settings. */
     @Volatile
@@ -269,7 +269,7 @@ class AppGraph(private val app: Application) {
 
     val scheduleBackends: Map<String, SchedulerBackend> by lazy {
         buildMap {
-            put("alarm", AlarmBackend(app))
+            put("alarm", AlarmBackend(application))
             put(
                 "work",
                 WorkBackend(app, app.autohost.service.ScheduleFireWorker::class.java, clock),
@@ -283,7 +283,7 @@ class AppGraph(private val app: Application) {
 
     val scheduleController: ScheduleController by lazy {
         ScheduleController(
-            app = app,
+            app = application,
             clock = clock,
             engine = scheduleEngine,
             backends = scheduleBackends,
@@ -306,7 +306,7 @@ class AppGraph(private val app: Application) {
 
     // ---- Phase 2: data, grants/review, import pipeline, health, dev api ----
     val database: AutoHostDatabase by lazy {
-        Room.databaseBuilder(app, AutoHostDatabase::class.java, AutoHostDatabase.NAME)
+        Room.databaseBuilder(application, AutoHostDatabase::class.java, AutoHostDatabase.NAME)
             .addMigrations(*Migrations.ALL)
             .build()
     }
@@ -350,17 +350,17 @@ class AppGraph(private val app: Application) {
     val capabilityCatalog: CapabilityCatalog by lazy {
         CapabilityCatalog.loadFromResources(AppGraph::class.java.classLoader)
     }
-    val probe = AndroidDeviceProbe(app, ::availabilityOfCapability, ::switchEnabled)
+    val probe = AndroidDeviceProbe(application, ::availabilityOfCapability, ::switchEnabled)
     val capabilityResolver = CapabilityResolver(capabilityCatalog, probe)
 
     val bundleExtractor: BundleExtractor by lazy {
-        BundleExtractor(File(app.cacheDir, "imports"), File(app.filesDir, "tasks"))
+        BundleExtractor(File(application.cacheDir, "imports"), File(application.filesDir, "tasks"))
     }
     val importPipeline: ImportPipeline by lazy {
         // P11-04: pack awareness — missing `uses_packs` become non-blocking report warnings.
         ImportPipeline(bundleExtractor, scanner = { null }, compat = capabilityResolver, installedPackIds = { packController.installedIds() })
     }
-    val taskRemover = TaskRemover(File(app.filesDir, "tasks")) { taskId ->
+    val taskRemover = TaskRemover(File(application.filesDir, "tasks")) { taskId ->
         AhLog.i("app", "removing task", buildJsonObject { put("task_id", taskId) })
     }
 
@@ -627,14 +627,14 @@ class AppGraph(private val app: Application) {
     }
 
     private fun isCharging(): Boolean = runCatching {
-        val bm = app.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
+        val bm = application.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
         val status = bm?.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1) ?: -1
         status == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
             status == android.os.BatteryManager.BATTERY_STATUS_FULL
     }.getOrDefault(false)
 
     private fun batteryPercent(): Int = runCatching {
-        val bm = app.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
+        val bm = application.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
         bm?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1)?.takeIf { it >= 0 }?.let { level ->
             val scale = bm.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100)
             (level * 100) / scale.coerceAtLeast(1)
@@ -642,7 +642,7 @@ class AppGraph(private val app: Application) {
     }.getOrDefault(100)
 
     private fun isUnmetered(): Boolean = runCatching {
-        val cm = app.getSystemService(android.net.ConnectivityManager::class.java)
+        val cm = application.getSystemService(android.net.ConnectivityManager::class.java)
         val caps = cm?.getNetworkCapabilities(cm.activeNetwork)
         caps?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED) ?: false
     }.getOrDefault(false)
@@ -650,13 +650,13 @@ class AppGraph(private val app: Application) {
     /** WAITING_USER(unlock) surfaced from a scheduled fire (plan §11.5/§11.6). */
     private fun postNeedsUserNotification(taskId: String, reason: String) {
         runCatching {
-            val manager = app.getSystemService(android.app.NotificationManager::class.java)
+            val manager = application.getSystemService(android.app.NotificationManager::class.java)
             if (android.os.Build.VERSION.SDK_INT >= 26) {
                 manager.createNotificationChannel(
                     android.app.NotificationChannel("needs_user", "Needs you", android.app.NotificationManager.IMPORTANCE_HIGH),
                 )
             }
-            val notification = android.app.Notification.Builder(app, "needs_user")
+            val notification = android.app.Notification.Builder(application, "needs_user")
                 .setSmallIcon(app.autohost.R.drawable.ic_autohost)
                 .setContentTitle("Task needs you")
                 .setContentText("Unlock the phone to run $taskId ($reason)")
@@ -690,12 +690,12 @@ class AppGraph(private val app: Application) {
         changeEvents = A11yBridge.windowChanges,
     )
     private val appProvider = AppProvider(
-        packages = AndroidPackageReader(app),
+        packages = AndroidPackageReader(application),
         launcher = A11yActivityLauncher(),
         foreground = ForegroundSource.live,
         clock = clock,
         killer = BackgroundKiller { pkg ->
-            val am = app.getSystemService(android.app.ActivityManager::class.java)
+            val am = application.getSystemService(android.app.ActivityManager::class.java)
             try {
                 am.killBackgroundProcesses(pkg)
                 true
@@ -709,7 +709,7 @@ class AppGraph(private val app: Application) {
     private val screenProvider = ScreenProvider()
     private val screenshotProvider = ProjectionScreenshotProvider(
         clock = clock,
-        evidenceDir = File(File(app.filesDir, "runs"), "pending"),
+        evidenceDir = File(File(application.filesDir, "runs"), "pending"),
         a11yActive = { ApiGate.sdkInt >= 30 && A11yBridge.connected },
         a11yCapture = {
             val service = A11yBridge.service.value
@@ -741,13 +741,13 @@ class AppGraph(private val app: Application) {
             },
         )
     }
-    val uiPromptProvider = UiPromptProvider(app, clock, UiTextOverlay(clock))
+    val uiPromptProvider = UiPromptProvider(application, clock, UiTextOverlay(clock))
 
     // P9-01..06: the shell tier — one ordered transport chain (plan §3.1 T3: adb-over-tcp →
     // wireless pairing (draft) → Shizuku → root), shared by the device.shell / device.ui /
     // device.screenshot shell providers. Keys persist under filesDir/adb (one RSA identity).
     private val adbKeys = app.autohost.capabilities.shell.AdbKeyFiles(
-        File(app.filesDir, "adb"),
+        File(application.filesDir, "adb"),
         "autohost@" + android.os.Build.MODEL.let { if (it.isNullOrBlank()) "device" else it },
     ).load()
     private val shellTransports = app.autohost.capabilities.shell.ShellTransports(
@@ -762,7 +762,7 @@ class AppGraph(private val app: Application) {
     private val shellUiProvider = app.autohost.capabilities.shell.ShellUiProvider(shellTransports)
     private val shellScreenshotProvider = app.autohost.capabilities.shell.ShellScreenshotProvider(
         shellTransports,
-        File(File(app.filesDir, "runs"), "pending"),
+        File(File(application.filesDir, "runs"), "pending"),
     )
 
     // ---- P9 part 2: app manage, logcat/device-control, settings write, self-heal, ui.automation ----
@@ -793,12 +793,12 @@ class AppGraph(private val app: Application) {
 
     /** P10-02: the app-side browser host — page registry, visible activities, profile lock. */
     val browserController = app.autohost.browser.BrowserController(
-        app,
+        application,
         taskBundleDir = { taskId ->
             // The task installer extracts bundles under filesDir/tasks/<taskId>/<version>/;
             // the newest version directory is the one runs execute.
             runCatching {
-                File(app.filesDir, "tasks/$taskId").listFiles()
+                File(application.filesDir, "tasks/$taskId").listFiles()
                     ?.filter { it.isDirectory }?.maxByOrNull { it.name }
             }.getOrNull()
         },
@@ -817,7 +817,7 @@ class AppGraph(private val app: Application) {
             runCatching {
                 val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url))
                     .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                app.startActivity(intent)
+                application.startActivity(intent)
                 true
             }.getOrDefault(false)
         },
@@ -846,14 +846,14 @@ class AppGraph(private val app: Application) {
         captureScreen = { target ->
             runCatching { app.autohost.capabilities.projection.Screenshotter.capture(target) }.getOrNull()
         },
-        cacheDir = app.cacheDir,
+        cacheDir = application.cacheDir,
         runDirs = { runId ->
             buildList {
-                add(File(app.filesDir, "runs/$runId/evidence"))
-                add(File(app.filesDir, "runs/$runId/tmp"))
+                add(File(application.filesDir, "runs/$runId/evidence"))
+                add(File(application.filesDir, "runs/$runId/tmp"))
                 val taskId = runStore.runs.value.firstOrNull { it.runId == runId }?.taskId
                 if (taskId != null) {
-                    File(app.filesDir, "tasks/$taskId").listFiles()
+                    File(application.filesDir, "tasks/$taskId").listFiles()
                         ?.filter { it.isDirectory }?.maxByOrNull { it.name }?.let { add(it) }
                 }
             }
@@ -917,7 +917,7 @@ class AppGraph(private val app: Application) {
     /** P10-06..08: lazy-permission truth refresh (call at app start + after FixHub outcomes). */
     fun refreshDataPermissionState() {
         fun granted(permission: String): Boolean = androidx.core.content.ContextCompat.checkSelfPermission(
-            app, permission,
+            application, permission,
         ) == android.content.pm.PackageManager.PERMISSION_GRANTED
         contactsProvider.granted = granted(android.Manifest.permission.READ_CONTACTS)
         calendarProvider.granted = granted(android.Manifest.permission.READ_CALENDAR)
@@ -928,8 +928,8 @@ class AppGraph(private val app: Application) {
         cameraProvider.granted = granted(android.Manifest.permission.CAMERA)
         micProvider.granted = granted(android.Manifest.permission.RECORD_AUDIO)
         val flavorFull = runCatching {
-            app.packageManager.getPackageInfo(app.packageName, 0).versionName != null
-        }.getOrDefault(false) && app.filesDir.parentFile?.name?.contains("full") == true
+            application.packageManager.getPackageInfo(application.packageName, 0).versionName != null
+        }.getOrDefault(false) && application.filesDir.parentFile?.name?.contains("full") == true
         // Flavor truth comes from the build config: core never declares the SMS permissions.
         val flavor = listOf(flavorFull, granted(android.Manifest.permission.SEND_SMS)).any { it }
         smsProvider.flavorFull = flavor || granted(android.Manifest.permission.SEND_SMS)
@@ -1043,7 +1043,7 @@ class AppGraph(private val app: Application) {
 
     /** P8-07: task-private storage host provider (W1 first-build gap closed). */
     private val filesPrivateProvider = app.autohost.capabilities.files.FilesPrivateProvider { taskId ->
-        File(File(app.filesDir, "taskdata"), taskId)
+        File(File(application.filesDir, "taskdata"), taskId)
     }
 
     /** P8-07: SAF trees + MediaStore (user-picked folders). */
@@ -1071,9 +1071,9 @@ class AppGraph(private val app: Application) {
     private val settingsProvider = app.autohost.core.engine.host.SystemSettingsProvider(
         reader = { table, key ->
             when (table) {
-                "system" -> android.provider.Settings.System.getString(app.contentResolver, key)
-                "secure" -> android.provider.Settings.Secure.getString(app.contentResolver, key)
-                else -> android.provider.Settings.Global.getString(app.contentResolver, key)
+                "system" -> android.provider.Settings.System.getString(application.contentResolver, key)
+                "secure" -> android.provider.Settings.Secure.getString(application.contentResolver, key)
+                else -> android.provider.Settings.Global.getString(application.contentResolver, key)
             }
         },
         writer = { table, key, value ->
@@ -1140,17 +1140,17 @@ class AppGraph(private val app: Application) {
     }
 
     /** P7-05: notify.post — task notifications with handler actions (Android sink below). */
-    private val notifyProvider = NotifyProvider(AndroidNotificationSink(app))
+    private val notifyProvider = NotifyProvider(AndroidNotificationSink(application))
 
     /** P7-01: Tier B/C task-UI state + actions; P7-03: the handler call path surfaces dispatch through. */
     val uiHandlers by lazy {
-        UiHandlerController(app, data, grantBuilder, tokens, binder, clock, appScope)
+        UiHandlerController(application, data, grantBuilder, tokens, binder, clock, appScope)
     }
 
     // ---- Phase 7 part 2: system surfaces (plan §10.3) ----
 
     /** P7-06..12: prefs for every surface (bubble mode, tile bindings, external token, key filter). */
-    val surfacesPrefs by lazy { SurfacesPrefs(app) }
+    val surfacesPrefs by lazy { SurfacesPrefs(application) }
 
     /** P7-06..10: the one path tiles/shortcuts/widget/intent use to start runs. */
     val surfaceRuns by lazy { SurfaceRuns(this) }
@@ -1161,7 +1161,7 @@ class AppGraph(private val app: Application) {
      */
     val triggerController: app.autohost.schedule.TriggerController by lazy {
         app.autohost.schedule.TriggerController(
-            app = app,
+            app = application,
             clock = clock,
             engine = scheduleEngine,
             backends = scheduleBackends,
@@ -1177,7 +1177,7 @@ class AppGraph(private val app: Application) {
     val bubble by lazy { BubbleController(this, surfacesPrefs, appScope) }
 
     /** P7-11: the on-device inspector overlay (bounds + ids, tap copies a selector). */
-    val inspector by lazy { InspectorController(app, clock, appScope) }
+    val inspector by lazy { InspectorController(application, clock, appScope) }
 
     /** Per-run "acts on the UI" flag — the bubble policy's `auto` mode consumes it (plan §10.3). */
     private val runUiActing = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
@@ -1195,11 +1195,11 @@ class AppGraph(private val app: Application) {
     }
 
     // dev-folder tasks
-    val devTasks = DevFolderTaskSource(app, clock)
+    val devTasks = DevFolderTaskSource(application, clock)
 
     init {
         A11yBridge.clock = clock
-        AndroidSystemState.init(app)
+        AndroidSystemState.init(application)
         // P9-08: the exclusive-session toggle loads async; a11y reconnects close any live session.
         appScope.launch { loadUiAutomationToggle() }
         appScope.launch {
@@ -1312,7 +1312,7 @@ class AppGraph(private val app: Application) {
             }.getOrDefault(false)
         }
         screenProvider.canWriteSettings = {
-            android.provider.Settings.System.canWrite(app)
+            android.provider.Settings.System.canWrite(application)
         }
         runtimes.register(pythonRuntime)
         runtimes.register(flowRuntime)
@@ -1345,9 +1345,9 @@ class AppGraph(private val app: Application) {
         appScope.launch {
             runStore.runs.collect { runs ->
                 if (runs.any { it.active }) {
-                    RunForegroundService.start(app)
+                    RunForegroundService.start(application)
                 } else {
-                    RunForegroundService.stop(app)
+                    RunForegroundService.stop(application)
                 }
                 for (run in runs) {
                     val previous = previousStatuses[run.runId]
@@ -1478,7 +1478,7 @@ class AppGraph(private val app: Application) {
      * behind `device.clipboard.get` (Android 10+ background-read rule).
      */
     private fun registerActivityFocusTracker() {
-        app.registerActivityLifecycleCallbacks(object : android.app.Application.ActivityLifecycleCallbacks {
+        application.registerActivityLifecycleCallbacks(object : android.app.Application.ActivityLifecycleCallbacks {
             override fun onActivityResumed(activity: android.app.Activity) {
                 app.autohost.capabilities.clipboard.AppFocusTracker.focused = true
             }
@@ -1495,13 +1495,13 @@ class AppGraph(private val app: Application) {
         })
     }
 
-    private fun fileKv(): FileKvStore = FileKvStore(File(app.filesDir, "kv/kv.json"))
+    private fun fileKv(): FileKvStore = FileKvStore(File(application.filesDir, "kv/kv.json"))
     private fun androidSystemInfo(): JsonObject = buildJsonObject {
         put("sdk_int", ApiGate.sdkInt)
         put("manufacturer", android.os.Build.MANUFACTURER)
         put("model", android.os.Build.MODEL)
         put("app_version", try {
-            app.packageManager.getPackageInfo(app.packageName, 0).versionName
+            application.packageManager.getPackageInfo(application.packageName, 0).versionName
         } catch (e: Exception) {
             "?"
         })
@@ -1514,7 +1514,7 @@ class AppGraph(private val app: Application) {
     private inner class A11yActivityLauncher : ActivityLauncher {
         override fun launch(packageName: String): Boolean {
             val service = A11yBridge.service.value ?: return false
-            val intent = app.packageManager.getLaunchIntentForPackage(packageName) ?: return false
+            val intent = application.packageManager.getLaunchIntentForPackage(packageName) ?: return false
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             return try {
                 service.startActivity(intent)

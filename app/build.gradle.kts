@@ -124,6 +124,8 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.androidx.glance.appwidget) // P7-09: home widget (plan §10.3)
     implementation(libs.compose.ui.tooling.preview)
+    implementation(libs.androidx.work.runtime)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
     debugImplementation(libs.compose.ui.tooling)
 

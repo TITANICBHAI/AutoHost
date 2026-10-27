@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import app.autohost.capabilities.browser.CdpClient
 import app.autohost.capabilities.net.JvmWsSocketFactory
+import app.autohost.capabilities.vision.VisionProvider
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -21,14 +22,6 @@ import java.util.concurrent.atomic.AtomicInteger
  * lambda-injection pattern, ADR-035).
  */
 class CdpTransportFactory : CdpClient.Transport {
-
-    private data class HttpTarget(
-        override val id: String,
-        override val url: String,
-        override val title: String?,
-        override val type: String,
-        override val wsPath: String,
-    ) : CdpClient.Transport.Target
 
     override fun listTargets(port: Int, timeoutMs: Long): List<CdpClient.Transport.Target> {
         val conn = (URI("http://127.0.0.1:$port/json/list").toURL().openConnection() as HttpURLConnection).apply {
@@ -50,7 +43,7 @@ class CdpTransportFactory : CdpClient.Transport {
             val obj = element as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
             fun str(name: String): String? = (obj[name] as? kotlinx.serialization.json.JsonPrimitive)?.content
             val ws = str("webSocketDebuggerUrl") ?: return@mapNotNull null
-            HttpTarget(
+            CdpClient.Transport.Target(
                 id = str("id") ?: return@mapNotNull null,
                 url = str("url") ?: "",
                 title = str("title"),
@@ -118,7 +111,10 @@ class CdpTransportFactory : CdpClient.Transport {
         }
 
         override fun close() {
-            runCatching { output.write(byteArrayOf(0x88, 0x80, 0, 0, 0, 0)); output.flush() } // masked empty close
+            runCatching {
+                output.write(byteArrayOf(0x88.toByte(), 0x80.toByte(), 0, 0, 0, 0))
+                output.flush()
+            } // masked empty close
             runCatching { input.close() }
             runCatching { output.close() }
         }

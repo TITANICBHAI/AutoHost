@@ -29,7 +29,7 @@ class AndroidLocation(private val context: Context) : HardwareSeams.LocationSour
     private fun hasFine(): Boolean = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
         PackageManager.PERMISSION_GRANTED
 
-    private fun backgroundAllowed(): Boolean =
+    private fun hasBackgroundLocationPermission(): Boolean =
         if (android.os.Build.VERSION.SDK_INT >= 29) {
             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_BACKGROUND_LOCATION) ==
                 PackageManager.PERMISSION_GRANTED
@@ -37,7 +37,7 @@ class AndroidLocation(private val context: Context) : HardwareSeams.LocationSour
             true // pre-29 background access follows the foreground permission
         }
 
-    override fun backgroundAllowed(): Boolean = backgroundAllowed()
+    override fun backgroundAllowed(): Boolean = hasBackgroundLocationPermission()
 
     override fun lastKnown(): HardwareSeams.LocFix? {
         if (!hasFine()) return null
@@ -67,7 +67,7 @@ class AndroidLocation(private val context: Context) : HardwareSeams.LocationSour
         } finally {
             runCatching { manager.removeUpdates(listener) }
         }
-        return (fix ?: lastKnown())?.toFix()
+        return fix?.toFix() ?: lastKnown()
     }
 
     private fun Location.toFix() = HardwareSeams.LocFix(
@@ -98,7 +98,7 @@ class AndroidCamera(private val context: Context, private val outputDir: File) :
             camera.takePicture(
                 { }, // shutter — visible to the user, no suppression knob exists
                 null,
-                { _, data ->
+                { data, _ ->
                     jpeg = data
                     latch.countDown()
                 },
