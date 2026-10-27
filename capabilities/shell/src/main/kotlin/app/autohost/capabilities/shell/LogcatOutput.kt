@@ -17,7 +17,7 @@ object LogcatOutput {
     )
 
     private val STAMP = Regex(
-        "^(\\d{9,13})\\.(\\d{3})\\s+([VDIWEF])/([^(\s]+)\\(\\s*(\\d+)?\\)?:\\s?(.*)$",
+        "^(\\d{9,13})\\.(\\d{3})\\s+([VDIWEF])/([^()\\s]+)\\(\\s*(\\d+)?\\)?:\\s?(.*)$",
     )
 
     /**
@@ -50,7 +50,7 @@ object LogcatOutput {
         pid: Int? = null,
         contains: String? = null,
     ): List<Entry> {
-        val order = "VDIWEF".mapIndexed { i, c -> c to i }.toMap()
+        val order = "VDIWEF".mapIndexed { i, c -> c.toString() to i }.toMap()
         val minIdx = minLevel?.uppercase()?.let { order[it] }
         return entries.filter { e ->
             if (minIdx != null && (order[e.level] ?: -1) < minIdx) return@filter false

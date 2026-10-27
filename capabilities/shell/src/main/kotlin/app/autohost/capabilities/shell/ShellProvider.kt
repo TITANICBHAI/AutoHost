@@ -33,7 +33,9 @@ class ShellProvider(private val transports: ShellTransports) : CapabilityProvide
         null -> {
             val statuses = transports.statuses()
             val awaiting = statuses.any { it.second is TransportStatus.AwaitingAuthorization }
-            val draft = statuses.any { it.second is TransportStatus.Unsupported && it.second.reason.contains("DRAFT") }
+            val draft = statuses.any { (_, status) ->
+                status is TransportStatus.Unsupported && status.reason.contains("DRAFT")
+            }
             when {
                 awaiting -> Availability.NeedsSetup(
                     reason = "SHELL_AWAITING_AUTHORIZATION",

@@ -52,7 +52,7 @@ class AdbKeys(
             .mod(BigInteger.valueOf(2).pow(32))
         val rr = BigInteger.valueOf(2).pow(4096).mod(modulus)
         val blob = ByteArray(4 + 4 + 256 + 256 + 4)
-        writeLe32(blob, 0, words)
+        writeLe32(blob, 0, words.toLong())
         writeLe32(blob, 4, n0inv.toLong())
         n.copyInto(blob, 8)
         littleEndian(rr, 256).copyInto(blob, 264)

@@ -86,7 +86,8 @@ class SmsProvider(
         else -> null
     }
 
-    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope = when (method) {
+    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope {
+        return when (method) {
         "read_inbox" -> {
             val limit = DataPolicy.rows((args["limit"] as? JsonPrimitive)?.content?.toIntOrNull())
             val filter = (args["filter"] as? JsonPrimitive)?.content
@@ -151,7 +152,8 @@ class SmsProvider(
             }
             Envelope.err(ErrorCode.TIMEOUT, "no matching SMS within ${timeoutMs}ms")
         }
-        else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown device.sms method '$method'")
+            else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown device.sms method '$method'")
+        }
     }
 
     companion object {
@@ -176,7 +178,8 @@ class TelephonyProvider(private val telephony: TelephonySeams.Telephony) : FullF
         else -> null
     }
 
-    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope = when (method) {
+    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope {
+        return when (method) {
         "call_state" -> {
             val (state, number) = telephony.callState()
             Envelope.ok(buildJsonObject {
@@ -197,6 +200,7 @@ class TelephonyProvider(private val telephony: TelephonySeams.Telephony) : FullF
                 put("verified", false) // the dialer owns the call; we never claim it connected
             })
         }
-        else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown device.telephony method '$method'")
+            else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown device.telephony method '$method'")
+        }
     }
 }

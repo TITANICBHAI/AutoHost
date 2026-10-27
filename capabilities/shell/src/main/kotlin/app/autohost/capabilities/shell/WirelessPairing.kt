@@ -134,7 +134,11 @@ object Spake2P256 {
             )
             require(onCurve(peer)) { "peer point is not a member of the group (RFC: MUST abort)" }
             val base = if (side == Side.A) decodePoint(N_HEX) else decodePoint(M_HEX)
-            val shared = mul(scalar, add(peer, mul(w.negate().mod(ORDER), base)))
+            val maskingPoint = mul(w.negate().mod(ORDER), base)
+                ?: throw IllegalStateException("masking point is at infinity")
+            val adjustedPeer = add(peer, maskingPoint)
+                ?: throw IllegalStateException("adjusted peer point is at infinity")
+            val shared = mul(scalar, adjustedPeer)
                 ?: throw IllegalStateException("shared point is at infinity")
             val k = encodeUncompressed(shared)
             val pa = if (side == Side.A) myMessage else peerMessage

@@ -128,7 +128,7 @@ object UiautomatorDump {
         private fun attributes(body: String): Map<String, String> {
             val map = HashMap<String, String>(16)
             var i = body.indexOf(' ') + 1
-            while (i in 1 until body.size) {
+            while (i in 1 until body.length) {
                 while (i < body.length && (body[i].isWhitespace() || body[i] == '/')) i++
                 if (i >= body.length) break
                 val eq = body.indexOf('=', i)

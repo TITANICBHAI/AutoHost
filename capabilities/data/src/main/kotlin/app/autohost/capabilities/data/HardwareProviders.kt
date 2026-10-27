@@ -2,6 +2,8 @@ package app.autohost.capabilities.data
 
 import app.autohost.core.broker.CallContext
 import app.autohost.core.broker.CapabilityProvider
+import app.autohost.core.broker.DeviceEnv
+import app.autohost.core.model.Availability
 import app.autohost.core.model.Envelope
 import app.autohost.core.model.ErrorCode
 import kotlinx.serialization.json.JsonObject
@@ -76,7 +78,8 @@ class LocationProvider(private val source: HardwareSeams.LocationSource) : LazyP
 
     override fun permissionFor(method: String, args: JsonObject): String? = "location"
 
-    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope = when (method) {
+    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope {
+        return when (method) {
         "last_known" -> {
             if (!source.backgroundAllowed()) {
                 return Envelope.err(
@@ -96,7 +99,8 @@ class LocationProvider(private val source: HardwareSeams.LocationSource) : LazyP
                 ?: return Envelope.err(ErrorCode.TIMEOUT, "no location fix within ${timeoutMs}ms (location services off?)")
             Envelope.ok(fixJson(fix, stale = false))
         }
-        else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown location method '$method'")
+            else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown location method '$method'")
+        }
     }
 
     private fun fixJson(fix: HardwareSeams.LocFix, stale: Boolean) = buildJsonObject {
@@ -119,7 +123,8 @@ class CameraProvider(private val camera: HardwareSeams.Camera) : LazyPermissionP
 
     override fun permissionFor(method: String, args: JsonObject): String? = "camera"
 
-    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope = when (method) {
+    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope {
+        return when (method) {
         "capture_photo" -> {
             val front = (args["front"] as? JsonPrimitive)?.content?.toBooleanStrictOrNull() ?: false
             val capture = camera.capture(front)
@@ -131,7 +136,8 @@ class CameraProvider(private val camera: HardwareSeams.Camera) : LazyPermissionP
                 put("size_bytes", capture.sizeBytes)
             })
         }
-        else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown camera method '$method'")
+            else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown camera method '$method'")
+        }
     }
 }
 
@@ -143,7 +149,8 @@ class MicProvider(private val mic: HardwareSeams.Mic) : LazyPermissionProvider("
 
     override fun permissionFor(method: String, args: JsonObject): String? = "microphone"
 
-    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope = when (method) {
+    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope {
+        return when (method) {
         "record" -> {
             val durationMs = DataPolicy.recordMs((args["duration_ms"] as? JsonPrimitive)?.content?.toIntOrNull())
             val recording = mic.record(durationMs)
@@ -154,7 +161,8 @@ class MicProvider(private val mic: HardwareSeams.Mic) : LazyPermissionProvider("
                 put("size_bytes", recording.sizeBytes)
             })
         }
-        else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown microphone method '$method'")
+            else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown microphone method '$method'")
+        }
     }
 }
 

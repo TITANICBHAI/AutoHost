@@ -17,7 +17,7 @@ import kotlinx.serialization.json.put
  * the shell uid, and mock location is an appop on our own package. Every act is verified by a
  * follow-up read where the platform offers one; the rest report the exit code honestly.
  */
-internal abstract class ShellCapabilityProvider(
+abstract class ShellCapabilityProvider(
     override val capabilityId: String,
     override val providerId: String,
 ) : CapabilityProvider {

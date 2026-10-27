@@ -86,7 +86,8 @@ class ContactsProvider(private val store: PersonalDataStores.Contacts) : LazyPer
         else -> null
     }
 
-    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope = when (method) {
+    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope {
+        return when (method) {
         "query" -> {
             val limit = DataPolicy.rows((args["limit"] as? JsonPrimitive)?.content?.toIntOrNull())
             val filter = (args["filter"] as? JsonPrimitive)?.content
@@ -112,7 +113,8 @@ class ContactsProvider(private val store: PersonalDataStores.Contacts) : LazyPer
             val id = store.insert(name, phone, email)
             Envelope.ok(buildJsonObject { put("id", id) })
         }
-        else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown contacts method '$method'")
+            else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown contacts method '$method'")
+        }
     }
 }
 
@@ -128,7 +130,8 @@ class CalendarProvider(private val store: PersonalDataStores.Calendar) : LazyPer
         else -> null
     }
 
-    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope = when (method) {
+    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope {
+        return when (method) {
         "query" -> {
             val now = ctx.nowMs
             val fromMs = (args["from_ms"] as? JsonPrimitive)?.content?.toLongOrNull() ?: now
@@ -164,7 +167,8 @@ class CalendarProvider(private val store: PersonalDataStores.Calendar) : LazyPer
             val id = store.insert(title, startMs, endMs, location, description)
             Envelope.ok(buildJsonObject { put("id", id) })
         }
-        else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown calendar method '$method'")
+            else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown calendar method '$method'")
+        }
     }
 }
 
@@ -180,7 +184,8 @@ class MediaProvider(private val store: PersonalDataStores.Media) : LazyPermissio
         else -> null
     }
 
-    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope = when (method) {
+    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope {
+        return when (method) {
         "list" -> {
             val limit = DataPolicy.rows((args["limit"] as? JsonPrimitive)?.content?.toIntOrNull())
             val kind = (args["kind"] as? JsonPrimitive)?.content
@@ -232,6 +237,7 @@ class MediaProvider(private val store: PersonalDataStores.Media) : LazyPermissio
             if (!deleted) return Envelope.err(ErrorCode.NOT_FOUND, "media id $id not found")
             Envelope.ok(buildJsonObject { put("deleted", true) })
         }
-        else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown media method '$method'")
+            else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown media method '$method'")
+        }
     }
 }

@@ -37,8 +37,8 @@ class ClipboardProvider(private val system: System = AndroidClipboard) : Capabil
     override fun permissionFor(method: String, args: kotlinx.serialization.json.JsonObject): String =
         "device.clipboard"
 
-    override suspend fun invoke(ctx: CallContext, method: String, args: kotlinx.serialization.json.JsonObject): Envelope =
-        when (method) {
+    override suspend fun invoke(ctx: CallContext, method: String, args: kotlinx.serialization.json.JsonObject): Envelope {
+        return when (method) {
             "get" -> {
                 val focus = focusSource?.isFocused() ?: system.isFocusedByDefault()
                 when (ClipboardPolicy.readVerdict(focus)) {
@@ -72,6 +72,7 @@ class ClipboardProvider(private val system: System = AndroidClipboard) : Capabil
             }
             else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown device.clipboard method '$method'")
         }
+    }
 
     /** Settable in tests; defaults to the process-wide tracker the app wires at startup. */
     @Volatile
