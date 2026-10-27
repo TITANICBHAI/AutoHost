@@ -237,7 +237,7 @@ class ScheduleController(
                 put("proposed", proposal != null && proposal == next)
                 val refused = arm.first as? ArmResult.Refused
                 if (refused != null) put("refused", refused.reason)
-            },
+            }.toString(),
         )
     }
 

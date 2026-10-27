@@ -40,8 +40,15 @@ import kotlinx.serialization.json.put
  */
 class UiAutomationRunner : Instrumentation() {
 
+    private var configuredPort: Int = DEFAULT_PORT
+
+    override fun onCreate(arguments: Bundle) {
+        super.onCreate(arguments)
+        configuredPort = arguments.getInt("port", DEFAULT_PORT)
+    }
+
     override fun onStart() {
-        val port = getArguments().getInt("port", DEFAULT_PORT)
+        val port = configuredPort
         val thread = Thread { serve(port) }
         thread.name = "ui-automation-runner"
         thread.start()
