@@ -1094,8 +1094,6 @@ class AppGraph(val application: Application) {
             }
         },
     )
-    private val tasksRunProvider = app.autohost.core.engine.host.TasksRunProvider(chainRunner)
-
     /** P8-12: the raw-bridge handshake (grant + raw_api switch enforced upstream in the pipeline). */
     private val rawBridgeProvider = app.autohost.capabilities.rawbridge.RawBridgeProvider(
         workerPid = { android.os.Process.myPid() },
@@ -1140,6 +1138,8 @@ class AppGraph(val application: Application) {
             return app.autohost.core.engine.host.TasksRunProvider.ChainRunner.Outcome.Timeout
         }
     }
+
+    private val tasksRunProvider = app.autohost.core.engine.host.TasksRunProvider(chainRunner)
 
     /** P8-08: the webhook endpoint → `external` trigger rules (Settings → Webhooks, S23). */
     val webhooks: app.autohost.webhook.WebhookController by lazy {
@@ -1310,9 +1310,19 @@ class AppGraph(val application: Application) {
         // P8-10: the a11y wake/lock actions for device.screen control + the write-settings flag.
         screenProvider.a11yActions = object : app.autohost.capabilities.screen.A11yScreenActions {
             override fun wakeUp(): Boolean = runCatching {
-                A11yBridge.service.value?.performGlobalAction(
-                    android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_WAKE_UP,
-                ) == true
+                val power = application.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+                if (power.isInteractive) {
+                    true
+                } else {
+                    @Suppress("DEPRECATION")
+                    power.newWakeLock(
+                        android.os.PowerManager.FULL_WAKE_LOCK or
+                            android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP or
+                            android.os.PowerManager.ON_AFTER_RELEASE,
+                        "AutoHost:screen-wake",
+                    ).acquire(1_000L)
+                    true
+                }
             }.getOrDefault(false)
             override fun lockScreen(): Boolean = runCatching {
                 A11yBridge.service.value?.performGlobalAction(

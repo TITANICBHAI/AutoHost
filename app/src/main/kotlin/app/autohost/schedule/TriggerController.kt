@@ -10,10 +10,13 @@ import app.autohost.core.engine.events.EventSourceCatalog
 import app.autohost.core.engine.events.TriggerEvent
 import app.autohost.core.engine.schedule.ScheduleEngine
 import app.autohost.core.engine.schedule.SchedulerBackend
+import app.autohost.core.engine.schedule.ArmResult
+import app.autohost.core.model.ScheduleRule
 import app.autohost.core.engine.triggers.BusyGate
 import app.autohost.core.engine.triggers.EventMatcher
 import app.autohost.core.engine.triggers.TriggerDecisionEngine
 import app.autohost.core.model.TriggerRule
+import app.autohost.core.model.TriggerSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -297,7 +300,7 @@ class TriggerController(
             val outcome = if (runId != null) "FIRED" else "REFUSED"
             state.lastFireAtMs = clock.nowMs()
             state.launchCount += 1
-            data.triggers.touchFired(entry.entity.ruleId, clock.nowMs())
+            data.triggers.touchFired(entry.entity.ruleId)
             data.triggers.recordEvent(
                 entry.entity.ruleId,
                 outcome,
@@ -387,18 +390,18 @@ class TriggerController(
     fun armTimeRules() {
         scope.launch {
             val rules = data.triggers.enabledRules()
-                .filter { it.source in app.autohost.core.model.TriggerSource.TIMED }
+                .filter { it.source in TriggerSource.TIMED }
             for (entity in rules) {
                 val timed = parseTimedRule(entity) ?: continue
                 val now = clock.nowMs()
                 val next = engine.nextFires(timed.schedule, now, n = 1).firstOrNull()
                 if (next == null) {
-                    data.triggers.setArmed(entity.ruleId, false, now)
+                    data.triggers.setArmed(entity.ruleId, false)
                     continue
                 }
                 val backend = backends["alarm"] ?: backends.values.firstOrNull() ?: continue
                 val result = backend.arm(fireId(entity.ruleId), next, allowWhileIdle = backend.canDeliverExact())
-                data.triggers.setArmed(entity.ruleId, result is SchedulerBackend.ArmResult.Armed, now)
+                data.triggers.setArmed(entity.ruleId, result is ArmResult.Armed)
             }
         }
     }
@@ -420,14 +423,14 @@ class TriggerController(
         }
     }
 
-    private class TimedRule(val rule: TriggerRule, val schedule: app.autohost.core.model.ScheduleRule)
+    private class TimedRule(val rule: TriggerRule, val schedule: ScheduleRule)
 
     private fun parseTimedRule(entity: app.autohost.core.data.db.TriggerRuleEntity): TimedRule? {
         val rule = parseRuleOf(entity) ?: return null
         val schedule = when (entity.source) {
             "time.delay" -> {
                 val seconds = (rule.params["seconds"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toLongOrNull() ?: return null
-                app.autohost.core.model.ScheduleRule(
+                ScheduleRule(
                     id = "trig-${entity.ruleId}", task = entity.taskId, type = "once",
                     at = java.time.Instant.ofEpochMilli(clock.nowMs() + seconds * 1000).toString(),
                     timezone = "UTC",
@@ -443,8 +446,9 @@ class TriggerController(
     /** The `triggers.status` row for one rule: guards, counters, cooldown remaining, busy depth. */
     suspend fun statusOf(entity: app.autohost.core.data.db.TriggerRuleEntity): JsonObject {
         val state = states[entity.ruleId]
-        val cooldownRemaining = if (entity.lastFireAt != null && entity.cooldownSeconds > 0) {
-            (entity.lastFireAt + entity.cooldownSeconds * 1000 - clock.nowMs()).coerceAtLeast(0)
+        val lastFireAt = entity.lastFireAt
+        val cooldownRemaining = if (lastFireAt != null && entity.cooldownSeconds > 0) {
+            (lastFireAt + entity.cooldownSeconds * 1000 - clock.nowMs()).coerceAtLeast(0)
         } else {
             0L
         }

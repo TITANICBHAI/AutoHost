@@ -6,10 +6,11 @@ import app.autohost.runtime.js.JsEngineFactory
 import com.dokar.quickjs.QuickJs
 import com.dokar.quickjs.binding.function
 import com.dokar.quickjs.evaluate
-import com.dokar.quickjs.moduleLoader
+import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.put
 
 /**
  * P11-02 (ADR-076): the ONLY file in the repo that imports the QuickJS binding
@@ -25,14 +26,11 @@ import kotlinx.serialization.json.JsonPrimitive
  *    JSON array `[op, payloadJson]` (single-arg keeps the binding arity simple); the reply JSON
  *    string comes back verbatim. Blocking the JS thread for the call duration is BY DESIGN —
  *    the same blocking semantics as the Python worker.
- *  - setLimits: heap/stack caps are applied through the binding's runtime options when the
- *    artifact exposes them; if 1.0.3 lacks a knob the value is skipped with a logged warning
- *    (honest caps: deadline + interrupt still bound the run).
- *  - setInterruptHandler: quickjs-kt has no poll handler — a 200 ms watcher thread polls the
- *    check and calls [QuickJs.interruptEvaluation] when it flips true (cancel + run deadline).
+ *  - setLimits: heap and stack caps use the public QuickJS properties.
+ *  - setInterruptHandler: the binding exposes no native interrupt primitive; the check is applied
+ *    at host-bridge boundaries and between evaluation stages.
  *  - runEntry: prelude script → entry re-exported as a module (`import * as ns from
- *    "__autohost_entry__"` with the loader serving the real entry source, so its `./lib/` + `*.js`
- *    imports resolve through [moduleLoader] with containment from JsSources) → the namespace
+ *    "__autohost_entry__"` with statically registered modules from the JsSources loader) → the namespace
  *    lands in `__autohost_exports` → `JSON.stringify(__autohost_run_main())` returned verbatim.
  *  - A script-level failure returns the outcome JSON from the prelude; only engine-internal
  *    failures throw out of runEntry (worker death, like every other runtime).
@@ -50,7 +48,6 @@ object QuickJsEngineFactory : JsEngineFactory {
         private var interruptCheck: (() -> Boolean)? = null
         private var maxMemoryBytes: Long = -1
         private var maxStackBytes: Long = -1
-        private var watcher: Thread? = null
         private var quickjs: QuickJs? = null
 
         override fun installBridge(bridge: (op: String, payload: String) -> String) {
@@ -73,28 +70,19 @@ object QuickJsEngineFactory : JsEngineFactory {
             moduleLoader: ((String) -> String?)?,
         ): String {
             val bridgeFn = requireNotNull(bridgeFn) { "installBridge must be called before runEntry" }
-            val quickjs = QuickJs.create()
+            val quickjs = QuickJs.create(Dispatchers.IO)
             this.quickjs = quickjs
-            startInterruptWatcher(quickjs)
             return try {
                 quickjs.function("__autohost_bridge") { payload: String ->
                     serveBridge(bridgeFn, payload)
                 }
                 applyLimits(quickjs)
-                if (moduleLoader != null) {
-                    quickjs.moduleLoader {
-                        normalize { _, requestedName -> requestedName }
-                        load { name ->
-                            when {
-                                name == ENTRY_MODULE -> com.dokar.quickjs.ModuleContent.Source(entrySource)
-                                else -> moduleLoader(name)?.let { com.dokar.quickjs.ModuleContent.Source(it) }
-                            }
-                        }
-                    }
-                }
+                registerModules(quickjs, entrySource, moduleLoader)
                 runBlockingEval {
+                    checkInterrupted()
                     // 1) prelude: defines autohost, errors, sel and __autohost_run_main.
                     quickjs.evaluate<Any?>(preludeSource, filename = "prelude.js")
+                    checkInterrupted()
                     // 2) entry as a module: the loader serves the real entry source under the
                     //    reserved name; relative './lib/*.js' imports resolve through the loader.
                     quickjs.evaluate<Any?>(
@@ -107,10 +95,10 @@ object QuickJsEngineFactory : JsEngineFactory {
                         "JSON.stringify(__autohost_run_main())",
                         filename = "main-invoker",
                     )
+                    checkInterrupted()
                     raw
                 }
             } finally {
-                stopInterruptWatcher()
                 runCatching { quickjs.close() }
                     .onFailure { AhLog.w(TAG, "quickjs close failed: ${it.message}") }
                 this.quickjs = null
@@ -118,12 +106,35 @@ object QuickJsEngineFactory : JsEngineFactory {
         }
 
         override fun close() {
-            stopInterruptWatcher()
             quickjs?.let { q -> runCatching { q.close() } }
             quickjs = null
         }
 
         // --- internals -------------------------------------------------------------------------
+
+        private fun registerModules(
+            quickjs: QuickJs,
+            entrySource: String,
+            moduleLoader: ((String) -> String?)?,
+        ) {
+            quickjs.addModule(ENTRY_MODULE, entrySource)
+            if (moduleLoader == null) return
+
+            val visited = mutableSetOf(ENTRY_MODULE)
+            val pending = ArrayDeque<Pair<String, String>>()
+            pending.addLast(ENTRY_MODULE to entrySource)
+            while (pending.isNotEmpty()) {
+                val (_, source) = pending.removeFirst()
+                for (match in IMPORT_SPECIFIERS.findAll(source)) {
+                    val name = match.groupValues[1].ifEmpty { match.groupValues[2] }
+                    if (!name.startsWith("./") && !name.startsWith("../")) continue
+                    if (!visited.add(name)) continue
+                    val imported = moduleLoader(name) ?: continue
+                    quickjs.addModule(name, imported)
+                    pending.addLast(name to imported)
+                }
+            }
+        }
 
         /** Parses the single-arg `[op, payloadJson]` frame and serves it; never throws into JS. */
         private fun serveBridge(
@@ -148,46 +159,14 @@ object QuickJsEngineFactory : JsEngineFactory {
         }
 
         private fun applyLimits(quickjs: QuickJs) {
-            // Owner-verify: expose the caps through whatever runtime/options surface the artifact
-            // provides. A missing knob is logged, never thrown — deadline + interrupt still bound
-            // the run honestly.
-            runCatching {
-                val runtime = quickjs.javaClass.methods.firstOrNull { it.name == "getRuntime" }
-                    ?.invoke(quickjs) ?: return
-                runtime.javaClass.methods.firstOrNull { it.name == "setMemoryLimit" }
-                    ?.invoke(runtime, maxMemoryBytes)
-                runtime.javaClass.methods.firstOrNull { it.name == "setMaxStackSize" }
-                    ?.invoke(runtime, maxStackBytes)
-            }.onFailure {
-                AhLog.w(TAG, "quickjs limits not applied (binding surface drifted): ${it.message}")
+            if (maxMemoryBytes > 0) quickjs.memoryLimit = maxMemoryBytes
+            if (maxStackBytes > 0) quickjs.maxStackSize = maxStackBytes
+        }
+
+        private fun checkInterrupted() {
+            if (interruptCheck?.invoke() == true) {
+                throw kotlinx.coroutines.CancellationException("JavaScript run cancelled or timed out")
             }
-        }
-
-        /** Polls the interrupt check ~5×/s and interrupts the evaluation when it flips true. */
-        private fun startInterruptWatcher(quickjs: QuickJs) {
-            stopInterruptWatcher()
-            val check = interruptCheck ?: return
-            val thread = Thread({
-                while (!Thread.currentThread().isInterrupted) {
-                    try {
-                        Thread.sleep(200)
-                    } catch (e: InterruptedException) {
-                        return@Thread
-                    }
-                    if (runCatching { check() }.getOrDefault(false)) {
-                        runCatching { quickjs.interruptEvaluation() }
-                        return@Thread
-                    }
-                }
-            }, "autohost-js-interrupt")
-            thread.isDaemon = true
-            thread.start()
-            watcher = thread
-        }
-
-        private fun stopInterruptWatcher() {
-            watcher?.interrupt()
-            watcher = null
         }
 
         /**
@@ -196,5 +175,12 @@ object QuickJsEngineFactory : JsEngineFactory {
          */
         private fun <T> runBlockingEval(block: suspend () -> T): T =
             kotlinx.coroutines.runBlocking { block() }
+
+        companion object {
+            private val IMPORT_SPECIFIERS = Regex(
+                """(?:\bimport\s*(?:[^'"]*?\s+from\s*)?|\bexport\s+[^'"]*?\s+from\s*)['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]\s*\)""",
+                setOf(RegexOption.DOT_MATCHES_ALL),
+            )
+        }
     }
 }

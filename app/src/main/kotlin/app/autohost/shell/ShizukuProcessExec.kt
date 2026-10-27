@@ -8,8 +8,9 @@ import app.autohost.capabilities.shell.ShizukuTransport
  * (`dev.rikka.shizuku:api`, Apache-2.0, ADR-064), isolated here so the capability module and its
  * tests stay dependency-free.
  *
- * Availability = `Shizuku.pingBinder()` (the server is running) AND the permission granted. Exec =
- * `Shizuku.newProcess` running `sh -c <command>` with the same wait/drain discipline as
+ * Availability = `Shizuku.pingBinder()` (the server is running) AND the permission granted. Exec
+ * uses Shizuku's deprecated process facade reflectively because API 13.1.5 made it private; this
+ * keeps the dependency isolated and produces an explicit failure if that compatibility surface is removed.
  * [app.autohost.capabilities.shell.RootTransport].
  *
  * First-build note: confirm the `newProcess(String[], String[], String?)` facade against the
@@ -23,7 +24,21 @@ class ShizukuProcessExec : ShizukuTransport.Exec {
     }.getOrDefault(false)
 
     override fun run(command: String, timeoutMs: Long): ShellResult {
-        val process = rikka.shizuku.Shizuku.newProcess(arrayOf("sh", "-c", command), null, null)
+        val process = try {
+            val method = rikka.shizuku.Shizuku::class.java.getDeclaredMethod(
+                "newProcess",
+                Array<String>::class.java,
+                Array<String>::class.java,
+                String::class.java,
+            )
+            method.isAccessible = true
+            method.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
+        } catch (e: ReflectiveOperationException) {
+            throw app.autohost.capabilities.shell.ShellTransportException(
+                app.autohost.capabilities.shell.ShellTransportException.Reason.DEVICE_CLOSED,
+                "Shizuku process execution is unavailable: ${e.message}",
+            )
+        }
         val stdout = StringBuilder()
         val stderr = StringBuilder()
         val outThread = Thread { drain(process.inputStream, stdout) }.apply { isDaemon = true }

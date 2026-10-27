@@ -6,6 +6,7 @@ import android.content.Intent
 import app.autohost.AutoHostApp
 import app.autohost.core.common.AhLog
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.put
 
 /**
  * P4-07: re-arm on boot, app update, time-zone change and clock change; reconcile on app start

@@ -8,6 +8,7 @@ import app.autohost.capabilities.shell.ShellTransports
 import app.autohost.capabilities.shell.TransportStatus
 import app.autohost.core.common.AhJson
 import app.autohost.core.common.AhLog
+import kotlinx.serialization.json.put
 
 /**
  * P9-12: the post-reboot re-arm reminder (plan Gate 9-d — "reboot/re-arm behaviour documented and

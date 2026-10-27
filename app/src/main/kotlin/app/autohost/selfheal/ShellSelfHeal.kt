@@ -4,6 +4,7 @@ import android.content.ComponentName
 import app.autohost.core.common.AhJson
 import app.autohost.core.common.AhLog
 import app.autohost.shell.SecureSettingsHelper
+import kotlinx.serialization.json.put
 
 /**
  * P9-11: the shell-fallback half of self-heal (the P4-14 [SecureSettingsSelfHeal] keeps owning the

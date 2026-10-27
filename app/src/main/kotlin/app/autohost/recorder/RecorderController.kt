@@ -160,11 +160,11 @@ class RecorderController(
     /** Matches the tapped node against the snapshot by exact bounds, then nearest-bounds fallback. */
     private fun matchNode(tap: RecorderTapEvent, nodes: List<UiNode>): RecordedNode? {
         val bounds = tap.bounds ?: return null
-        nodes.firstOrNull { listOf(it.bounds.left, it.bounds.top, it.bounds.right, it.bounds.bottom) == bounds }
+        nodes.firstOrNull { listOf(it.bounds.l, it.bounds.t, it.bounds.r, it.bounds.b) == bounds }
             ?.let { return it.toRecorded(tap) }
         // Bounds drift between event and snapshot (animations): accept a near-exact overlap only.
         return nodes
-            .map { it to (kotlin.math.abs(it.bounds.left - bounds[0]) + kotlin.math.abs(it.bounds.top - bounds[1])) }
+            .map { it to (kotlin.math.abs(it.bounds.l - bounds[0]) + kotlin.math.abs(it.bounds.t - bounds[1])) }
             .filter { (_, distance) -> distance <= 24 }
             .minByOrNull { (_, distance) -> distance }
             ?.first
@@ -176,7 +176,7 @@ class RecorderController(
         text = text.ifEmpty { tap?.text.orEmpty() },
         desc = desc.ifEmpty { tap?.desc.orEmpty() },
         cls = cls.ifEmpty { tap?.className.orEmpty() },
-        bounds = listOf(bounds.left, bounds.top, bounds.right, bounds.bottom),
+        bounds = listOf(bounds.l, bounds.t, bounds.r, bounds.b),
         editable = has("editable"),
         password = has("password"),
         clickable = has("clickable"),

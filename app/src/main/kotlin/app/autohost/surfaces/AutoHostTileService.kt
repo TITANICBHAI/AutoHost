@@ -45,18 +45,13 @@ abstract class AutoHostTileService : TileService() {
             openSurfaces()
             return
         }
-        val pending = goAsync()
         graph.appScope.launch {
-            try {
-                graph.surfaceRuns.start(
-                    taskId = binding.taskId,
-                    profileId = binding.profileId,
-                    stage = binding.stage,
-                    source = "tile$slot",
-                )
-            } finally {
-                pending.finish()
-            }
+            graph.surfaceRuns.start(
+                taskId = binding.taskId,
+                profileId = binding.profileId,
+                stage = binding.stage,
+                source = "tile$slot",
+            )
         }
         refreshTile()
     }

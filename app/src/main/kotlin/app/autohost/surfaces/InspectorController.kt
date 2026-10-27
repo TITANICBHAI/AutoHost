@@ -115,7 +115,7 @@ class InspectorController(
     }
 
     private fun currentPkg(): String {
-        val fg = ForegroundTracker.current()?.pkg.orEmpty()
+        val fg = ForegroundTracker.state.value?.pkg.orEmpty()
         return if (fg == context.packageName) "" else fg
     }
 

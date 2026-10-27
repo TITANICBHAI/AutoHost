@@ -38,6 +38,7 @@ import app.autohost.core.designsystem.components.SectionHeader
 import app.autohost.core.designsystem.components.StatusChip
 import app.autohost.core.model.TaskManifest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.JsonObject
 
 /**
@@ -50,7 +51,7 @@ fun LibraryScreen(graph: AppGraph, onOpenTask: (String) -> Unit, onImport: () ->
     var query by remember { mutableStateOf("") }
     var showTemplates by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        tasks = kotlinx.coroutines.flow.first(graph.data.tasks.observeActive())
+        tasks = graph.data.tasks.observeActive().first()
     }
     if (showTemplates) {
         NewFromTemplateScreen(graph = graph, onOpenTask = onOpenTask, onBack = { showTemplates = false })

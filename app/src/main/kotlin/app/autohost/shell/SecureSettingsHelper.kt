@@ -6,6 +6,7 @@ import app.autohost.capabilities.shell.ShellCommands
 import app.autohost.capabilities.shell.ShellTransports
 import app.autohost.core.common.AhJson
 import app.autohost.core.common.AhLog
+import kotlinx.serialization.json.put
 
 /**
  * P9-11: the one settings-write door (ADR-067, plan §3.4 — "one-time WRITE_SECURE_SETTINGS grant"; plan

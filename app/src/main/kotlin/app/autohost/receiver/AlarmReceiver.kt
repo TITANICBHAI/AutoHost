@@ -6,6 +6,7 @@ import android.content.Intent
 import app.autohost.AutoHostApp
 import app.autohost.core.common.AhLog
 import app.autohost.core.engine.schedule.AlarmBackend
+import kotlinx.serialization.json.put
 
 /**
  * P4-05: delivers one armed schedule fire (plan §11.3). Starts the run foreground service path

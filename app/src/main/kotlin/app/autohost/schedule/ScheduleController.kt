@@ -13,7 +13,9 @@ import app.autohost.core.engine.schedule.ReconcilePolicy
 import app.autohost.core.engine.schedule.ScheduleEngine
 import app.autohost.core.engine.schedule.ScheduleState
 import app.autohost.core.engine.schedule.SchedulerBackend
+import app.autohost.core.engine.schedule.ArmResult
 import app.autohost.core.model.ScheduleRule
+import app.autohost.core.model.TaskManifest
 import app.autohost.core.model.isHhMm
 import app.autohost.core.model.parseIsoToMs
 import app.autohost.core.model.toMinutes
@@ -136,7 +138,7 @@ class ScheduleController(
         )
         data.schedules.recordEvent(
             state.scheduleId, EVENT_FIRED,
-            AhJson.meta { put("profile", profileId ?: ""); put("outcome", outcome); put("run_id", runId ?: "") },
+            AhJson.meta { put("profile", profileId ?: ""); put("outcome", outcome); put("run_id", runId ?: "") }.toString(),
         )
     }
 
@@ -150,7 +152,11 @@ class ScheduleController(
             data.schedules.upsert(state.copy(consecutiveFailures = next, updatedAt = clock.nowMs()))
             val cap = rule.limits.stopAfterConsecutiveFailures
             if (failed && cap != null && next >= cap) {
-                data.schedules.recordEvent(state.scheduleId, EVENT_LIMIT_HIT, AhJson.meta { put("consecutive_failures", next) })
+                data.schedules.recordEvent(
+                    state.scheduleId,
+                    EVENT_LIMIT_HIT,
+                    AhJson.meta { put("consecutive_failures", next) }.toString(),
+                )
             }
         }
     }
@@ -186,7 +192,7 @@ class ScheduleController(
                                 put("why", why)
                                 put("policy", decision.policyName)
                                 put("missed", decision.fires.size)
-                            },
+                            }.toString(),
                         )
                         for (fire in decision.fires) {
                             for (target in engine.fanOut(rule, clock.nowMs())) {
@@ -219,7 +225,7 @@ class ScheduleController(
         val arm = armWithFallback(state.backend, fireId(scheduleId), next, now)
         data.schedules.updateArming(
             scheduleId, next,
-            if (arm.first is SchedulerBackend.ArmResult.Armed) fireId(scheduleId) else null,
+            if (arm.first is ArmResult.Armed) fireId(scheduleId) else null,
             arm.second,
             lateTiming = arm.second != BACKEND_ALARM,
         )
@@ -229,7 +235,7 @@ class ScheduleController(
                 put("backend", arm.second)
                 put("next", next)
                 put("proposed", proposal != null && proposal == next)
-                val refused = arm.first as? SchedulerBackend.ArmResult.Refused
+                val refused = arm.first as? ArmResult.Refused
                 if (refused != null) put("refused", refused.reason)
             },
         )
@@ -241,14 +247,14 @@ class ScheduleController(
         fireId: String,
         next: Long,
         now: Long,
-    ): Pair<SchedulerBackend.ArmResult, String> {
+    ): Pair<ArmResult, String> {
         val primary = backendFor(preferred)
         val result = primary.arm(fireId, next, allowWhileIdle = primary.canDeliverExact())
-        if (result is SchedulerBackend.ArmResult.Armed) return result to primary.kind
+        if (result is ArmResult.Armed) return result to primary.kind
         if (primary.kind != BACKEND_ALARM) return result to primary.kind
         val work = backends[BACKEND_WORK] ?: return result to primary.kind
         val fallback = work.arm(fireId, next, allowWhileIdle = false)
-        return fallback to if (fallback is SchedulerBackend.ArmResult.Armed) work.kind else primary.kind
+        return fallback to if (fallback is ArmResult.Armed) work.kind else primary.kind
     }
 
     // ------------------------------------------------------------------ ctx.next_run (P4-11)
@@ -266,7 +272,7 @@ class ScheduleController(
             val minIntervalMs = (data.tasks.latestVersion(record.taskId)?.let { version ->
                 runCatching {
                     AhJson.json.decodeFromString(
-                        app.autohost.core.model.TaskManifest.serializer(),
+                        TaskManifest.serializer(),
                         version.manifestJson,
                     )
                 }.getOrNull()?.execution?.minIntervalMinutes
@@ -287,7 +293,7 @@ class ScheduleController(
                     put("run_id", runId)
                     put("proposed", clamped)
                     put("clamped", clamped != proposed)
-                },
+                }.toString(),
             )
             armNext(state.scheduleId)
         }
@@ -341,6 +347,7 @@ class ScheduleController(
         const val EVENT_PROPOSED = "PROPOSED"
         const val EVENT_DISABLED = "DISABLED"
         const val EVENT_FINISHED = "FINISHED"
+        const val EVENT_LIMIT_HIT = "LIMIT_HIT"
 
         fun scheduleIdOf(fireId: String): String = fireId.removePrefix(FIRE_PREFIX)
     }

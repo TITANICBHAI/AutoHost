@@ -12,6 +12,7 @@ import app.autohost.core.common.AhLog
 import app.autohost.core.common.Clock
 import java.io.File
 import kotlinx.coroutines.delay
+import kotlinx.serialization.json.put
 
 /**
  * P9-09: the installer-UI path of `device.app.manage.install` (mode "installer") — the a11y-driven

@@ -57,8 +57,8 @@ class BubbleController(
     }
 
     /** AppGraph.startRun calls this so the policy knows which runs act on the UI. */
-    fun noteUiActing(runId: String, uiActing: Boolean) {
-        uiActing[runId] = uiActing
+    fun noteUiActing(runId: String, isUiActing: Boolean) {
+        uiActing[runId] = isUiActing
     }
 
     fun forget(runId: String) {

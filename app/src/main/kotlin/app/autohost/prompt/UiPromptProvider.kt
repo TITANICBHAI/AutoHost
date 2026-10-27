@@ -98,7 +98,8 @@ class UiPromptProvider(
             notifyUser(prompt)
             try {
                 val answer = withTimeoutOrNull(timeoutMs.toLong()) { deferred.await() }
-                answer ?: Envelope.ok(buildJsonObject { put("answered", false); put("reason", "timeout") })
+                answer?.let { Envelope.ok(it) }
+                    ?: Envelope.ok(buildJsonObject { put("answered", false); put("reason", "timeout") })
             } finally {
                 pending.remove(prompt.promptId)
                 cancelNotification(prompt.promptId)
@@ -129,7 +130,7 @@ class UiPromptProvider(
             notifyUser(prompt)
             try {
                 val answer = withTimeoutOrNull(DEFAULT_TIMEOUT_MS.toLong()) { deferred.await() }
-                answer
+                answer?.let { Envelope.ok(it) }
                     ?: Envelope.ok(buildJsonObject { put("answered", false); put("reason", "timeout") })
             } finally {
                 pending.remove(prompt.promptId)
@@ -160,7 +161,7 @@ class UiPromptProvider(
             notifyUser(prompt)
             try {
                 val answer = withTimeoutOrNull(DEFAULT_TIMEOUT_MS.toLong()) { deferred.await() }
-                answer
+                answer?.let { Envelope.ok(it) }
                     ?: Envelope.ok(buildJsonObject { put("answered", false); put("reason", "timeout") })
             } finally {
                 pending.remove(prompt.promptId)

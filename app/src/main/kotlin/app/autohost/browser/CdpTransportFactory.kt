@@ -23,6 +23,8 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class CdpTransportFactory : CdpClient.Transport {
 
+    override fun close() = Unit
+
     override fun listTargets(port: Int, timeoutMs: Long): List<CdpClient.Transport.Target> {
         val conn = (URI("http://127.0.0.1:$port/json/list").toURL().openConnection() as HttpURLConnection).apply {
             connectTimeout = timeoutMs.toInt().coerceAtMost(30_000)

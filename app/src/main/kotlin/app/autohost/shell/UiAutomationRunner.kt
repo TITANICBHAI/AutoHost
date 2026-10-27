@@ -5,6 +5,8 @@ import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityNodeInfo
+import android.graphics.Rect
+import android.view.MotionEvent
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.InputStreamReader
@@ -39,7 +41,7 @@ import kotlinx.serialization.json.put
 class UiAutomationRunner : Instrumentation() {
 
     override fun onStart() {
-        val port = arguments.getInt("port", DEFAULT_PORT)
+        val port = getArguments().getInt("port", DEFAULT_PORT)
         val thread = Thread { serve(port) }
         thread.name = "ui-automation-runner"
         thread.start()
@@ -92,24 +94,8 @@ class UiAutomationRunner : Instrumentation() {
                     it.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
                 })
                 "gesture" -> {
-                    val path = android.graphics.Path().apply {
-                        moveTo(req.int("x1").toFloat(), req.int("y1").toFloat())
-                        lineTo(req.int("x2").toFloat(), req.int("y2").toFloat())
-                    }
                     val duration = req.int("ms").coerceIn(50, 60_000).toLong()
-                    val gesture = android.accessibilityservice.GestureDescription.Builder()
-                        .addStroke(android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, duration))
-                        .build()
-                    val dispatched = arrayOf(false)
-                    uiAutomation.dispatchGesture(gesture, object : android.accessibilityservice.GestureResultCallback() {
-                        override fun onCompleted(g: android.accessibilityservice.GestureDescription?) {
-                            dispatched[0] = true
-                        }
-                    }, null)
-                    // dispatchGesture is async; wait at most the stroke duration + a grace.
-                    val deadline = SystemClock.uptimeMillis() + duration + 1_500
-                    while (!dispatched[0] && SystemClock.uptimeMillis() < deadline) Thread.sleep(25)
-                    opBool(ok = dispatched[0])
+                    opBool(ok = injectSwipe(uiAutomation, req.int("x1"), req.int("y1"), req.int("x2"), req.int("y2"), duration))
                 }
                 "key" -> {
                     val now = SystemClock.uptimeMillis()
@@ -149,6 +135,37 @@ class UiAutomationRunner : Instrumentation() {
         return action(node)
     }
 
+    private fun injectSwipe(
+        uiAutomation: android.app.UiAutomation,
+        x1: Int,
+        y1: Int,
+        x2: Int,
+        y2: Int,
+        durationMs: Long,
+    ): Boolean {
+        val downTime = SystemClock.uptimeMillis()
+        fun event(action: Int, x: Float, y: Float, at: Long) =
+            MotionEvent.obtain(downTime, at, action, x, y, 0)
+
+        val steps = 10
+        if (!uiAutomation.injectInputEvent(event(MotionEvent.ACTION_DOWN, x1.toFloat(), y1.toFloat(), downTime), true)) {
+            return false
+        }
+        for (step in 1..steps) {
+            val fraction = step.toFloat() / steps
+            val x = x1 + (x2 - x1) * fraction
+            val y = y1 + (y2 - y1) * fraction
+            val at = downTime + durationMs * step / steps
+            val move = event(MotionEvent.ACTION_MOVE, x, y, at)
+            val accepted = uiAutomation.injectInputEvent(move, true)
+            move.recycle()
+            if (!accepted) return false
+            if (step < steps) Thread.sleep((durationMs / steps).coerceAtLeast(1))
+        }
+        val upAt = downTime + durationMs
+        return uiAutomation.injectInputEvent(event(MotionEvent.ACTION_UP, x2.toFloat(), y2.toFloat(), upAt), true)
+    }
+
     /** Depth-first, document order — the exact order UiautomatorDump assigns indexes. */
     private fun flatten(root: AccessibilityNodeInfo): List<AccessibilityNodeInfo> {
         val out = ArrayList<AccessibilityNodeInfo>(256)
@@ -175,10 +192,12 @@ class UiAutomationRunner : Instrumentation() {
     }
 
     private fun appendNode(sb: StringBuilder, node: AccessibilityNodeInfo, depth: Int) {
-        val l = node.boundsInScreen.left
-        val t = node.boundsInScreen.top
-        val r = node.boundsInScreen.right
-        val b = node.boundsInScreen.bottom
+        val bounds = Rect()
+        node.getBoundsInScreen(bounds)
+        val l = bounds.left
+        val t = bounds.top
+        val r = bounds.right
+        val b = bounds.bottom
         sb.append(" index=\"${depth}\" text=\"${esc(node.text?.toString())}\"")
         sb.append(" resource-id=\"${esc(node.viewIdResourceName)}\" class=\"${esc(node.className?.toString())}\"")
         sb.append(" package=\"${esc(node.packageName?.toString())}\" content-desc=\"${esc(node.contentDescription?.toString())}\"")

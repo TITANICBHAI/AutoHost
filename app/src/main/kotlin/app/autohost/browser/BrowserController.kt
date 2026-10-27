@@ -56,6 +56,9 @@ class BrowserController(
 
         @Volatile
         var bodySample: String? = null
+
+        @Volatile
+        var activity: BrowserActivity? = null
     }
 
     private val runs = ConcurrentHashMap<String, MutableMap<String, PageSession>>()
