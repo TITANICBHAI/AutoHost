@@ -7,6 +7,7 @@ import app.autohost.core.model.Availability
 import app.autohost.core.model.Envelope
 import app.autohost.core.model.ErrorCode
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import java.util.concurrent.atomic.AtomicInteger
@@ -153,19 +154,19 @@ class CdpBrowserProvider(
         val timeoutMs = BrowserPolicy.timeoutMs((args["timeout_ms"] as? JsonPrimitive)?.content?.toLongOrNull())
         val (c, _) = ensureClient(timeoutMs)
         val result = c.evaluate(expression, timeoutMs)
-        return Envelope.ok(buildJsonObject { put("result", result["result"]) })
+        return Envelope.ok(buildJsonObject { put("result", result["result"] ?: JsonNull) })
     }
 
     private fun screenshot(ctx: CallContext): Envelope {
         val (c, _) = ensureClient(BrowserPolicy.DEFAULT_TIMEOUT_MS)
         val shot = c.screenshot(BrowserPolicy.DEFAULT_TIMEOUT_MS)
-        return Envelope.ok(buildJsonObject { put("data_b64", shot["data"]); put("format", "png") })
+        return Envelope.ok(buildJsonObject { put("data_b64", shot["data"] ?: JsonNull); put("format", "png") })
     }
 
     private fun cookies(ctx: CallContext): Envelope {
         val (c, _) = ensureClient(BrowserPolicy.DEFAULT_TIMEOUT_MS)
         val list = c.cookies(BrowserPolicy.DEFAULT_TIMEOUT_MS)
-        return Envelope.ok(buildJsonObject { put("cookies", list["cookies"]) })
+        return Envelope.ok(buildJsonObject { put("cookies", list["cookies"] ?: JsonNull) })
     }
 
     private fun close(ctx: CallContext): Envelope {

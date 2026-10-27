@@ -1,10 +1,10 @@
 package app.autohost.capabilities.a11y
 
 import android.accessibilityservice.AccessibilityService
+import android.annotation.TargetApi
 import android.graphics.Bitmap
 import android.os.Handler
 import android.os.Looper
-import androidx.annotation.RequiresApi
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
@@ -44,7 +44,7 @@ object ScreenshotA11yApi30 {
     fun isBlockedError(errorCodeName: String): Boolean =
         errorCodeName == ERROR_SECURE_SCREEN || errorCodeName == ERROR_NO_ACCESS
 
-    @RequiresApi(30)
+    @TargetApi(30)
     fun take(service: AccessibilityService, timeoutMs: Long = 5_000): Outcome {
         if (Looper.myLooper() == Looper.getMainLooper()) {
             return Outcome.Failed(ERROR_INTERNAL, "take() must not run on the main thread")
@@ -56,15 +56,32 @@ object ScreenshotA11yApi30 {
             service.takeScreenshot(
                 android.view.Display.DEFAULT_DISPLAY,
                 executor,
-            ) { screenshot ->
-                val bitmap = screenshot.bitmap
-                outcome = if (bitmap != null && !bitmap.isRecycled) {
-                    Outcome.Ok(bitmap)
-                } else {
-                    Outcome.Failed(ERROR_INTERNAL, "framework returned an empty screenshot")
-                }
-                latch.countDown()
-            }
+                object : AccessibilityService.TakeScreenshotCallback {
+                    override fun onSuccess(screenshot: AccessibilityService.ScreenshotResult) {
+                        val buffer = screenshot.hardwareBuffer
+                        try {
+                            val hardwareBitmap = Bitmap.wrapHardwareBuffer(buffer, screenshot.colorSpace)
+                            val bitmap = hardwareBitmap?.copy(Bitmap.Config.ARGB_8888, false)
+                            outcome = if (bitmap != null && !bitmap.isRecycled) {
+                                Outcome.Ok(bitmap)
+                            } else {
+                                Outcome.Failed(ERROR_INTERNAL, "framework returned an empty screenshot")
+                            }
+                        } catch (e: RuntimeException) {
+                            outcome = Outcome.Failed(ERROR_INTERNAL, "could not copy screenshot buffer: ${e.message}")
+                        } finally {
+                            runCatching { buffer.close() }
+                            latch.countDown()
+                        }
+                    }
+
+                    override fun onFailure(errorCode: Int) {
+                        val codeName = errorCodeName(errorCode)
+                        outcome = Outcome.Failed(codeName, "takeScreenshot failed: $codeName")
+                        latch.countDown()
+                    }
+                },
+            )
         } catch (e: RuntimeException) {
             return Outcome.Failed(ERROR_INTERNAL, "takeScreenshot threw: ${e.message}")
         }

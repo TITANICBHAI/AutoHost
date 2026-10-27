@@ -134,7 +134,7 @@ class A11yUiProvider(
 
     private class ReadBudgetExhausted(val detail: String) : Exception(detail)
 
-    private fun snapshot(args: JsonObject, packages: Set<String>?): Envelope {
+    private suspend fun snapshot(args: JsonObject, packages: Set<String>?): Envelope {
         val requested = requestedPackages(args, packages)
         val (snap, meta) = try {
             read(requested)

@@ -40,12 +40,14 @@ class AndroidAudio(private val appContext: Context) : AudioProvider.System {
         return Triple(level, max, muted)
     }
 
-    override fun setVolume(stream: String, level: Int): Boolean = try {
-        val am = audioManager ?: return false
-        am.setStreamVolume(streamConstant(stream), level, 0)
-        true
-    } catch (e: Exception) {
-        false
+    override fun setVolume(stream: String, level: Int): Boolean {
+        return try {
+            val am = audioManager ?: return false
+            am.setStreamVolume(streamConstant(stream), level, 0)
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 
     override fun ringerMode(): String = when (audioManager?.ringerMode) {
@@ -54,16 +56,18 @@ class AndroidAudio(private val appContext: Context) : AudioProvider.System {
         else -> "normal"
     }
 
-    override fun setRingerMode(mode: String): Boolean = try {
-        val am = audioManager ?: return false
-        am.ringerMode = when (mode) {
-            "silent" -> AudioManager.RINGER_MODE_SILENT
-            "vibrate" -> AudioManager.RINGER_MODE_VIBRATE
-            else -> AudioManager.RINGER_MODE_NORMAL
+    override fun setRingerMode(mode: String): Boolean {
+        return try {
+            val am = audioManager ?: return false
+            am.ringerMode = when (mode) {
+                "silent" -> AudioManager.RINGER_MODE_SILENT
+                "vibrate" -> AudioManager.RINGER_MODE_VIBRATE
+                else -> AudioManager.RINGER_MODE_NORMAL
+            }
+            true
+        } catch (e: Exception) {
+            false
         }
-        true
-    } catch (e: Exception) {
-        false
     }
 
     override fun dndState(): Pair<Boolean, Int> = try {
@@ -74,51 +78,59 @@ class AndroidAudio(private val appContext: Context) : AudioProvider.System {
         false to 0
     }
 
-    override fun speak(text: String, language: String?, queue: Boolean): Boolean = try {
-        val engine = tts ?: return false
-        if (!ttsReady) return false
-        language?.let { engine.language = java.util.Locale.forLanguageTag(it) }
-        val mode = if (queue) {
-            android.speech.tts.TextToSpeech.QUEUE_ADD
-        } else {
-            android.speech.tts.TextToSpeech.QUEUE_FLUSH
+    override fun speak(text: String, language: String?, queue: Boolean): Boolean {
+        return try {
+            val engine = tts ?: return false
+            if (!ttsReady) return false
+            language?.let { engine.language = java.util.Locale.forLanguageTag(it) }
+            val mode = if (queue) {
+                android.speech.tts.TextToSpeech.QUEUE_ADD
+            } else {
+                android.speech.tts.TextToSpeech.QUEUE_FLUSH
+            }
+            engine.speak(text, mode, null, "autohost-${System.nanoTime()}")
+            true
+        } catch (e: Exception) {
+            false
         }
-        engine.speak(text, mode, null, "autohost-${System.nanoTime()}")
-        true
-    } catch (e: Exception) {
-        false
     }
 
-    override fun vibrate(ms: Long): Boolean = try {
-        val vibrator = appContext.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator ?: return false
-        vibrator.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE))
-        true
-    } catch (e: Exception) {
-        false
-    }
-
-    override fun setTorch(on: Boolean): Boolean = try {
-        val cameraManager = appContext.getSystemService(Context.CAMERA_SERVICE) as? android.hardware.camera2.CameraManager
-            ?: return false
-        val cameraId = cameraManager.cameraIdList.firstOrNull { id ->
-            cameraManager.getCameraCharacteristics(id)
-                .get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
-        } ?: return false
-        cameraManager.setTorchMode(cameraId, on)
-        true
-    } catch (e: Exception) {
-        false
-    }
-
-    override fun torchAvailable(): Boolean = try {
-        val cameraManager = appContext.getSystemService(Context.CAMERA_SERVICE) as? android.hardware.camera2.CameraManager
-            ?: return false
-        cameraManager.cameraIdList.any { id ->
-            cameraManager.getCameraCharacteristics(id)
-                .get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+    override fun vibrate(ms: Long): Boolean {
+        return try {
+            val vibrator = appContext.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator ?: return false
+            vibrator.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE))
+            true
+        } catch (e: Exception) {
+            false
         }
-    } catch (e: Exception) {
-        false
+    }
+
+    override fun setTorch(on: Boolean): Boolean {
+        return try {
+            val cameraManager = appContext.getSystemService(Context.CAMERA_SERVICE) as? android.hardware.camera2.CameraManager
+                ?: return false
+            val cameraId = cameraManager.cameraIdList.firstOrNull { id ->
+                cameraManager.getCameraCharacteristics(id)
+                    .get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+            } ?: return false
+            cameraManager.setTorchMode(cameraId, on)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    override fun torchAvailable(): Boolean {
+        return try {
+            val cameraManager = appContext.getSystemService(Context.CAMERA_SERVICE) as? android.hardware.camera2.CameraManager
+                ?: return false
+            cameraManager.cameraIdList.any { id ->
+                cameraManager.getCameraCharacteristics(id)
+                    .get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+            }
+        } catch (e: Exception) {
+            false
+        }
     }
 
     override fun playTone(tone: String): Boolean = try {

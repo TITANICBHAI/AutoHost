@@ -43,7 +43,8 @@ class AudioProvider(private val system: System) : CapabilityProvider {
     override fun permissionFor(method: String, args: JsonObject): String? =
         if (method in METHODS) "device.audio" else null
 
-    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope = when (method) {
+    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope {
+        return when (method) {
         "volume" -> {
             val stream = (args["stream"] as? JsonPrimitive)?.content ?: "music"
             if (stream !in STREAMS) {
@@ -128,7 +129,8 @@ class AudioProvider(private val system: System) : CapabilityProvider {
             }
             Envelope.ok(buildJsonObject { put("played", system.playTone(tone)) })
         }
-        else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown device.audio method '$method'")
+            else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown device.audio method '$method'")
+        }
     }
 
     companion object {

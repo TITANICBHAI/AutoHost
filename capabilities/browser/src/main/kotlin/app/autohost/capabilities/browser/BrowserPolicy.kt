@@ -49,20 +49,20 @@ object BrowserPolicy {
     private fun webVerdict(grant: kotlinx.serialization.json.JsonObject?, url: String): UrlVerdict {
         val host = runCatching { URI(url).host?.lowercase() }.getOrNull()
             ?: return UrlVerdict.Denied("URL has no host")
-        if (grant == null) return UrlVerdict.Allowed(UrlVerdict.Kind.WEB, url)
+        if (grant == null) return UrlVerdict.Allowed(UrlVerdict.Allowed.Kind.WEB, url)
         val domains = (grant["domains"] as? kotlinx.serialization.json.JsonArray)
             ?.mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
             ?: return UrlVerdict.NoGrant
         if (domains.isEmpty()) return UrlVerdict.Denied(host)
         for (pattern in domains) {
-            if (pattern == "*") return UrlVerdict.Allowed(UrlVerdict.Kind.WEB, url)
+            if (pattern == "*") return UrlVerdict.Allowed(UrlVerdict.Allowed.Kind.WEB, url)
             if (pattern.startsWith("*.")) {
                 val suffix = pattern.removePrefix("*.")
                 if (host == suffix || host.endsWith(".$suffix")) {
-                    return UrlVerdict.Allowed(UrlVerdict.Kind.WEB, url)
+                    return UrlVerdict.Allowed(UrlVerdict.Allowed.Kind.WEB, url)
                 }
             } else if (host == pattern) {
-                return UrlVerdict.Allowed(UrlVerdict.Kind.WEB, url)
+                return UrlVerdict.Allowed(UrlVerdict.Allowed.Kind.WEB, url)
             }
         }
         return UrlVerdict.Denied(host)
@@ -79,7 +79,7 @@ object BrowserPolicy {
             return UrlVerdict.Denied("task: paths must stay inside the task bundle (no '.', '..' or empty segments)")
         }
         if (rel.length > 512) return UrlVerdict.Denied("task: path too long")
-        return UrlVerdict.Allowed(UrlVerdict.Kind.TASK_FILE, rel)
+        return UrlVerdict.Allowed(UrlVerdict.Allowed.Kind.TASK_FILE, rel)
     }
 
     fun timeoutMs(requested: Long?): Long = (requested ?: DEFAULT_TIMEOUT_MS).coerceIn(1, MAX_TIMEOUT_MS)

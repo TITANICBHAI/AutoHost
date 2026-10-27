@@ -46,7 +46,7 @@ class CdpClient(private val transport: Transport) : Closeable {
     private var boundPort: Int = -1
     private var boundPath: String? = null
 
-    fun targets(port: Int, timeoutMs: Long): List<Target> = transport.listTargets(port, timeoutMs)
+    fun targets(port: Int, timeoutMs: Long): List<Transport.Target> = transport.listTargets(port, timeoutMs)
 
     /** Binds this client to one page target; subsequent commands share the connection. */
     fun attach(port: Int, wsPath: String, timeoutMs: Long) {
