@@ -28,7 +28,7 @@ class DynamicScreenActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dynamic)
         Screens.bind(this, "dynamic")
-        delayMs = Screens.delay(this, 500).coerceAtLeast(50)
+        delayMs = Screens.delay(this, 500).toLong().coerceAtLeast(50L)
         findViewById<Button>(R.id.fx_dynamic_stop).setOnClickListener {
             handler.removeCallbacks(ticker)
             FixtureState.lastEvent = "dynamic:stopped"

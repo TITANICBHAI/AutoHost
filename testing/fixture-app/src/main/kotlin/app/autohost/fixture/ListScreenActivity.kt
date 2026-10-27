@@ -20,7 +20,7 @@ class ListScreenActivity : Activity() {
 
         val list = findViewById<ListView>(R.id.fx_list)
         list.adapter = ItemsAdapter()
-        list.onItemClickListener = { _, view, _, _ ->
+        list.setOnItemClickListener { _, view, _, _ ->
             FixtureState.lastEvent = "item:" + (view as TextView).text
             updateState()
         }
