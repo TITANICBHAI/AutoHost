@@ -38,12 +38,13 @@ class FilesPrivateProvider(
     override fun permissionFor(method: String, args: JsonObject): String? =
         if (method in METHODS) "files.private" else null
 
-    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope = try {
-        val segments = SharedFilesPolicy.safeRelative((args["path"] as? JsonPrimitive)?.content ?: "")
-            ?: return Envelope.err(ErrorCode.SCOPE_VIOLATION, "path escapes the task's private folder (.. / absolute)")
-        val root = rootFor(ctx.taskId).apply { mkdirs() }
-        val file = root + segments
-        when (method) {
+    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope {
+        return try {
+            val segments = SharedFilesPolicy.safeRelative((args["path"] as? JsonPrimitive)?.content ?: "")
+                ?: return Envelope.err(ErrorCode.SCOPE_VIOLATION, "path escapes the task's private folder (.. / absolute)")
+            val root = rootFor(ctx.taskId).apply { mkdirs() }
+            val file = root + segments
+            when (method) {
             "read" -> {
                 if (!file.isFile) return Envelope.err(ErrorCode.NOT_FOUND, "no such file: ${segments.joinToString("/")}")
                 val bytes = file.readBytes()
@@ -85,13 +86,14 @@ class FilesPrivateProvider(
                 if (!file.exists()) return Envelope.err(ErrorCode.NOT_FOUND, "no such file: ${segments.joinToString("/")}")
                 Envelope.ok(buildJsonObject { put("deleted", file.delete()) })
             }
-            else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown files.private method '$method'")
+                else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown files.private method '$method'")
+            }
+        } catch (e: Exception) {
+            Envelope.err(ErrorCode.INTERNAL, "files.private failed: ${e.message}")
         }
-    } catch (e: Exception) {
-        Envelope.err(ErrorCode.INTERNAL, "files.private failed: ${e.message}")
     }
 
-    private infix fun File.plus(segments: List<String>): File = segments.fold(this) { dir, name -> File(dir, name) }
+    private operator fun File.plus(segments: List<String>): File = segments.fold(this) { dir, name -> File(dir, name) }
 
     private fun decodeBody(args: JsonObject): ByteArray? {
         val b64 = (args["body_b64"] as? JsonPrimitive)?.content
