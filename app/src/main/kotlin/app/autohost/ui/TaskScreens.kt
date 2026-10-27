@@ -1,5 +1,6 @@
 package app.autohost.ui
 
+import androidx.compose.material3.Switch
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,7 +37,6 @@ import app.autohost.core.engine.tasks.ImportReport
 import app.autohost.core.designsystem.components.SectionHeader
 import app.autohost.core.designsystem.components.StatusChip
 import app.autohost.core.model.TaskManifest
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 

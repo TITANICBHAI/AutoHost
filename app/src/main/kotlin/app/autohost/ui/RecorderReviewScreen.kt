@@ -46,7 +46,7 @@ fun RecorderReviewScreen(controller: RecorderController, onBack: () -> Unit) {
 
     // Local editing state (delete/reorder/confirm) over the recorded steps.
     var steps by remember(state.result) {
-        mutableStateOf(state.result?.steps?.map { ReviewRow(it) } ?: emptyList())
+        mutableStateOf<List<ReviewRow>>(state.result?.steps?.map { ReviewRow(it) }.orEmpty())
     }
     var saveMessage by remember { mutableStateOf<String?>(null) }
 

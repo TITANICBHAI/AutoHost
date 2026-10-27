@@ -77,7 +77,7 @@ object TemplateInstaller {
 
     private fun copyDir(context: Context, assetPath: String, out: File) {
         out.mkdirs()
-        for (name in context.assets.list(assetPath) ?: emptyList()) {
+        for (name in context.assets.list(assetPath).orEmpty()) {
             val child = "$assetPath/$name"
             val target = File(out, name)
             val nested = context.assets.list(child)

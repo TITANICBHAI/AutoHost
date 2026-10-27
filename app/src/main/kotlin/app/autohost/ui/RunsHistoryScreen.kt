@@ -80,8 +80,8 @@ fun RunsHistoryScreen(activity: MainActivity, onOpenRun: (String) -> Unit, onBac
             LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(visible, key = { it.rowId }) { run ->
                     Card(
-                        Modifier.fillMaxWidth(),
                         onClick = { onOpenRun(run.runId) },
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Column(Modifier.padding(12.dp)) {
                             Row(

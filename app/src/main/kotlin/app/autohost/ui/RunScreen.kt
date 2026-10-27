@@ -14,8 +14,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,8 +31,12 @@ import app.autohost.MainActivity
 import app.autohost.R
 import app.autohost.core.designsystem.components.LogLine
 import app.autohost.core.designsystem.components.StatusChip
-import app.autohost.core.engine.orchestrator.RunStatus
+import app.autohost.core.model.BrokerEvent
+import app.autohost.core.model.RunStatus
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -44,7 +52,14 @@ fun RunScreen(activity: MainActivity, runId: String?, onBack: () -> Unit) {
     val graph = (activity.application as AutoHostApp).graph
     val runs by graph.runStore.runs.collectAsState()
     val run = runs.firstOrNull { it.runId == runId }
-    val events by graph.runStore.events(runId ?: "").collectAsState(initial = emptyList())
+    var events by remember(runId) { mutableStateOf<List<BrokerEvent>>(emptyList()) }
+    LaunchedEffect(runId) {
+        val activeRunId = runId ?: return@LaunchedEffect
+        events = graph.runStore.snapshot(activeRunId, limit = 500)
+        graph.runStore.events(activeRunId).collect { event ->
+            events = (events + event).takeLast(500)
+        }
+    }
     val incidents = runId?.let { graph.incidents.openOf(it) }.orEmpty()
     val audit = runId?.let { graph.auditMem.forRun(it).takeLast(20) }.orEmpty()
     val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
@@ -104,13 +119,18 @@ fun RunScreen(activity: MainActivity, runId: String?, onBack: () -> Unit) {
                 Text(stringResource(R.string.action_stop))
             }
             OutlinedButton(onClick = {
-                if (runId == null) return@OutlinedButton
-                val bytes = graph.runExporter.export(runId) ?: return@OutlinedButton
-                val dir = graph.runsRoot()
-                File(dir, "$runId.aarun").writeBytes(bytes)
-                android.widget.Toast.makeText(
-                    graph.appContext, "saved $runId.aarun", android.widget.Toast.LENGTH_SHORT,
-                ).show()
+                val exportRunId = runId ?: return@OutlinedButton
+                graph.appScope.launch(Dispatchers.IO) {
+                    val bytes = graph.runExporter.export(exportRunId) ?: return@launch
+                    File(graph.runsRoot(), "$exportRunId.aarun").writeBytes(bytes)
+                    withContext(Dispatchers.Main) {
+                        android.widget.Toast.makeText(
+                            graph.appContext,
+                            "saved $exportRunId.aarun",
+                            android.widget.Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                }
             }) {
                 Text("Export")
             }

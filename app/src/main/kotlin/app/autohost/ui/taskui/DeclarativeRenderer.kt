@@ -38,6 +38,8 @@ import app.autohost.core.model.taskui.UiBindingScope
 import app.autohost.core.model.taskui.UiBindings
 import app.autohost.core.model.taskui.UiWidget
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * P7-01 (plan §10.1, UI_SPEC S16): the Tier B declarative renderer. Renders exactly the frozen v1
@@ -104,9 +106,9 @@ private fun boundText(value: kotlinx.serialization.json.JsonElement): String =
     (value as? JsonPrimitive)?.content ?: value.toString()
 
 private fun inputsJsonObject(inputs: Map<String, String>): kotlinx.serialization.json.JsonObject {
-    val builder = kotlinx.serialization.json.JsonObjectBuilder()
-    for ((key, value) in inputs) builder.put(key, JsonPrimitive(value))
-    return builder.build()
+    return buildJsonObject {
+        for ((key, value) in inputs) put(key, JsonPrimitive(value))
+    }
 }
 
 @Composable

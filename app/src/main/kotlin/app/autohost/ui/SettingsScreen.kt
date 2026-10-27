@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import app.autohost.AppGraph
+import app.autohost.core.broker.security.InsecureFeatures
 import app.autohost.core.designsystem.components.SectionHeader
 import kotlinx.coroutines.launch
 
@@ -39,7 +40,9 @@ fun SettingsScreen(graph: AppGraph, onOpenHealth: () -> Unit, onOpenSurfaces: ()
     val clipboard = LocalClipboardManager.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var backend by remember { mutableStateOf(graph.schedulerBackendPreference) }
-    var switchState by remember { mutableStateOf(graph.insecureSwitches.state) }
+    var switchState by remember {
+        mutableStateOf<InsecureFeatures.State>(graph.insecureSwitches.state)
+    }
 
     Column(
         modifier = Modifier.fillMaxWidth().padding(16.dp).verticalScroll(rememberScrollState()),
@@ -227,7 +230,7 @@ private fun BackupAndPacksSection(graph: AppGraph) {
         scope.launch {
             graph.backupController.export()
                 .onSuccess { json ->
-                    graph.app.contentResolver.openOutputStream(uri)?.use { out ->
+                    graph.appContext.contentResolver.openOutputStream(uri)?.use { out ->
                         out.write(json.encodeToByteArray())
                     }
                     status = "backup written ($uri)"
@@ -241,7 +244,7 @@ private fun BackupAndPacksSection(graph: AppGraph) {
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
             val text = runCatching {
-                graph.app.contentResolver.openInputStream(uri)?.use { it.readBytes().decodeToString() }
+                graph.appContext.contentResolver.openInputStream(uri)?.use { it.readBytes().decodeToString() }
             }.getOrNull()
             if (text == null) {
                 status = "could not read $uri"
@@ -261,7 +264,7 @@ private fun BackupAndPacksSection(graph: AppGraph) {
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val outcome = graph.packController.install(uri.toString()) {
-                graph.app.contentResolver.openInputStream(uri) ?: throw java.io.IOException("unreadable $uri")
+                graph.appContext.contentResolver.openInputStream(uri) ?: throw java.io.IOException("unreadable $uri")
             }
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                 packs = graph.packController.list()
@@ -324,7 +327,6 @@ private fun BackupAndPacksSection(graph: AppGraph) {
 @Composable
 private fun ReverseBridgeRow(graph: AppGraph) {
     var url by remember { mutableStateOf("") }
-    var connected by remember { mutableStateOf(graph.reverseLink.isRunning) }
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         androidx.compose.material3.OutlinedTextField(
             value = url,
@@ -337,11 +339,9 @@ private fun ReverseBridgeRow(graph: AppGraph) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(onClick = {
             graph.reverseLink.start(url)
-            connected = graph.reverseLink.isRunning
         }) { Text("Connect") }
         TextButton(onClick = {
             graph.reverseLink.stop()
-            connected = false
         }) { Text("Stop") }
     }
     val state = graph.reverseLink.state

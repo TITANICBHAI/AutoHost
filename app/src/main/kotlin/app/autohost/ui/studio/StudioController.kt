@@ -5,6 +5,8 @@ import app.autohost.core.common.AhLog
 import app.autohost.core.engine.tasks.RepoIndex
 import app.autohost.core.engine.tasks.StudioDraft
 import java.io.File
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -19,7 +21,7 @@ import kotlinx.coroutines.withContext
 class StudioController(private val graph: AppGraph) {
 
     private val devRoot: File?
-        get() = graph.app.getExternalFilesDir("dev")
+        get() = graph.appContext.getExternalFilesDir("dev")
 
     // ---- dev-folder drafts -------------------------------------------------------------------
 

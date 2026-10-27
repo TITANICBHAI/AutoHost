@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-internal enum class Routes(val arg: String? = null) {
+enum class Routes(val arg: String? = null) {
     LIBRARY,
     RUN,
     RUNS_HISTORY,

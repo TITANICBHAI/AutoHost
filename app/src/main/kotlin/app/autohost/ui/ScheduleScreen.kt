@@ -88,6 +88,7 @@ fun ScheduleScreen(graph: AppGraph) {
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(schedules, key = { it.scheduleId }) { state ->
+                    val rule = ScheduleRule.fromJson(state.ruleJson)
                     Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp)) {
                             Row(
@@ -96,7 +97,6 @@ fun ScheduleScreen(graph: AppGraph) {
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(Modifier.weight(1f)) {
-                                    val rule = ScheduleRule.fromJson(state.ruleJson)
                                     Text(
                                         rule?.summary() ?: state.scheduleId,
                                         style = MaterialTheme.typography.titleMedium,

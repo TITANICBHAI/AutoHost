@@ -25,7 +25,9 @@ data class ImportReport(
     val installed: Boolean = false,
 ) {
     @Serializable
-    data class Issue(val path: String, val rule: String, val message: String)
+    data class Issue(val path: String, val rule: String, val message: String) {
+        fun describe(): String = if (path.isEmpty()) message else "$path: $message"
+    }
 
     /** Python import scan outcome (P2-13), attached when a python bundle was scanned. */
     @Serializable

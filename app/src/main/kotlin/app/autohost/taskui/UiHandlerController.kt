@@ -51,7 +51,7 @@ class UiHandlerController(
         if (!gate.tryAcquire(taskId)) return UiHandlerOutcome.BUSY
         try {
             val prepared = prepare(taskId, handler, args) ?: return notFound(taskId, handler)
-            val (spec, grantMap, manifest) = prepared
+            val (spec, grantMap) = prepared
             val runId = "ui-" + taskId
             val token = tokens.issue(RunGrants(runId, taskId, spec.profileId, grantMap, clock.nowMs()))
             try {

@@ -2,6 +2,7 @@ package app.autohost.surfaces
 
 import android.content.Context
 import android.content.Intent
+import androidx.glance.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceId
@@ -109,7 +110,7 @@ class TaskRunsWidget : GlanceAppWidget() {
                 )
             }
             Spacer(GlanceModifier.width(8.dp))
-            androidx.glance.appwidget.Button(
+            Button(
                 text = "Run",
                 onClick = actionStartActivity(row.runIntent),
             )

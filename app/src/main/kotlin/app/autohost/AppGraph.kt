@@ -144,7 +144,8 @@ class AppGraph(private val app: Application) {
      * refreshed on every Settings write; the broker's [InsecureFeatureInterceptor] reads the plain
      * volatile — the call hot path never touches the DB.
      */
-    val insecureSwitches = app.autohost.security.InsecureSwitchStore(app)
+    val insecureSwitches: app.autohost.security.InsecureSwitchStore =
+        app.autohost.security.InsecureSwitchStore(app)
     private val basePermissionIndex: PermissionIndex by lazy {
         PermissionIndex.loadFromResources(AppGraph::class.java.classLoader)
     }
@@ -337,10 +338,14 @@ class AppGraph(private val app: Application) {
     }
 
     /** P11-04 (ADR-080): `.aapack` install/store/resolve; the payload rides `config.packs`. */
-    val packController by lazy { app.autohost.packs.PackController(app, clock) }
+    val packController: app.autohost.packs.PackController by lazy {
+        app.autohost.packs.PackController(app, clock)
+    }
 
     /** P11-08 (ADR-082): tasks + profiles backup/restore, minus secrets. */
-    val backupController by lazy { app.autohost.backup.BackupController(this) }
+    val backupController: app.autohost.backup.BackupController by lazy {
+        app.autohost.backup.BackupController(this)
+    }
 
     val capabilityCatalog: CapabilityCatalog by lazy {
         CapabilityCatalog.loadFromResources(AppGraph::class.java.classLoader)
@@ -719,6 +724,23 @@ class AppGraph(private val app: Application) {
     )
     private val storeProvider = StoreProvider(fileKv())
     private val stateProvider = StateProvider(checkpoints)
+    val runExporter: AppRunExporter by lazy {
+        AppRunExporter(
+            runStore = runStore,
+            auditSink = auditMem,
+            incidents = incidents,
+            stateProvider = stateProvider,
+            redactor = redactor,
+            runRoot = runsRoot(),
+            manifestOf = { taskId ->
+                kotlinx.coroutines.runBlocking { data.tasks.latestVersion(taskId)?.manifestJson }
+            },
+            environment = buildJsonObject {
+                put("android_api", android.os.Build.VERSION.SDK_INT)
+                put("android_release", android.os.Build.VERSION.RELEASE)
+            },
+        )
+    }
     val uiPromptProvider = UiPromptProvider(app, clock, UiTextOverlay(clock))
 
     // P9-01..06: the shell tier — one ordered transport chain (plan §3.1 T3: adb-over-tcp →
@@ -1111,7 +1133,7 @@ class AppGraph(private val app: Application) {
     }
 
     /** P8-08: the webhook endpoint → `external` trigger rules (Settings → Webhooks, S23). */
-    val webhooks by lazy {
+    val webhooks: app.autohost.webhook.WebhookController by lazy {
         app.autohost.webhook.WebhookController(app, appScope) { name, payload ->
             triggerController.externalFire(name, payload)
         }
