@@ -6,6 +6,8 @@ import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import app.autohost.core.common.AhLog
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * P8-14: the small explanatory request flow behind runtime-permission and SAF-folder fixes
@@ -106,7 +108,7 @@ object PermissionOutcomes {
         lastAtMs = System.currentTimeMillis()
         AhLog.i(
             "fix", "permission outcomes",
-            kotlinx.serialization.buildJsonObject {
+            buildJsonObject {
                 put("granted", granted.size)
                 put("denied", lastDenied.size)
             },

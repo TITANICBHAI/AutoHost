@@ -5,7 +5,8 @@ import app.autohost.core.engine.export.RunExporter
 import app.autohost.core.engine.orchestrator.InMemoryRunStore
 import app.autohost.core.engine.orchestrator.IncidentTracker
 import app.autohost.core.engine.host.StateProvider
-import app.autohost.core.broker.InMemoryAuditSink
+import app.autohost.core.broker.interceptor.AuditRecord
+import app.autohost.core.broker.interceptor.InMemoryAuditSink
 import app.autohost.core.data.secrets.Redactor
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -44,7 +45,7 @@ class AppRunExporter(
         val auditJsonl = auditSink.forRun(runId).takeLast(MAX_AUDIT).joinToString("\n") { entry ->
             redactor.redact(
                 AhJson.json.encodeToString(
-                    app.autohost.core.broker.AuditRecord.serializer(),
+                    AuditRecord.serializer(),
                     entry,
                 ),
             )

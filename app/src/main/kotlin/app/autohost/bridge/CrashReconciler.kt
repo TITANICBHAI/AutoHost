@@ -25,7 +25,7 @@ class CrashReconciler(private val graph: AppGraph) {
         val orphans = runBlocking {
             val rows = mutableListOf<app.autohost.core.data.db.RunEntity>()
             for (status in ORPHAN_STATUSES) {
-                rows += graph.data.runs.runDao.byStatus(status)
+                rows += graph.data.runDao.byStatus(status)
             }
             rows
         }

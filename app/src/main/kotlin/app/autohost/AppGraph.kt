@@ -3,6 +3,7 @@ package app.autohost
 import android.app.Application
 import android.content.ComponentName
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
 import app.autohost.capabilities.a11y.A11yBridge
 import app.autohost.capabilities.a11y.A11yUiProvider
@@ -27,6 +28,7 @@ import app.autohost.core.broker.CapabilityRegistry
 import app.autohost.core.broker.DeviceEnv
 import app.autohost.core.broker.PermissionIndex
 import app.autohost.core.broker.RunTokenStore
+import app.autohost.core.broker.interceptor.AuditSink
 import app.autohost.core.broker.interceptor.InMemoryAuditSink
 import app.autohost.core.common.ApiGate
 import app.autohost.core.common.AppDispatchers
@@ -71,7 +73,9 @@ import app.autohost.core.engine.host.SystemProvider
 import app.autohost.core.engine.orchestrator.InMemoryRunStore
 import app.autohost.core.engine.orchestrator.IncidentTracker
 import app.autohost.core.engine.orchestrator.ResourceLocks
+import app.autohost.core.engine.orchestrator.RunRecord
 import app.autohost.core.engine.orchestrator.RunOrchestrator
+import app.autohost.core.engine.orchestrator.StartRequest
 import app.autohost.core.engine.schedule.AlarmBackend
 import app.autohost.core.engine.schedule.JobBackend
 import app.autohost.core.engine.schedule.ScheduleEngine
@@ -91,10 +95,12 @@ import app.autohost.runtime.flow.FlowBinderTransport
 import app.autohost.runtime.js.JsBrokerCaller
 import app.autohost.runtime.js.JsRuntimeProvider
 import app.autohost.runtime.python.PythonRuntimeProvider
+import app.autohost.service.RunForegroundService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.io.File
@@ -129,7 +135,7 @@ class AppGraph(val application: Application) {
      * The composite audit sink: ring buffer + incident tracker + idle-watchdog activity feed.
      * Every broker call flows through here exactly once (AuditInterceptor is the outermost link).
      */
-    val auditSink: app.autohost.core.broker.AuditSink = app.autohost.core.broker.AuditSink { record ->
+    val auditSink: AuditSink = AuditSink { record ->
         auditMem.record(record)
         if (record.runId.isNotEmpty()) {
             incidents.onAudit(record, runStore.get(record.runId)?.stage)
@@ -272,11 +278,11 @@ class AppGraph(val application: Application) {
             put("alarm", AlarmBackend(application))
             put(
                 "work",
-                WorkBackend(app, app.autohost.service.ScheduleFireWorker::class.java, clock),
+                WorkBackend(application, app.autohost.service.ScheduleFireWorker::class.java, clock),
             )
             put(
                 "job",
-                JobBackend(app, ComponentName(app, app.autohost.service.ScheduleFireJobService::class.java), clock),
+                JobBackend(application, ComponentName(application, app.autohost.service.ScheduleFireJobService::class.java), clock),
             )
         }
     }
@@ -318,6 +324,9 @@ class AppGraph(val application: Application) {
     @Volatile var grantService = GrantService(permissionIndex)
         private set
     val data: DataGraph by lazy { DataGraph(database, clock, grantService) }
+    private val runPersistenceBridge by lazy {
+        RunPersistenceBridge(runStore, data, appScope, checkpoints::load)
+    }
 
     /**
      * P11-02 (ADR-079): a plugin attach merges its permission fragment into the live index and
@@ -334,12 +343,12 @@ class AppGraph(val application: Application) {
 
     /** P11-02: discovery + binding live in the controller; the host policy stays in PluginHost. */
     val pluginController by lazy {
-        app.autohost.plugins.PluginController(app, registry, clock) { attachPluginPermissions(it) }
+        app.autohost.plugins.PluginController(application, registry, clock) { attachPluginPermissions(it) }
     }
 
     /** P11-04 (ADR-080): `.aapack` install/store/resolve; the payload rides `config.packs`. */
     val packController: app.autohost.packs.PackController by lazy {
-        app.autohost.packs.PackController(app, clock)
+        app.autohost.packs.PackController(application, clock)
     }
 
     /** P11-08 (ADR-082): tasks + profiles backup/restore, minus secrets. */
@@ -561,7 +570,7 @@ class AppGraph(val application: Application) {
 
         val runDir = File(runsRoot(), Ids.ulid(clock.nowMs())).absolutePath
         val result = orchestrator.start(
-            RunOrchestrator.StartRequest(
+            StartRequest(
                 taskId = taskId,
                 taskName = manifest.name,
                 manifest = manifest,
@@ -769,13 +778,13 @@ class AppGraph(val application: Application) {
 
     /** P9-11: the one settings-write door (WRITE_SECURE direct, shell `settings put` fallback). */
     private val secureSettingsHelper =
-        app.autohost.shell.SecureSettingsHelper(app, shellTransports)
+        app.autohost.shell.SecureSettingsHelper(application, shellTransports)
 
     /** P9-11: shell-fallback self-heal (a11y re-enable, IME auto-select, keep-awake). */
     val shellSelfHeal = app.autohost.selfheal.ShellSelfHeal(secureSettingsHelper)
 
     /** P9-09: the installer-UI path (a11y-driven, auto-accept gate backed). */
-    private val installController = app.autohost.install.InstallController(app, clock)
+    private val installController = app.autohost.install.InstallController(application, clock)
 
     /** P9-09: `device.app.manage` — force-stop/clear/grant/install/uninstall (T3, DANGEROUS). */
     private val appManageProvider = app.autohost.capabilities.app.AppManageProvider(
@@ -802,7 +811,7 @@ class AppGraph(val application: Application) {
                     ?.filter { it.isDirectory }?.maxByOrNull { it.name }
             }.getOrNull()
         },
-        newPageId = { "pg-" + app.autohost.core.common.Ids.newId() },
+        newPageId = { "pg-" + Ids.ulid(clock.nowMs()) },
     )
 
     /** P10-02: the in-app WebView browser (T0) — the default browser link. */
@@ -869,31 +878,31 @@ class AppGraph(val application: Application) {
     // ---- P10 part 2: personal data, hardware, sms/telephony (ADR-073/074) + net riders ----
 
     private val contactsProvider = app.autohost.capabilities.data.ContactsProvider(
-        app.autohost.data.AndroidContacts(app),
+        app.autohost.data.AndroidContacts(application),
     )
     private val calendarProvider = app.autohost.capabilities.data.CalendarProvider(
-        app.autohost.data.AndroidCalendar(app),
+        app.autohost.data.AndroidCalendar(application),
     )
     private val mediaProvider = app.autohost.capabilities.data.MediaProvider(
-        app.autohost.data.AndroidMedia(app),
+        app.autohost.data.AndroidMedia(application),
     )
     private val locationProvider = app.autohost.capabilities.data.LocationProvider(
-        app.autohost.data.AndroidLocation(app),
+        app.autohost.data.AndroidLocation(application),
     )
     private val cameraProvider = app.autohost.capabilities.data.CameraProvider(
-        app.autohost.data.AndroidCamera(app, File(app.cacheDir, "camera")),
+        app.autohost.data.AndroidCamera(application, File(application.cacheDir, "camera")),
     )
     private val micProvider = app.autohost.capabilities.data.MicProvider(
-        app.autohost.data.AndroidMic(app, File(app.cacheDir, "mic")),
+        app.autohost.data.AndroidMic(application, File(application.cacheDir, "mic")),
     )
     private val sensorsProvider = app.autohost.capabilities.data.SensorsProvider(
-        app.autohost.data.AndroidSensors(app),
+        app.autohost.data.AndroidSensors(application),
     )
     private val smsProvider = app.autohost.capabilities.data.SmsProvider(
-        app.autohost.data.AndroidSms(app), clock,
+        app.autohost.data.AndroidSms(application), clock,
     )
     private val telephonyProvider = app.autohost.capabilities.data.TelephonyProvider(
-        app.autohost.data.AndroidTelephony(app),
+        app.autohost.data.AndroidTelephony(application),
     )
 
     /** P10 W3 riders: raw TCP/UDP + the device-initiated reverse WS (net_reverse switch upstream). */
@@ -970,7 +979,7 @@ class AppGraph(val application: Application) {
     }
 
     /** P9-12: the post-reboot re-arm reminder (ADB-over-TCP resets at boot on the Android 10 phone). */
-    val shellRearmReminder = app.autohost.shell.RearmReminder(app, shellTransports)
+    val shellRearmReminder = app.autohost.shell.RearmReminder(application, shellTransports)
 
     /** P9-12: live transport rows for the Setup section — (id, state, reason?). */
     fun shellTransportStatuses(): List<Triple<String, String, String?>> =
@@ -1025,7 +1034,7 @@ class AppGraph(val application: Application) {
     // P8-02: the event backbone — the hub, the app-side controller (sources/bridges/FGS) and the
     // device.events read-side provider.
     private val rawEventHub = app.autohost.core.engine.events.EventHub(clock)
-    val eventHub = app.autohost.events.EventHubController(app, rawEventHub, clock, appScope)
+    val eventHub = app.autohost.events.EventHubController(application, rawEventHub, clock, appScope)
     private val eventsProvider = app.autohost.core.engine.host.EventsProvider { rawEventHub }
 
     // P8-01: the notification-listener provider (device.notifications).
@@ -1042,13 +1051,13 @@ class AppGraph(val application: Application) {
     // ---- P8 part 2: files, net, audio/power, screen control, overlays, settings, chains ----
 
     /** P8-07: task-private storage host provider (W1 first-build gap closed). */
-    private val filesPrivateProvider = app.autohost.capabilities.files.FilesPrivateProvider { taskId ->
-        File(File(application.filesDir, "taskdata"), taskId)
-    }
+    private val filesPrivateProvider = app.autohost.capabilities.files.FilesPrivateProvider(
+        rootFor = { taskId -> File(File(application.filesDir, "taskdata"), taskId) },
+    )
 
     /** P8-07: SAF trees + MediaStore (user-picked folders). */
     private val filesSharedProvider =
-        app.autohost.capabilities.files.FilesSharedProvider(app.autohost.capabilities.files.AndroidSharedFiles(app))
+        app.autohost.capabilities.files.FilesSharedProvider(app.autohost.capabilities.files.AndroidSharedFiles(application))
 
     /** P8-08 first-build gap closed: the W1 net.http provider. */
     private val httpProvider = app.autohost.capabilities.net.HttpProvider(app.autohost.capabilities.net.JavaHttpEngine())
@@ -1062,8 +1071,8 @@ class AppGraph(val application: Application) {
     private val uiOverlayProvider = app.autohost.capabilities.screen.UiOverlayProvider(overlaySink)
 
     /** P8-09: audio + power (one AndroidAudio/AndroidPower each — the release path shares the maps). */
-    private val androidAudio = app.autohost.capabilities.audio.AndroidAudio(app)
-    private val androidPower = app.autohost.capabilities.audio.AndroidPower(app)
+    private val androidAudio = app.autohost.capabilities.audio.AndroidAudio(application)
+    private val androidPower = app.autohost.capabilities.audio.AndroidPower(application)
     private val audioProvider = app.autohost.capabilities.audio.AudioProvider(androidAudio)
     private val powerProvider = app.autohost.capabilities.audio.PowerProvider(androidPower)
 
@@ -1134,7 +1143,7 @@ class AppGraph(val application: Application) {
 
     /** P8-08: the webhook endpoint → `external` trigger rules (Settings → Webhooks, S23). */
     val webhooks: app.autohost.webhook.WebhookController by lazy {
-        app.autohost.webhook.WebhookController(app, appScope) { name, payload ->
+        app.autohost.webhook.WebhookController(application, appScope) { name, payload ->
             triggerController.externalFire(name, payload)
         }
     }
@@ -1210,8 +1219,8 @@ class AppGraph(val application: Application) {
         // P9-12: the boot re-arm reminder also covers a process start that missed BOOT_COMPLETED.
         appScope.launch { shellRearmReminder.onBoot("app_start") }
         // P8-01/P8-05/P8-06: process context for the notification bridge, clipboard and intents.
-        app.autohost.capabilities.clipboard.AndroidClipboard.init(app)
-        app.autohost.capabilities.intents.AndroidIntents.init(app)
+        app.autohost.capabilities.clipboard.AndroidClipboard.init(application)
+        app.autohost.capabilities.intents.AndroidIntents.init(application)
         // P8-09: TTS warms up asynchronously; honesty preserved (calls before ready are refused).
         androidAudio.initTts()
         registerActivityFocusTracker()
@@ -1341,7 +1350,7 @@ class AppGraph(val application: Application) {
         // The run foreground service lives exactly as long as some run is active (plan §5.2);
         // the same stream releases scheduled runs' UI locks on terminal transitions (P4-08),
         // closes open prompts (P5-06) and closes remaining incidents (P5-07).
-        var previousStatuses = Map<String, String>()
+        var previousStatuses = emptyMap<String, String>()
         appScope.launch {
             runStore.runs.collect { runs ->
                 if (runs.any { it.active }) {
@@ -1383,7 +1392,7 @@ class AppGraph(val application: Application) {
         }
 
         // P5-01/P5-18: persist runs/events/stages/evidence into Room (History, export, crash recovery).
-        runBridge.start()
+        runPersistenceBridge.start()
 
         // P7-06: the bubble subscribes to runs + a11y connection; P7-12: the a11y key filter gets
         // its config and the kill-switch hook (same process — plain lambdas, no binder hop).
@@ -1408,8 +1417,8 @@ class AppGraph(val application: Application) {
             scheduleController.reconcile("app_start")
             // P8-03: time-source trigger rules re-arm on the same reconcile pass.
             triggerController.reconcile("app_start")
-            app.autohost.service.ReconcileWorker.ensurePeriodic(app)
-            app.autohost.service.RetentionWorker.ensurePeriodic(app)
+            app.autohost.service.ReconcileWorker.ensurePeriodic(application)
+            app.autohost.service.RetentionWorker.ensurePeriodic(application)
             schedulerBackendPreference = data.settings.string(SETTING_SCHEDULER_BACKEND) ?: "auto"
             // P5-05: orphaned runs from a crash/reboot → INTERRUPTED + bounded auto-resume (plan §12.4).
             crashReconciler.reconcile("app_start")
@@ -1447,7 +1456,7 @@ class AppGraph(val application: Application) {
                     AhJson.json.decodeFromString(JsonObject.serializer(), it)
                 }
             } ?: JsonObject(emptyMap())
-            val request = RunOrchestrator.StartRequest(
+            val request = StartRequest(
                 taskId = row.taskId,
                 taskName = manifest.name,
                 manifest = manifest,

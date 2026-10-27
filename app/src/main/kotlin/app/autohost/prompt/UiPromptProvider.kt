@@ -61,7 +61,8 @@ class UiPromptProvider(
     override fun permissionFor(method: String, args: JsonObject): String? =
         if (method in setOf("ask", "toast", "dialog", "form", "overlay")) "ui.prompt" else null
 
-    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope = when (method) {
+    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope {
+        return when (method) {
         "toast" -> {
             val text = args["text"]?.jsonPrimitive?.content ?: ""
             runCatching { android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_SHORT).show() }
@@ -187,6 +188,7 @@ class UiPromptProvider(
             )
         }
         else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown ui.prompt method '$method'")
+        }
     }
 
     /** Called by [PromptActivity] when the user answers. */

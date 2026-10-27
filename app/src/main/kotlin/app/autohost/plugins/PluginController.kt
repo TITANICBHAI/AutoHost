@@ -10,6 +10,8 @@ import app.autohost.core.common.Clock
 import app.autohost.core.broker.CapabilityRegistry
 import app.autohost.core.engine.plugins.PluginHost
 import app.autohost.plugin.ICapabilityProvider
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * P11-02 (ADR-079): the Android half of the plugin host — discovery, binding and lifecycle.
@@ -96,8 +98,8 @@ class PluginController(
             val stub = ICapabilityProvider.Stub.asInterface(binder) ?: return
             val pluginId = component.packageName
             val adapter = object : PluginHost.PluginBinder {
-                override fun apiLevel(): Int = runCatching { stub.apiLevel }.getOrDefault(Int.MAX_VALUE)
-                override fun describe(): String = runCatching { stub.describe }.getOrDefault("")
+                override fun apiLevel(): Int = runCatching { stub.apiLevel() }.getOrDefault(Int.MAX_VALUE)
+                override fun describe(): String = runCatching { stub.describe() }.getOrDefault("")
                 override fun availability(envJson: String): String = stub.availability(envJson)
                 override fun invoke(callJson: String): String = stub.invoke(callJson)
             }
@@ -125,7 +127,7 @@ class PluginController(
             AhLog.i(
                 TAG,
                 "plugin attached: ${attached.pluginId} (${attached.capabilities.size} capabilities)",
-                app.autohost.core.common.AhJson.json.buildJsonObject {
+                buildJsonObject {
                     put("plugin", kotlinx.serialization.json.JsonPrimitive(attached.pluginId))
                     put("capabilities", kotlinx.serialization.json.JsonPrimitive(attached.capabilities.size))
                     put("at_ms", kotlinx.serialization.json.JsonPrimitive(clock.nowMs()))

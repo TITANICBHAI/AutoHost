@@ -189,7 +189,7 @@ class AppDevApiBackend(
 
     override fun runsStart(taskId: String, profileId: String?, args: JsonObject?): JsonObject =
         kotlinx.coroutines.runBlocking {
-            val runId = graph.orchestrator.startDevApiRun(taskId, profileId, args)
+            val runId = graph.startRun(taskId, profileId, "dev_api", args ?: JsonObject(emptyMap()))
             buildJsonObject { put("runId", runId) }
         }
 
@@ -325,6 +325,7 @@ class AppDevApiBackend(
         }
         return kotlinx.coroutines.runBlocking {
             val existing = parsed.id.takeIf { it.isNotBlank() }?.let { graph.data.triggers.byRuleId(it) }
+            val now = graph.clock.nowMs()
             val entity = app.autohost.core.data.db.TriggerRuleEntity(
                 rowId = existing?.rowId ?: 0,
                 ruleId = parsed.id.ifBlank { app.autohost.core.common.Ids.ulid(graph.clock.nowMs()) },
@@ -339,6 +340,8 @@ class AppDevApiBackend(
                 queueMax = parsed.queueMax,
                 enabled = parsed.enabled,
                 armed = parsed.source in app.autohost.core.model.TriggerSource.TIMED,
+                createdAt = existing?.createdAt ?: now,
+                updatedAt = now,
             )
             graph.data.triggers.upsert(entity)
             // P8-03: the runtime reloads its cache and re-arms (time sources) / fixes the FGS need.
@@ -378,7 +381,7 @@ class AppDevApiBackend(
             }
         } else if (scheduleRule == null && fire && problems.isEmpty()) {
             // P8-03: dispatch a synthetic event for this rule through the live runtime.
-            val stored = graph.data.triggers.byRuleId(parsed.id)
+            val stored = kotlinx.coroutines.runBlocking { graph.data.triggers.byRuleId(parsed.id) }
             if (stored != null && stored.enabled) {
                 rows += graph.triggerController.testFire(stored.ruleId)
             } else {

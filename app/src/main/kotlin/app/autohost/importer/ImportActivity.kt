@@ -86,12 +86,20 @@ class ImportActivity : ComponentActivity() {
             )
         } catch (e: BundleExtractor.BundleException) {
             UiState(
-                ImportReport(source = name, bundleName = name, sha256 = "", errors = listOf(ImportReport.Issue("", e.rule, e.message ?: "bundle rejected"))),
+                ImportReport(
+                    source = name, bundleName = name, sha256 = "",
+                    taskId = null, taskName = null, version = null,
+                    errors = listOf(ImportReport.Issue("", e.rule, e.message ?: "bundle rejected")),
+                ),
                 staged = null,
             )
         } catch (e: Exception) {
             UiState(
-                ImportReport(source = name, bundleName = name, sha256 = "", errors = listOf(ImportReport.Issue("", "IO", e.message ?: "unreadable bundle"))),
+                ImportReport(
+                    source = name, bundleName = name, sha256 = "",
+                    taskId = null, taskName = null, version = null,
+                    errors = listOf(ImportReport.Issue("", "IO", e.message ?: "unreadable bundle")),
+                ),
                 staged = null,
             )
         }
