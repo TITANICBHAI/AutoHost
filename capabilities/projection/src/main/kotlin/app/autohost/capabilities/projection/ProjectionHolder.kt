@@ -55,12 +55,22 @@ object ProjectionHolder {
     ): Session {
         stop()
         val reader = android.media.ImageReader.newInstance(width, height, android.graphics.PixelFormat.RGBA_8888, 2)
-        val display = projection.createVirtualDisplay(
-            "autohost-shot",
-            width, height, dpi,
-            android.hardware.display.DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-            reader.surface, null, null,
-        )
+        val display = try {
+            projection.createVirtualDisplay(
+                "autohost-shot",
+                width, height, dpi,
+                android.hardware.display.DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                reader.surface, null, null,
+            )
+        } catch (e: RuntimeException) {
+            reader.close()
+            projection.stop()
+            throw e
+        } ?: run {
+            reader.close()
+            projection.stop()
+            throw IllegalStateException("MediaProjection could not create a virtual display")
+        }
         val session = Session(projection, display, reader, width, height, dpi, System.currentTimeMillis())
         projection.registerCallback(object : android.media.projection.MediaProjection.Callback() {
             override fun onStop() {

@@ -67,7 +67,7 @@ object Screenshotter {
         val plane = planes[0]
         val buffer = plane.buffer
         val pixelStride = plane.pixelStride
-        val rowPadding = rowStride - pixelStride * width
+        val rowPadding = plane.rowStride - pixelStride * width
         val bitmap = Bitmap.createBitmap(width + rowPadding / pixelStride, height, Bitmap.Config.ARGB_8888)
         bitmap.copyPixelsFromBuffer(buffer)
         if (rowPadding == 0) bitmap else Bitmap.createBitmap(bitmap, 0, 0, width, height)
