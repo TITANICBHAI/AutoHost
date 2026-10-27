@@ -13,6 +13,9 @@ import app.autohost.core.data.db.ProfileDao
 import app.autohost.core.data.db.ProfileEntity
 import app.autohost.core.data.db.RunDao
 import app.autohost.core.data.db.RunEntity
+import app.autohost.core.data.db.ScheduleEventEntity
+import app.autohost.core.data.db.ScheduleStateEntity
+import app.autohost.core.data.db.TriggerRuleEntity
 import app.autohost.core.engine.tasks.GrantService
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.JsonObject
@@ -198,7 +201,7 @@ class DbKvBackend(private val dao: KvDao, private val clock: Clock) :
     }
 
     override fun delete(owner: String, key: String): Boolean =
-        kotlinx.coroutines.runBlocking { dao.get(scopeFor(owner), ownerId, key) }?.let { existing ->
+        kotlinx.coroutines.runBlocking { dao.get(scopeFor(owner), owner, key) }?.let { existing ->
             kotlinx.coroutines.runBlocking { dao.delete(scopeFor(owner), owner, key) }
             existing.rowId != 0L
         } ?: false
@@ -295,6 +298,7 @@ class ScheduleRepository(private val db: AutoHostDatabase, private val clock: Cl
 /** P4-04: trigger-rule persistence (plan §11.9); event sources stay unarmed until Phase 8. */
 class TriggerRepository(private val db: AutoHostDatabase, private val clock: Clock) {
     private val dao = db.triggerRuleDao()
+    private val events = db.scheduleEventDao()
 
     fun observeAll(): Flow<List<TriggerRuleEntity>> = dao.observeAll()
 

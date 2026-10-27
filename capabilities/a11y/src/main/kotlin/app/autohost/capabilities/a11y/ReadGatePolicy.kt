@@ -6,8 +6,8 @@ package app.autohost.capabilities.a11y
  * exhaustively unit-tested.
  */
 class ReadGatePolicy(
-    private val maxConcurrentReads: Int = 2,
-    private val budgetMs: Long = 2_500,
+    val maxConcurrentReads: Int = 2,
+    val budgetMs: Long = 2_500,
 ) {
     enum class Reason { BUDGET_EXHAUSTED, POOL_SATURATED }
 

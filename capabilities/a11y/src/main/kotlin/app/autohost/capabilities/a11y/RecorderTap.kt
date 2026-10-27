@@ -61,7 +61,7 @@ data class RecorderTapEvent(
                 className = event.className?.toString(),
                 viewId = source?.viewIdResourceName, // view ids need flagReportViewIds (service config sets it)
                 text = when (kind) {
-                    Kind.TEXT -> safeText(event.afterText)
+                    Kind.TEXT -> safeText(event.text?.firstOrNull())
                     else -> source?.let { safeText(it.text) } ?: safeText(event.text?.firstOrNull())
                 },
                 desc = source?.let { safeText(it.contentDescription) },

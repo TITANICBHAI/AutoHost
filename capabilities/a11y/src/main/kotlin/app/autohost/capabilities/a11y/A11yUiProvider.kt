@@ -9,6 +9,7 @@ import app.autohost.core.common.Clock
 import app.autohost.core.model.AhError
 import app.autohost.core.model.Availability
 import app.autohost.core.model.CompactDump
+import app.autohost.core.model.DumpFilter
 import app.autohost.core.model.Envelope
 import app.autohost.core.model.ErrorCode
 import app.autohost.core.model.Meta
@@ -114,7 +115,7 @@ class A11yUiProvider(
     /** Read key: one gate slot per distinct scope set so concurrent runs do not thrash each other. */
     private fun gateKey(packages: Set<String>?): String = packages?.sorted()?.joinToString(",") ?: "*"
 
-    private fun read(packages: Set<String>?): Pair<A11ySnapshot, Meta?> {
+    private suspend fun read(packages: Set<String>?): Pair<A11ySnapshot, Meta?> {
         val gate = readGate ?: return reader.read(packages) to null
         return when (val result = gate.read(gateKey(packages)) { reader.read(packages) }) {
             is ReadGate.ReadResult.Fresh -> result.snapshot to null
@@ -261,7 +262,7 @@ class A11yUiProvider(
             keyboardVisible = snap.keyboardVisible,
             screenWidth = screenWidth,
             screenHeight = screenHeight,
-            filter = if (filtering) CompactDump.DumpFilter() else null,
+            filter = if (filtering) DumpFilter() else null,
             coordinates = if (normalized) CompactDump.Coordinates.NORMALIZED else CompactDump.Coordinates.ABSOLUTE,
         )
         return Envelope.ok(buildJsonObject { put("text", text) })
@@ -277,7 +278,10 @@ class A11yUiProvider(
         longClick: Boolean,
     ): Envelope {
         val guardResult = guardAndResolve(args, actPackages, observePackages)
-        val info = guardResult.getOrElse { e -> return mapResolveError(e, "click target not found") }
+        val info = when (guardResult) {
+            is AhResult.Ok -> guardResult.value
+            is AhResult.Err -> return mapResolveError(guardResult.error, "click target not found")
+        }
         val fingerprintBefore = fingerprintOfCurrent(observePackages)
         val outcome = if (longClick) actions.longClick(info) else actions.click(info)
         // retry_if_no_change: one honest repetition when the screen did not change at all (plan §5.7).
@@ -307,8 +311,9 @@ class A11yUiProvider(
         observePackages: Set<String>?,
     ): AhResult<android.view.accessibility.AccessibilityNodeInfo> {
         val resolved = resolveTarget(args, actPackages, observePackages)
-        val info = resolved.getOrElse { e ->
-            return AhResult.err(e)
+        val info = when (resolved) {
+            is AhResult.Ok -> resolved.value
+            is AhResult.Err -> return AhResult.err(resolved.error)
         }
         // Popup guard: a higher-layer window above the target's window refuses blind taps (plan §5.7).
         val targetWindowId = UiTreeBuilder.safeWindowId(info)
@@ -425,8 +430,9 @@ class A11yUiProvider(
         val text = args["text"]?.let { it as? JsonPrimitive }?.content
             ?: return Envelope.err(ErrorCode.INVALID_ARGS, "set_text needs a 'text' argument")
         val secret = (args["secret"] as? JsonPrimitive)?.content?.toBooleanStrict() ?: false
-        val info = guardAndResolve(args, actPackages, observePackages).getOrElse { e ->
-            return mapResolveError(e, "set_text target not found")
+        val info = when (val result = guardAndResolve(args, actPackages, observePackages)) {
+            is AhResult.Ok -> result.value
+            is AhResult.Err -> return mapResolveError(result.error, "set_text target not found")
         }
         // Strategy chain (plan §7.6): ACTION_SET_TEXT → IME commit → paste. First VERIFIED wins; unverifiable
         // outcomes are reported, never assumed. Secrets never touch the clipboard (canary rule).
@@ -576,19 +582,26 @@ class A11yUiProvider(
         actPackages: Set<String>?,
         observePackages: Set<String>?,
     ): AhResult<android.view.accessibility.AccessibilityNodeInfo> {
-        args["ref"]?.let { it as? JsonPrimitive }?.content?.let { ref -> return registry.resolve(ref) }
+        args["ref"]?.let { it as? JsonPrimitive }?.content?.let { ref -> return resolveHandle(ref) }
         args["target"]?.let { target ->
             (target as? JsonObject)?.get("ref")?.let { r ->
-                return registry.resolve((r as JsonPrimitive).content)
+                return resolveHandle((r as JsonPrimitive).content)
             }
         }
         args["selector"]?.let {
             val found = find(buildJsonObject { put("selector", it) }, observePackages, timeoutMs = 0)
             val ref = (found.result as? JsonObject)?.get("ref")?.let { r -> (r as JsonPrimitive).content }
-            if (ref != null) return registry.resolve(ref)
+            if (ref != null) return resolveHandle(ref)
         }
         return AhResult.err(app.autohost.core.model.AhError.of(ErrorCode.INVALID_ARGS, "click needs 'ref' or 'selector'"))
     }
+
+    private fun resolveHandle(ref: String): AhResult<android.view.accessibility.AccessibilityNodeInfo> =
+        when (val result = registry.resolve(ref)) {
+            is AhResult.Err -> AhResult.err(result.error)
+            is AhResult.Ok -> result.value?.let { AhResult.ok(it) }
+                ?: AhResult.err(ErrorCode.STALE_NODE, "node ref '$ref' has no live handle")
+        }
 
     private fun mapResolveError(e: AhError, fallback: String): Envelope = when (e.code) {
         ErrorCode.NOT_FOUND.name -> Envelope.err(ErrorCode.NOT_FOUND, fallback, reason = "NO_MATCH")

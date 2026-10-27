@@ -110,8 +110,9 @@ class AppManageProvider(
             })
         }
         // 2) T1 App-info UI path (the P3-20 machinery, same seams).
-        if (stopUi != null) {
-            val applied = runCatching { stopUi.forceStopViaUi(pkg) }.getOrDefault(false)
+        val ui = stopUi
+        if (ui != null) {
+            val applied = runCatching { ui.forceStopViaUi(pkg) }.getOrDefault(false)
             return Envelope.ok(buildJsonObject {
                 put("result", if (applied) BEST_EFFORT else FAILED)
                 put("method", "ui")

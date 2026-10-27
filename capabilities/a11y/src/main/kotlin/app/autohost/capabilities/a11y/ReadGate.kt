@@ -28,7 +28,7 @@ class ReadGate(
     val policy: ReadGatePolicy = ReadGatePolicy(),
     private val readDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
-    class ReadFailed(val cause: Throwable) : Exception(cause)
+    class ReadFailed(val original: Throwable) : Exception(original)
 
     data class LastGood<S>(val snapshot: S, val atMonotonicMs: Long)
 
@@ -66,7 +66,7 @@ class ReadGate(
             try {
                 entry.deferred.await()
             } catch (e: ReadFailed) {
-                throw e.cause
+                throw e.original
             }
         }
         return if (value != null) {

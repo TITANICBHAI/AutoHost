@@ -2,7 +2,6 @@ package app.autohost.capabilities.app
 
 import android.content.Context
 import android.content.pm.PackageManager
-import android.os.Build
 
 data class AppInfo(
     val pkg: String,
@@ -23,44 +22,34 @@ interface PackageReader {
 
 class AndroidPackageReader(private val context: Context) : PackageReader {
 
-    override fun query(pkg: String): AppInfo? = try {
+    override fun query(pkg: String): AppInfo? {
         val packageManager = context.packageManager
-        val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            packageManager.getPackageInfo(pkg, 0)
-        } else {
+        return try {
             @Suppress("DEPRECATION")
-            packageManager.getPackageInfo(pkg, 0)
+            val info = packageManager.getPackageInfo(pkg, 0)
+            val applicationInfo = info.applicationInfo ?: return null
+            AppInfo(
+                pkg = pkg,
+                label = try {
+                    packageManager.getApplicationLabel(applicationInfo).toString()
+                } catch (e: Exception) {
+                    pkg
+                },
+                versionName = info.versionName,
+                versionCode = info.longVersionCode,
+            )
+        } catch (e: PackageManager.NameNotFoundException) {
+            null
+        } catch (e: RuntimeException) {
+            null
         }
-        AppInfo(
-            pkg = pkg,
-            label = try {
-                packageManager.getApplicationLabel(info.applicationInfo ?: return null).toString()
-            } catch (e: Exception) {
-                pkg
-            },
-            versionName = info.versionName,
-            versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                info.longVersionCode
-            } else {
-                @Suppress("DEPRECATION")
-                info.versionCode.toLong()
-            },
-        )
-    } catch (e: PackageManager.NameNotFoundException) {
-        null
-    } catch (e: RuntimeException) {
-        null
     }
 
     override fun list(filter: String?): List<AppInfo> = try {
         val packageManager = context.packageManager
-        val flags = android.content.pm.PackageManager.GET_META_DATA
-        val infos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            packageManager.getInstalledPackages(android.content.pm.PackageInfoFlags.of(flags.toLong()))
-        } else {
-            @Suppress("DEPRECATION")
-            packageManager.getInstalledPackages(flags)
-        }
+        val flags = PackageManager.GET_META_DATA
+        @Suppress("DEPRECATION")
+        val infos = packageManager.getInstalledPackages(flags)
         infos.orEmpty()
             .mapNotNull { info ->
                 val pkg = info.packageName ?: return@mapNotNull null

@@ -4,7 +4,9 @@ import android.accessibilityservice.AccessibilityService
 import android.graphics.Bitmap
 import android.os.Handler
 import android.os.Looper
+import androidx.annotation.RequiresApi
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 
 /**

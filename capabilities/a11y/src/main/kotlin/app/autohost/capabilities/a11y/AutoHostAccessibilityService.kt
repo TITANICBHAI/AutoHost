@@ -89,7 +89,7 @@ class AutoHostAccessibilityService : AccessibilityService() {
                 A11yBridge.emitWindowChange()
                 consultAutoAccept()
             }
-            AccessibilityEvent.TYPE_NOTIFICATION_CHANGED -> {
+            AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED -> {
                 val text = try {
                     event.text?.firstOrNull()?.toString()
                 } catch (e: RuntimeException) {

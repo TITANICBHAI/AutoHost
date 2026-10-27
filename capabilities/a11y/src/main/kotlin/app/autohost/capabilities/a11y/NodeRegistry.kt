@@ -5,6 +5,7 @@ import app.autohost.core.common.AhResult
 import app.autohost.core.common.Clock
 import app.autohost.core.model.AhError
 import app.autohost.core.model.ErrorCode
+import app.autohost.core.model.UiNode
 
 /**
  * Keeps node handles from recent snapshots addressable by ref (`s<serial>-<index>`). A ref is only good while
