@@ -1,5 +1,6 @@
 package app.autohost.capabilities.intents
 
+import android.content.Intent
 import app.autohost.core.broker.CallContext
 import app.autohost.core.broker.CapabilityProvider
 import app.autohost.core.broker.DeviceEnv
@@ -20,7 +21,7 @@ import kotlinx.serialization.json.put
 class IntentProvider(private val dispatch: Dispatch = AndroidDispatch) : CapabilityProvider {
 
     /** The framework seam (JVM tests stub this; the app wires AndroidIntents). */
-    fun interface Dispatch {
+    interface Dispatch {
         fun startActivity(builder: (Intent) -> Intent): Boolean
         fun broadcast(builder: (Intent) -> Intent): Boolean
     }

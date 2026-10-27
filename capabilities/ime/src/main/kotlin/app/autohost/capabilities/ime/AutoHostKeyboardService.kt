@@ -71,8 +71,7 @@ class AutoHostKeyboardService : InputMethodService() {
 
     /** Our input-method id as the system records it (`<pkg>/<cls>`), for ImeSelector. */
     fun inputMethodId(): String? = try {
-        val info = android.view.inputmethod.InputMethodManager
-            .getSystemService(this) as? android.view.inputmethod.InputMethodManager
+        val info = getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
         // The canonical id is "<package>/<class>"; build it directly — the service knows its own identity.
         "${packageName}/${javaClass.name}".takeIf { info != null }
     } catch (e: RuntimeException) {
