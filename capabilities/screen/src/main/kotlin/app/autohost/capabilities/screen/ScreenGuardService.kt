@@ -108,7 +108,8 @@ class ScreenGuardService : Service() {
             nowMs = now,
             lastVerdict = lastVerdict,
         )
-        when (val verdict = ScreenGuardPolicy.decide(input)) {
+        val verdict = ScreenGuardPolicy.decide(input)
+        when (verdict) {
             ScreenGuardPolicy.Verdict.Noop -> {
                 if (lastVerdict !is ScreenGuardPolicy.Verdict.Noop) {
                     AhLog.i(TAG, "screen clear", AhJson.meta { put("why", why) })

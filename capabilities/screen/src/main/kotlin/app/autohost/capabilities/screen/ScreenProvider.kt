@@ -147,13 +147,9 @@ object AndroidSystemState : SystemState {
     override fun requestDismissKeyguard(): Boolean = appContext?.let { ctx ->
         val km = ctx.getSystemService(android.content.Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
         try {
-            var dismissed = false
-            km?.requestDismissKeyguard(null, object : android.app.KeyguardManager.KeyguardDismissCallback() {
-                override fun onDismissSucceeded() {
-                    dismissed = true
-                }
-            })
-            dismissed || km?.isKeyguardLocked?.not() == true
+            // requestDismissKeyguard requires an Activity. This holder has only application context;
+            // the dedicated recovery Activity performs the real request when the guard needs it.
+            km?.isKeyguardLocked?.not() ?: false
         } catch (e: RuntimeException) {
             false
         }

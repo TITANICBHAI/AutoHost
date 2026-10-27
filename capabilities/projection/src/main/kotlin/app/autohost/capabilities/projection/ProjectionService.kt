@@ -44,6 +44,11 @@ class ProjectionService : Service() {
                     stopSelf()
                     return START_NOT_STICKY
                 }
+                if (projection == null) {
+                    ProjectionHolder.stop()
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
                 val metrics = resources.displayMetrics
                 ProjectionHolder.start(projection, metrics.widthPixels, metrics.heightPixels, metrics.densityDpi)
             }
