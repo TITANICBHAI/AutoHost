@@ -65,9 +65,12 @@ class PermissionIndex private constructor(
             return PermissionIndex(permissionToCapability, capabilityToPermissions)
         }
 
-        fun loadFromResources(classLoader: ClassLoader): PermissionIndex =
-            parse(classLoader.getResourceAsStream(RESOURCE_PATH)!!.readBytes().decodeToString())
+        fun loadFromResources(classLoader: ClassLoader): PermissionIndex {
+            val resource = classLoader.getResourceAsStream(RESOURCE_PATH)
+                ?: error("Missing bundled capability specs resource: $RESOURCE_PATH")
+            return resource.use { parse(it.readBytes().decodeToString()) }
+        }
 
-        const val RESOURCE_PATH = "/autohost/capability-specs-w1.json"
+        const val RESOURCE_PATH = "autohost/capability-specs-w1.json"
     }
 }
