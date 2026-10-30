@@ -25,7 +25,18 @@ class TaskOverlaySink : UiOverlayProvider.Sink {
 
     override fun connected(): Boolean = A11yBridge.service.value != null
 
-    override fun highlight(runId: String, x: Int, y: Int, w: Int, h: Int, label: String?, durationMs: Long): Boolean {
+    override fun highlight(runId: String, x: Int, y: Int, w: Int, h: Int, label: String?, durationMs: Long): Boolean =
+        MainThread.call(false) { highlightOnMain(runId, x, y, w, h, label, durationMs) }
+
+    private fun highlightOnMain(
+        runId: String,
+        x: Int,
+        y: Int,
+        w: Int,
+        h: Int,
+        label: String?,
+        durationMs: Long,
+    ): Boolean {
         val service = A11yBridge.service.value ?: return false
         val wm = service.getSystemService(WindowManager::class.java) ?: return false
         detach(wm, highlights.remove(runId))
@@ -70,7 +81,10 @@ class TaskOverlaySink : UiOverlayProvider.Sink {
         }
     }
 
-    override fun panel(runId: String, text: String, corner: String): Boolean {
+    override fun panel(runId: String, text: String, corner: String): Boolean =
+        MainThread.call(false) { panelOnMain(runId, text, corner) }
+
+    private fun panelOnMain(runId: String, text: String, corner: String): Boolean {
         val service = A11yBridge.service.value ?: return false
         val wm = service.getSystemService(WindowManager::class.java) ?: return false
         detach(wm, panels.remove(runId))
@@ -99,7 +113,9 @@ class TaskOverlaySink : UiOverlayProvider.Sink {
         }
     }
 
-    override fun clear(runId: String): Int {
+    override fun clear(runId: String): Int = MainThread.call(0) { clearOnMain(runId) }
+
+    private fun clearOnMain(runId: String): Int {
         val service = A11yBridge.service.value ?: return 0
         val wm = service.getSystemService(WindowManager::class.java) ?: return 0
         var removed = 0
@@ -111,6 +127,10 @@ class TaskOverlaySink : UiOverlayProvider.Sink {
 
     /** The global kill switch / app shutdown: everything comes down. */
     fun clearAll() {
+        MainThread.post { clearAllOnMain() }
+    }
+
+    private fun clearAllOnMain() {
         val service = A11yBridge.service.value ?: return
         val wm = service.getSystemService(WindowManager::class.java) ?: return
         (highlights.values + panels.values).forEach { detach(wm, it) }

@@ -25,6 +25,7 @@ class FakeProvider(
     var availability: Availability = Availability.Available,
     private val permissionByMethod: Map<String, String> = emptyMap(),
 ) : CapabilityProvider {
+    override val providerId: String = "fake-$capabilityId"
     val calls = mutableListOf<Pair<String, JsonObject>>()
     var result: (String, JsonObject) -> Envelope = { method, _ -> Envelope.ok(buildJsonObject { put("method", method) }) }
 

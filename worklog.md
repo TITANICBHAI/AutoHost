@@ -715,3 +715,11 @@ Stage Summary:
 - Packaged: download/autohost-phase11-part2.zip
 
 **Next (no more code phases):** the owner's Gradle first build (HANDOFF §5 order, §6 failure map), then the device gates 6–11 (docs/GATES.md), then release (docs/RELEASE.md).
+
+## Session 20 — crash-fix pass (CRASH_FIX_PLAN.md, batches 1 to 4)
+
+**Scope delivered:** CrashLog + in-app crash report (Copy/Share); `AutoHostApp` builds the graph only in the main process and records a failed build; `AppGraph` publishes itself first in `init`, `appScope` has a `CoroutineExceptionHandler`, delayed startup steps are isolated; `CapabilityCatalog` named error; ADB key regenerates when corrupt (+test); `FakeProvider.providerId`; `CapabilityRegistry` duplicate guard (+test); Library Run folder and list key; overlay work on the main thread (bubble, task overlays, inspector); `FOREGROUND_SERVICE_MEDIA_PROJECTION`.
+
+**Verification:** Checkpoint A: NOT RUN — owner directed the Gradle run be the plan's very last step on explicit approval (this 10-year-old Windows machine, 3.9 GB RAM; toolchain prepared but idle: local SDK gained `platforms;android-36` + `build-tools;36.0.0` via its own sdkmanager, Gradle 8.13 sha256-verified at `C:\Users\DELL\.cache\autohost\gradle-8.13`). Checkpoint B: pending that build. All batch VERIFY checks (exact text counts) matched and are recorded in CRASH_FIX_PLAN.md §1.3–1.4; `tools/progress.py --check` ok at baseline (2026-10-30). Commits: none — the folder is not a git repository (plan rule 1.1b #5). PRE-EXISTING failures found: none (nothing compiled yet).
+
+**Open:** owner-approved final Gradle build+tests (then update this entry with results and the APK sha256); owner phone test (CRASH_FIX_PLAN.md section 8); owner decisions in its Appendix A.

@@ -94,11 +94,21 @@ class AdbKeyFiles(private val dir: File, private val name: String) : AdbKeyStore
 
     override fun load(): AdbKeys {
         val privateKeyFile = File(dir, "adbkey.pk8.b64")
-        val keyPair = if (privateKeyFile.isFile) {
-            restore(privateKeyFile.readText().trim())
+        // Crash-fix 1.5: a corrupt or half-written key file must not crash every launch; mint a fresh key instead.
+        val restored = if (privateKeyFile.isFile) {
+            try {
+                restore(privateKeyFile.readText().trim())
+            } catch (e: java.security.GeneralSecurityException) {
+                null
+            } catch (e: IllegalArgumentException) {
+                null
+            } catch (e: ClassCastException) {
+                null
+            }
         } else {
-            generate().also { persist(it, privateKeyFile) }
+            null
         }
+        val keyPair = restored ?: generate().also { persist(it, privateKeyFile) }
         return AdbKeys(keyPair, name)
     }
 

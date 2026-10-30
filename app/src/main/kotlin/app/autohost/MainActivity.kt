@@ -5,9 +5,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import app.autohost.core.designsystem.theme.AutoHostTheme
+import app.autohost.diag.CrashLog
 import app.autohost.ui.AppNavHost
+import app.autohost.ui.CrashReportScreen
 
 /**
  * Single activity. Navigation is hand-rolled state (ADR-026: no navigation library until the feature
@@ -23,21 +26,47 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Crash-fix 1.7: if the object graph could not be built, show why instead of crashing on the first screen.
+        val startupFailure = (application as AutoHostApp).startupFailure
+        if (startupFailure != null) {
+            val failureReport = CrashLog.pending(this) ?: CrashLog.describe(startupFailure)
+            setContent {
+                AutoHostTheme {
+                    CrashReportScreen(title = "AutoHost could not start", report = failureReport, onDismiss = null)
+                }
+            }
+            return
+        }
+        // Crash-fix 1.7: a report left by the previous run (a crash, or a background failure we survived) shows first.
+        val previousReport = CrashLog.pending(this)
         // P7-07: a tile (or a notification deep link) can ask for a specific screen on cold start.
         when (intent?.getStringExtra(EXTRA_ROUTE)) {
             "surfaces" -> route = Routes.SURFACES
         }
         setContent {
             AutoHostTheme {
-                AppNavHost(
-                    activity = this,
-                    route = route,
-                    runId = runIdArg,
-                    onNavigate = { target, runId ->
-                        route = target
-                        runIdArg = runId
-                    },
-                )
+                var crashReport by remember { mutableStateOf(previousReport) }
+                val shownReport = crashReport
+                if (shownReport != null) {
+                    CrashReportScreen(
+                        title = "AutoHost recorded a problem on its previous run",
+                        report = shownReport,
+                        onDismiss = {
+                            CrashLog.clearPending(applicationContext)
+                            crashReport = null
+                        },
+                    )
+                } else {
+                    AppNavHost(
+                        activity = this,
+                        route = route,
+                        runId = runIdArg,
+                        onNavigate = { target, runId ->
+                            route = target
+                            runIdArg = runId
+                        },
+                    )
+                }
             }
         }
     }

@@ -197,7 +197,7 @@ fun LibraryScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit)
             )
         } else {
             LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(tasks, key = { it.taskId }) { task ->
+                items(tasks, key = { it.dir.absolutePath }) { task ->
                     Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp)) {
                             Text(task.name, style = MaterialTheme.typography.titleMedium)
@@ -222,7 +222,10 @@ fun LibraryScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit)
                                             profile = kotlinx.serialization.json.JsonObject(emptyMap()),
                                             profileId = null,
                                             taskPath = task.dir.absolutePath,
-                                            runDir = java.io.File(activity.filesDir, "runs/$(java.util.UUID.randomUUID())").absolutePath,
+                                            runDir = java.io.File(
+                                                graph.runsRoot(),
+                                                app.autohost.core.common.Ids.ulid(graph.clock.nowMs()),
+                                            ).absolutePath,
                                         ),
                                     ).getOrNull()
                                     if (record != null) onNavigate(Routes.RUN, record.runId)

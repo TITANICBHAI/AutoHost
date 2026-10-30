@@ -35,10 +35,13 @@ class BubbleController(
             graph.runStore.runs.collect { runs ->
                 val policyRuns = runs.map { BubblePolicy.BubbleRun(it.runId, it.active, uiActing[it.runId] ?: false) }
                 val shouldShow = A11yBridge.connected && BubblePolicy.decide(prefs.bubbleMode(), policyRuns)
+                // Crash-fix 3.2: window work must run on the main thread.
                 if (shouldShow) {
-                    showOrUpdate(runs.count { it.active }, runs.firstOrNull { it.active })
+                    val activeCount = runs.count { it.active }
+                    val firstActive = runs.firstOrNull { it.active }
+                    MainThread.post { showOrUpdate(activeCount, firstActive) }
                 } else {
-                    hide()
+                    MainThread.post { hide() }
                 }
             }
         }
@@ -46,11 +49,15 @@ class BubbleController(
             // The overlay dies with the service (its window is the service's); reattach on reconnect.
             A11yBridge.service.collect { service ->
                 if (service == null) {
-                    overlay = null
+                    MainThread.post { overlay = null }
                 } else {
                     val active = graph.runStore.runs.value.filter { it.active }
                     val policyRuns = active.map { BubblePolicy.BubbleRun(it.runId, true, uiActing[it.runId] ?: false) }
-                    if (BubblePolicy.decide(prefs.bubbleMode(), policyRuns)) showOrUpdate(active.size, active.firstOrNull())
+                    if (BubblePolicy.decide(prefs.bubbleMode(), policyRuns)) {
+                        val activeCount = active.size
+                        val firstActive = active.firstOrNull()
+                        MainThread.post { showOrUpdate(activeCount, firstActive) }
+                    }
                 }
             }
         }

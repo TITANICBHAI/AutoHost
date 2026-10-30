@@ -115,12 +115,15 @@ class InspectorOverlay(
     fun refresh(): Boolean {
         val canvas = canvasView ?: return false
         canvas.setNodes(nodesProvider())
-        runCatching { canvas.invalidate() }
+        // Crash-fix 3.4: invalidate() must run on the main thread; the refresh loop runs on a background dispatcher.
+        MainThread.post { canvas.invalidate() }
         return true
     }
 
     fun updateInfo(text: String) {
-        infoRef?.text = text
+        val info = infoRef ?: return
+        // Crash-fix 3.4: setting text on an attached TextView must run on the main thread.
+        MainThread.post { info.text = text }
     }
 
     fun hide() {

@@ -12,7 +12,8 @@ class CapabilityRegistry {
     private val byCapability = ConcurrentHashMap<String, MutableList<CapabilityProvider>>()
 
     fun register(provider: CapabilityProvider) {
-        providers.addIfAbsent(provider)
+        // Registering the same provider twice must not duplicate it in the fallback chain.
+        if (!providers.addIfAbsent(provider)) return
         byCapability.getOrPut(provider.capabilityId) { CopyOnWriteArrayList() }.add(provider)
     }
 

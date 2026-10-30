@@ -96,6 +96,7 @@ import app.autohost.runtime.js.JsBrokerCaller
 import app.autohost.runtime.js.JsRuntimeProvider
 import app.autohost.runtime.python.PythonRuntimeProvider
 import app.autohost.service.RunForegroundService
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
@@ -120,7 +121,13 @@ class AppGraph(val application: Application) {
 
     val clock: Clock = AndroidClock()
     val dispatchers: AppDispatchers = AppDispatchers.real()
-    val appScope = CoroutineScope(SupervisorJob() + dispatchers.default)
+    val appScope = CoroutineScope(
+        SupervisorJob() + dispatchers.default + CoroutineExceptionHandler { _, failure ->
+            // Crash-fix 1.3: one failed background job is logged and recorded; it must not kill the app.
+            AhLog.e("app", "uncaught coroutine failure: ${failure.javaClass.name}: ${failure.message}")
+            app.autohost.diag.CrashLog.record("uncaught coroutine failure in appScope", failure)
+        },
+    )
 
     // broker
     val tokens = RunTokenStore()
@@ -1207,6 +1214,10 @@ class AppGraph(val application: Application) {
     val devTasks = DevFolderTaskSource(application, clock)
 
     init {
+        // Crash-fix 1.3: make this graph readable through AutoHostApp.graph BEFORE any controller starts.
+        // Controllers launch background coroutines that read AutoHostApp.graph while this constructor is still
+        // running; without this line they could hit UninitializedPropertyAccessException and kill the process.
+        (application as? AutoHostApp)?.publishGraph(this)
         A11yBridge.clock = clock
         AndroidSystemState.init(application)
         // P9-08: the exclusive-session toggle loads async; a11y reconnects close any live session.
@@ -1423,15 +1434,17 @@ class AppGraph(val application: Application) {
         appScope.launch {
             kotlinx.coroutines.delay(RECONCILE_STARTUP_DELAY_MS) // let the DB settle after process start
             // P8-13: the switch snapshot must be live before any broker call can be gated.
-            insecureSwitches.refresh()
-            scheduleController.reconcile("app_start")
+            startupStep("insecure switches") { insecureSwitches.refresh() }
+            startupStep("schedule reconcile") { scheduleController.reconcile("app_start") }
             // P8-03: time-source trigger rules re-arm on the same reconcile pass.
-            triggerController.reconcile("app_start")
-            app.autohost.service.ReconcileWorker.ensurePeriodic(application)
-            app.autohost.service.RetentionWorker.ensurePeriodic(application)
-            schedulerBackendPreference = data.settings.string(SETTING_SCHEDULER_BACKEND) ?: "auto"
+            startupStep("trigger reconcile") { triggerController.reconcile("app_start") }
+            startupStep("reconcile worker") { app.autohost.service.ReconcileWorker.ensurePeriodic(application) }
+            startupStep("retention worker") { app.autohost.service.RetentionWorker.ensurePeriodic(application) }
+            startupStep("scheduler backend setting") {
+                schedulerBackendPreference = data.settings.string(SETTING_SCHEDULER_BACKEND) ?: "auto"
+            }
             // P5-05: orphaned runs from a crash/reboot → INTERRUPTED + bounded auto-resume (plan §12.4).
-            crashReconciler.reconcile("app_start")
+            startupStep("crash reconcile") { crashReconciler.reconcile("app_start") }
         }
     }
 
@@ -1491,6 +1504,24 @@ class AppGraph(val application: Application) {
     }
 
     fun refreshDevTasks() = devTasks.refresh()
+
+    /**
+     * Crash-fix 1.3: runs one startup step so that a failure is logged and kept for the in-app crash report instead of
+     * killing the process or skipping every step after it. Cancellation and out-of-memory still propagate.
+     * Must stay `inline`: the wrapped calls are suspend functions called from a coroutine.
+     */
+    private inline fun startupStep(name: String, block: () -> Unit) {
+        try {
+            block()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: OutOfMemoryError) {
+            throw e
+        } catch (e: Throwable) {
+            AhLog.e("startup", "step failed: $name: ${e.javaClass.name}: ${e.message}")
+            app.autohost.diag.CrashLog.record("startup step failed: $name", e)
+        }
+    }
 
     /**
      * P8-05: maintain the process focus flag from activity lifecycle callbacks — the honest gate

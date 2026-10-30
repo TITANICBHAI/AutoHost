@@ -243,8 +243,11 @@ class CapabilityCatalog private constructor(
             return CapabilityCatalog(specs)
         }
 
-        fun loadFromResources(classLoader: ClassLoader): CapabilityCatalog =
-            parse(classLoader.getResourceAsStream(RESOURCE_PATH)!!.readBytes().decodeToString())
+        fun loadFromResources(classLoader: ClassLoader): CapabilityCatalog {
+            val stream = classLoader.getResourceAsStream(RESOURCE_PATH)
+                ?: error("Missing bundled capability specs resource: $RESOURCE_PATH")
+            return parse(stream.use { it.readBytes().decodeToString() })
+        }
 
         const val RESOURCE_PATH = "autohost/capability-specs-w1.json"
     }
