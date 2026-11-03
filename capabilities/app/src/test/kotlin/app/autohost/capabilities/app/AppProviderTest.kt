@@ -182,7 +182,7 @@ class AppProviderTest {
         var foregroundTarget = true
         provider = AppProvider(reader, launcher, {
             ForegroundTracker.Foreground(if (foregroundTarget) "com.x" else "other.app", null, clock.nowMs())
-        }, clock, killer = { foregroundTarget = false }, pollIntervalMs = 10)
+        }, clock, killer = { foregroundTarget = false; true }, pollIntervalMs = 10)
         val envelope = provider.invoke(ctx, "stop", buildJsonObject { put("package", "com.x") })
         assertTrue(envelope.ok)
         assertEquals("VERIFIED", (envelope.result!!.jsonObject["result"] as JsonPrimitive).content)

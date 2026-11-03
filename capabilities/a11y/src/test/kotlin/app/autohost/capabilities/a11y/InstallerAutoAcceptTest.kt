@@ -13,15 +13,15 @@ import org.junit.Test
 class InstallerAutoAcceptTest {
 
     @Test fun `install flow accepts installer and runtime dialogs only`() {
-        assertTrue(AutoAcceptPolicy.accepts(AutoAcceptPolicy.Flow.INSTALL, PopupGuardPolicy.KnownDialog.PACKAGE_INSTALLER_CONFIRM))
-        assertTrue(AutoAcceptPolicy.accepts(AutoAcceptPolicy.Flow.INSTALL, PopupGuardPolicy.KnownDialog.RUNTIME_PERMISSION))
-        assertFalse(AutoAcceptPolicy.accepts(AutoAcceptPolicy.Flow.INSTALL, PopupGuardPolicy.KnownDialog.MEDIA_PROJECTION_CONSENT))
-        assertFalse(AutoAcceptPolicy.accepts(AutoAcceptPolicy.Flow.NONE, PopupGuardPolicy.KnownDialog.PACKAGE_INSTALLER_CONFIRM))
+        assertTrue(AutoAcceptPolicy().accepts(AutoAcceptPolicy.Flow.INSTALL, PopupGuardPolicy.KnownDialog.PACKAGE_INSTALLER_CONFIRM))
+        assertTrue(AutoAcceptPolicy().accepts(AutoAcceptPolicy.Flow.INSTALL, PopupGuardPolicy.KnownDialog.RUNTIME_PERMISSION))
+        assertFalse(AutoAcceptPolicy().accepts(AutoAcceptPolicy.Flow.INSTALL, PopupGuardPolicy.KnownDialog.MEDIA_PROJECTION_CONSENT))
+        assertFalse(AutoAcceptPolicy().accepts(AutoAcceptPolicy.Flow.NONE, PopupGuardPolicy.KnownDialog.PACKAGE_INSTALLER_CONFIRM))
     }
 
     @Test fun `projection flow affinity is unchanged`() {
-        assertTrue(AutoAcceptPolicy.accepts(AutoAcceptPolicy.Flow.MEDIA_PROJECTION, PopupGuardPolicy.KnownDialog.MEDIA_PROJECTION_CONSENT))
-        assertFalse(AutoAcceptPolicy.accepts(AutoAcceptPolicy.Flow.MEDIA_PROJECTION, PopupGuardPolicy.KnownDialog.PACKAGE_INSTALLER_CONFIRM))
+        assertTrue(AutoAcceptPolicy().accepts(AutoAcceptPolicy.Flow.MEDIA_PROJECTION, PopupGuardPolicy.KnownDialog.MEDIA_PROJECTION_CONSENT))
+        assertFalse(AutoAcceptPolicy().accepts(AutoAcceptPolicy.Flow.MEDIA_PROJECTION, PopupGuardPolicy.KnownDialog.PACKAGE_INSTALLER_CONFIRM))
     }
 
     @Test fun `policy stand-downs cover affinity misses`() {

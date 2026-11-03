@@ -1,6 +1,7 @@
 package app.autohost.capabilities.a11y
 
 import app.autohost.core.broker.CallContext
+import app.autohost.core.common.FakeClock
 import app.autohost.core.broker.DeviceEnv
 import app.autohost.core.model.Availability
 import app.autohost.core.model.Bounds
@@ -14,6 +15,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -257,6 +259,8 @@ class A11yUiProviderTest {
             }
 
             override fun keyboardVisible(packages: Set<String>?): Boolean = false
+
+            override fun windows(): List<RootResolver.WindowMeta> = emptyList()
         }
         provider = A11yUiProvider(
             reader = lateReader,
