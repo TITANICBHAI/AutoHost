@@ -327,9 +327,9 @@ class A11yBrowserProviderTest {
         val link = FakeA11yLink()
         val provider = provider(link)
         provider.setLinkReady(true)
-        assertTrue(provider.availability(app.autohost.core.broker.DeviceEnv()) is app.autohost.core.model.Availability.Available)
+        assertTrue(provider.availability(app.autohost.core.broker.DeviceEnv(sdkInt = 29)) is app.autohost.core.model.Availability.Available)
         provider.setLinkReady(false)
-        val availability = provider.availability(app.autohost.core.broker.DeviceEnv())
+        val availability = provider.availability(app.autohost.core.broker.DeviceEnv(sdkInt = 29))
         assertTrue(availability is app.autohost.core.model.Availability.NeedsSetup)
         assertEquals("ACCESSIBILITY_SERVICE_OFF", (availability as app.autohost.core.model.Availability.NeedsSetup).reason)
     }
@@ -340,13 +340,13 @@ private class FakeCdpTransport : CdpClient.Transport {
     val sent = mutableListOf<String>()
     var reply: String = "{\"id\":1,\"result\":{}}"
     var targets: List<CdpClient.Transport.Target> = listOf(
-        object : CdpClient.Transport.Target {
-            override val id = "t1"
-            override val url = "https://example.com/"
-            override val title = "Example"
-            override val type = "page"
-            override val wsPath = "/devtools/page/t1"
-        },
+        CdpClient.Transport.Target(
+            id = "t1",
+            url = "https://example.com/",
+            title = "Example",
+            type = "page",
+            wsPath = "/devtools/page/t1",
+        ),
     )
 
     override fun listTargets(port: Int, timeoutMs: Long) = targets
@@ -380,7 +380,7 @@ class CdpBrowserProviderTest {
 
     @Test fun `no shell transport is needs setup`() {
         val availability = provider(FakeCdpTransport(), shellLive = false)
-            .availability(app.autohost.core.broker.DeviceEnv())
+            .availability(app.autohost.core.broker.DeviceEnv(sdkInt = 29))
         assertEquals("SHELL_TIER_NOT_PAIRED", (availability as app.autohost.core.model.Availability.NeedsSetup).reason)
     }
 
