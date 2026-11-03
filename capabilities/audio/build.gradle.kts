@@ -31,6 +31,6 @@ dependencies {
 
 
     testImplementation(libs.junit)
-    testImplementation(libs.kotlinx.coroutines.core)  # the test uses runBlocking
+    testImplementation(libs.kotlinx.coroutines.core) // the test uses runBlocking
     testImplementation(testFixtures(project(":core:common")))
 }
