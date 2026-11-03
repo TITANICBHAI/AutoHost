@@ -3,7 +3,7 @@ Chosen for compatibility, not novelty. Every entry existed on Maven/Google Maven
 
 | Component | Version | Notes |
 |---|---|---|
-| Gradle | 8.14.3 | No wrapper jar is committed (it is binary); CI installs this version; locally run `gradle wrapper --gradle-version 8.14.3` once |
+| Gradle | 8.13 | Pinned by the bootstrap (`scripts/android-build-env.sh:109`, sha256-verified at the 2026-10-30 owner build) and installed by CI (`gradle/actions/setup-gradle` with `gradle-version: 8.13` in both workflows). X-07 (2026-11-03) chose the documented-pin route over committing a wrapper jar (ADR-096(b) offers either); the local Windows toolchain mirrors it at `C:/Users/DELL/.cache/autohost/gradle-8.13`. If the pin ever moves, change the bootstrap AND both workflows in the same commit |
 | Android Gradle Plugin | 8.13.0 | Chaquopy 17 supports AGP 7.3–9.2 |
 | Kotlin | 2.2.21 | Compose compiler plugin has the same version |
 | Chaquopy | 17.0.0 | Python 3.13 in the app; needs a build-machine Python 3.13 on PATH |

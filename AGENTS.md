@@ -85,7 +85,7 @@ You do not decide *what* to build — the docs do. You decide *how to implement 
 1. Follow the assignment queue in `HANDOFF.md` §0.2 while Epoch V is open (then `HANDOFF.md` §5's check order); after Epoch V take the lowest-ID unticked, unblocked independent item in `docs/PROGRESS.md`. Never infer device-gate success from code or non-device tests.
 2. Read its docs. Write tests first where logic is pure (selectors, schedule engine, validators, redactor, policies, state machines).
 3. Implement in the modules/files named in `docs/REPO_LAYOUT.md`. If you must deviate, log an ADR.
-4. Run the canonical entry points (ADR-096): `scripts/test-jvm.sh`, `scripts/build-android-debug.sh`, `scripts/test-python.sh` (plus instrumented tests / device steps if device-touching). `./gradlew check` works once a Gradle wrapper exists (X-07).
+4. Run the canonical entry points (ADR-096): `scripts/test-jvm.sh`, `scripts/build-android-debug.sh`, `scripts/test-python.sh` (plus instrumented tests / device steps if device-touching). There is no Gradle wrapper and none is planned (X-07, 2026-11-03, documented-pin route): Gradle 8.13 is pinned in `scripts/android-build-env.sh` and installed by CI; call Gradle through the scripts, or via the local pinned install documented in `docs/VERSIONS.md`.
 5. Tick the task in `docs/PROGRESS.md`. For `[M]`/`[L]` tasks and every gate item fill the `evidence:` line (commit hash, test name, log/screenshot path, device + API level).
 6. Run `python tools/progress.py` (updates the dashboard), `python tools/progress.py --check` (must pass) and, after doc changes, `python3 tools/doc_check.py` (v4).
 7. Commit: `P1-06: <summary>` (task id first). Small commits.
@@ -106,10 +106,10 @@ python3 tools/progress.py [--check] [--html docs/progress.html]
 python3 tools/doc_check.py                # v4: doc integrity (paths, task/ADR/gate/RM ids, docs index)
 python3 tools/licence_check.py            # catalog -> THIRD_PARTY_NOTICES coverage
 
-# Once a wrapper exists (X-07):
-./gradlew check
-./gradlew :app:assembleCoreDebug
-./gradlew connectedCoreDebugAndroidTest   # device/emulator attached
+# Direct Gradle (no wrapper; use the pinned install from docs/VERSIONS.md, or CI):
+gradle check
+gradle :app:assembleCoreDebug
+gradle connectedCoreDebugAndroidTest   # device/emulator attached
 ```
 
 **Windows PC without bash (the owner's machine):** the `scripts/*.sh` files cannot run there; the Python commands above work as written (use `python` instead of `python3`), and the Gradle commands are in `HANDOFF.md` §0.4 — only with the owner's approval (rule 16).

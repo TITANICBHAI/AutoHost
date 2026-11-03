@@ -1,0 +1,150 @@
+# CI — the verification workflow (X-08, promoted from drafts/ci.workflow.yml on 2026-11-03, ADR-085).
+# python-suites: every stdlib-Python check (no Android SDK needed).
+# jvm-tests: the full JVM unit-test sweep (`gradle test`). No debug assemblies here —
+#   .github/workflows/android-debug-apk.yml owns the APK/fixture build (one build, no duplicates).
+# emulator-instrumented: the instrumented suite on an API 30 emulator (integration-tested rung;
+#   real-device gates stay with the owner — docs/GATES.md).
+# Gradle is pinned to 8.13 (docs/VERSIONS.md; X-07 chose the documented-pin route, no wrapper).
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-suites:
+    name: Python suites and consistency checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: SDK + simulator suite
+        run: cd sdk-python && python3 -m unittest discover -s tests -t tests -p "test_*.py"
+      - name: Root suite (schemas, tracker, docs, architecture)
+        run: python3 -m unittest discover -s tests -p "test_*.py"
+      - name: Progress tracker consistency
+        run: python3 tools/progress.py --check
+      - name: Docs consistency
+        run: python3 tools/doc_check.py
+      - name: Generated artifacts drift
+        run: python3 tools/gen_artifacts.py --check
+      - name: Bundled SDK copy drift
+        run: python3 tools/sync_sdk.py --check
+      - name: Golden flow vectors
+        run: python3 tools/gen_flow_vectors.py && git diff --exit-code testing/golden/flow_vectors.json
+      - name: Golden schedule vectors
+        run: python3 tools/gen_schedule_vectors.py && git diff --exit-code testing/golden/schedule_vectors.json
+      - name: Licence check (Gate 11-e)
+        run: python3 tools/licence_check.py
+      - name: MCP evals
+        run: python3 tools/mcp_eval.py
+
+  jvm-tests:
+    name: All JVM unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"   # Chaquopy 17 needs a build-machine Python 3.13 (docs/VERSIONS.md)
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.13"
+      - name: All JVM tests
+        run: gradle test --console=plain --stacktrace
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jvm-test-reports-${{ github.run_number }}
+          path: "**/build/reports/tests/"
+          if-no-files-found: warn
+          retention-days: 7
+
+  emulator-instrumented:
+    name: Instrumented tests (API 30 emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"   # Chaquopy 17 needs a build-machine Python 3.13 (docs/VERSIONS.md)
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.13"
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Locate the runner Android SDK
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          if [[ ! -d "$sdk_root" ]]; then
+            echo "ERROR: Android SDK directory does not exist: $sdk_root" >&2
+            exit 1
+          fi
+          printf 'ANDROID_HOME=%s\nANDROID_SDK_ROOT=%s\n' "$sdk_root" "$sdk_root" >> "$GITHUB_ENV"
+          sdkmanager_path="$(find "$sdk_root/cmdline-tools" -type f -path '*/bin/sdkmanager' 2>/dev/null | sort -V | tail -n 1)"
+          printf '%s\n' "$(dirname "$sdkmanager_path")" "$sdk_root/platform-tools" "$sdk_root/emulator" >> "$GITHUB_PATH"
+
+      - name: Install the API 30 system image
+        shell: bash
+        run: |
+          set -o pipefail
+          yes | sdkmanager --sdk_root="$ANDROID_HOME" --licenses > /dev/null || true
+          sdkmanager --sdk_root="$ANDROID_HOME" \
+            "platform-tools" "platforms;android-30" "system-images;android-30;google_apis;x86_64" \
+            2>&1 | tail -5
+
+      - name: Boot the emulator
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          avdmanager --sdk_root="$ANDROID_HOME" create avd -n ci -k "system-images;android-30;google_apis;x86_64" -d pixel --force
+          emulator -avd ci -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -camera-back none -camera-front none &
+          adb wait-for-device
+          timeout 300 bash -c 'while [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" != "1" ]; do sleep 5; done'
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+          adb devices
+
+      - name: Run instrumented tests
+        run: gradle :app:connectedCoreDebugAndroidTest --console=plain --stacktrace
+
+      - name: Upload connected-test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: connected-test-results-${{ github.run_number }}
+          path: |
+            **/build/outputs/androidTest-results/
+            **/build/reports/androidTests/
+          if-no-files-found: warn
+          retention-days: 7
