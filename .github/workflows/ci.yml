@@ -40,6 +40,8 @@ jobs:
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
             grep -E "^(FAIL|ERROR): " /tmp/sdk_suite.log | head -25 | while read -r l; do echo "::error::$l"; done
+            echo "::error::--- tail of sdk suite log ---"
+            tail -40 /tmp/sdk_suite.log | while read -r l; do echo "::error::${l:0:250}"; done
             exit "$rc"
           fi
       - name: Root suite (schemas, tracker, docs, architecture)
@@ -50,6 +52,8 @@ jobs:
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
             grep -E "^(FAIL|ERROR): " /tmp/root_suite.log | head -25 | while read -r l; do echo "::error::$l"; done
+            echo "::error::--- tail of root suite log ---"
+            tail -40 /tmp/root_suite.log | while read -r l; do echo "::error::${l:0:250}"; done
             exit "$rc"
           fi
       - name: Consistency and drift checks
@@ -92,7 +96,9 @@ jobs:
           gradle test --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
-            grep -E "error: |warning: |FAILED|FAILURE: Build|What went wrong|Caused by|> Task .* FAILED|Compilation error" /tmp/jvm.log | head -40 | while read -r l; do echo "::error::${l:0:250}"; done
+            grep -E "^e: |error: |FAILED|FAILURE: Build|What went wrong|Caused by|> Task .* FAILED|Compilation error|Exception is:" /tmp/jvm.log | head -30 | while read -r l; do echo "::error::${l:0:250}"; done
+            echo "::error::--- tail of gradle log ---"
+            tail -50 /tmp/jvm.log | while read -r l; do echo "::error::${l:0:250}"; done
             exit "$rc"
           fi
       - name: Upload test reports
@@ -153,9 +159,17 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          avdmanager --sdk_root="$ANDROID_HOME" create avd -n ci -k "system-images;android-30;google_apis;x86_64" -d pixel --force 2>&1 | tail -5
+          if ! avdmanager --sdk_root="$ANDROID_HOME" create avd -n ci -k "system-images;android-30;google_apis;x86_64" -d pixel --force > /tmp/avd.log 2>&1; then
+            echo "::error::avdmanager create avd failed"
+            tail -30 /tmp/avd.log | while read -r l; do echo "::error::${l:0:250}"; done
+            exit 1
+          fi
           emulator -avd ci -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -camera-back none -camera-front none > /tmp/emulator.log 2>&1 &
-          adb wait-for-device
+          if ! adb wait-for-device; then
+            echo "::error::adb wait-for-device failed"
+            tail -30 /tmp/emulator.log | while read -r l; do echo "::error::${l:0:250}"; done
+            exit 1
+          fi
           if ! timeout 300 bash -c 'while [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" != "1" ]; do sleep 5; done'; then
             echo "::error::emulator did not reach sys.boot_completed within 300 s"
             tail -40 /tmp/emulator.log | while read -r l; do echo "::error::${l:0:250}"; done
@@ -174,7 +188,9 @@ jobs:
           gradle :app:connectedCoreDebugAndroidTest --console=plain --stacktrace 2>&1 | tee /tmp/connected.log
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
-            grep -E "error: |FAILED|FAILURE: Build|What went wrong|Caused by|> Task .* FAILED|Tests on|Tests failed" /tmp/connected.log | head -40 | while read -r l; do echo "::error::${l:0:250}"; done
+            grep -E "^e: |error: |FAILED|FAILURE: Build|What went wrong|Caused by|> Task .* FAILED|Tests on|Tests failed" /tmp/connected.log | head -30 | while read -r l; do echo "::error::${l:0:250}"; done
+            echo "::error::--- tail of connected log ---"
+            tail -50 /tmp/connected.log | while read -r l; do echo "::error::${l:0:250}"; done
             exit "$rc"
           fi
 
