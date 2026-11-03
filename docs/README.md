@@ -8,6 +8,7 @@
 | `UI_SPEC.md` | Screens, navigation, tokens, UI state, copy (v4: Phase 14 screens planned) | planner; agent on change |
 | `DEVAPI.md` | Dev API JSON-RPC methods + MCP tools | planner; agent on change |
 | `CONVENTIONS.md` | Standards | planner |
+| `AGENT_OPERATING_PROTOCOL.md` | Pointer to the canonical agent operating protocol (repo-root `AGENT_OPERATING_PROTOCOL.md`) | agent |
 | `FIXTURE_APP.md` | Test app contract (v4: Phase 12/13 surfaces planned) | agent keeps in sync with code |
 | `REFERENCES.md` | Lessons from reference projects, licence rules | planner |
 | `REUSE_MATRIX.md` | **v4** File-level reuse/adaptation decisions over ClosePaw, opendroid, android-agent, sannabotapp, ARIA; adaptation rules | planner |
