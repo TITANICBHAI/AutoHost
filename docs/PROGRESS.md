@@ -4,7 +4,7 @@
 <!-- DASHBOARD:START -->
 **Verified: 1%** (weighted 7/932 points)  ░░░░░░░░░░░░░░░░░░░░
 **Code written (unverified): 46%**  █████████░░░░░░░░░░░
-Tasks 5/293 · Gate items 0/94 · Capabilities 0/46 · WIP 0 · Blocked 5
+Tasks 5/293 · Gate items 0/94 · Capabilities 0/46 · WIP 0 · Blocked 6
 **Ladder (items):** planned 251 · implemented 175 · compiled 0 · unit-tested 2 · integration-tested 0 · verified 5 · real-device-verified 0/19 · failing 8
 **Current phase:** Phase 0 — Feasibility spikes [BLOCKED]
 
