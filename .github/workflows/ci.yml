@@ -2,8 +2,7 @@
 # python-suites: every stdlib-Python check (no Android SDK needed).
 # jvm-tests: the full JVM unit-test sweep (`gradle test`). No debug assemblies here —
 #   .github/workflows/android-debug-apk.yml owns the APK/fixture build (one build, no duplicates).
-# emulator-instrumented: the instrumented suite on an API 30 emulator (integration-tested rung;
-#   real-device gates stay with the owner — docs/GATES.md).
+# The emulator job was REMOVED by owner decision D-24 (2026-11-03): CI never runs emulators.
 # Gradle is pinned to 8.13 (docs/VERSIONS.md; X-07 chose the documented-pin route, no wrapper).
 # Failing steps tee their log and emit the failure lines as ::error:: annotations — run logs need
 # admin access to download, annotations are readable by anyone on the run page.
@@ -106,108 +105,5 @@ jobs:
         with:
           name: jvm-test-reports-${{ github.run_number }}
           path: "**/build/reports/tests/"
-          if-no-files-found: warn
-          retention-days: 7
-
-  emulator-instrumented:
-    name: Instrumented tests (API 30 emulator)
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: "17"
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"   # Chaquopy 17 needs a build-machine Python 3.13 (docs/VERSIONS.md)
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.13"
-
-      - name: Enable KVM group perms
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      - name: Locate the runner Android SDK
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
-          if [[ ! -d "$sdk_root" ]]; then
-            echo "ERROR: Android SDK directory does not exist: $sdk_root" >&2
-            exit 1
-          fi
-          printf 'ANDROID_HOME=%s\nANDROID_SDK_ROOT=%s\n' "$sdk_root" "$sdk_root" >> "$GITHUB_ENV"
-          sdkmanager_path="$(find "$sdk_root/cmdline-tools" -type f -path '*/bin/sdkmanager' 2>/dev/null | sort -V | tail -n 1)"
-          printf '%s\n' "$(dirname "$sdkmanager_path")" "$sdk_root/platform-tools" "$sdk_root/emulator" >> "$GITHUB_PATH"
-
-      - name: Install the API 30 system image
-        shell: bash
-        run: |
-          set +e
-          yes | sdkmanager --sdk_root="$ANDROID_HOME" --licenses > /dev/null || true
-          ok=0
-          for attempt in 1 2 3; do
-            sdkmanager --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-30" "system-images;android-30;google_apis;x86_64" > /tmp/sdk_install.log 2>&1
-            rc=$?
-            if [ "$rc" -eq 0 ]; then ok=1; break; fi
-            echo "::warning::sdkmanager attempt $attempt failed (rc=$rc); retrying"
-            sleep 10
-          done
-          if [ "$ok" -ne 1 ]; then
-            echo "::error::sdkmanager failed after 3 attempts"
-            tail -8 /tmp/sdk_install.log | while read -r l; do echo "::error::${l:0:250}"; done
-            exit 1
-          fi
-
-      - name: Boot the emulator
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          if ! avdmanager create avd -n ci -k "system-images;android-30;google_apis;x86_64" -d pixel --force > /tmp/avd.log 2>&1; then
-            echo "::error::avdmanager create avd failed"
-            tail -9 /tmp/avd.log | while read -r l; do echo "::error::${l:0:250}"; done
-            exit 1
-          fi
-          emulator -avd ci -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -camera-back none -camera-front none > /tmp/emulator.log 2>&1 &
-          if ! adb wait-for-device; then
-            echo "::error::adb wait-for-device failed"
-            tail -9 /tmp/emulator.log | while read -r l; do echo "::error::${l:0:250}"; done
-            exit 1
-          fi
-          if ! timeout 300 bash -c 'while [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" != "1" ]; do sleep 5; done'; then
-            echo "::error::emulator did not reach sys.boot_completed within 300 s"
-            tail -40 /tmp/emulator.log | while read -r l; do echo "::error::${l:0:250}"; done
-            adb devices
-            exit 1
-          fi
-          adb shell settings put global window_animation_scale 0
-          adb shell settings put global transition_animation_scale 0
-          adb shell settings put global animator_duration_scale 0
-          adb devices
-
-      - name: Run instrumented tests
-        shell: bash
-        run: |
-          set +e
-          gradle :app:connectedCoreDebugAndroidTest --console=plain --stacktrace 2>&1 | tee /tmp/connected.log
-          rc=${PIPESTATUS[0]}
-          if [ "$rc" -ne 0 ]; then
-            tail -9 /tmp/connected.log | while read -r l; do echo "::error::${l:0:250}"; done
-            exit "$rc"
-          fi
-
-      - name: Upload connected-test results
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: connected-test-results-${{ github.run_number }}
-          path: |
-            **/build/outputs/androidTest-results/
-            **/build/reports/androidTests/
           if-no-files-found: warn
           retention-days: 7

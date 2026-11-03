@@ -258,3 +258,7 @@ class UiAutomationProviderTest {
 
     private val DeviceEnvStub: DeviceEnv = DeviceEnv(sdkInt = 29)
 }
+
+private fun Envelope.errorOrNull() = error
+
+private fun app.autohost.core.model.AhError.codeAsEnum(): ErrorCode = ErrorCode.valueOf(code)

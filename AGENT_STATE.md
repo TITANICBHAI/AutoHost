@@ -29,10 +29,15 @@
 - Active workflow `android-debug-apk.yml` builds the APK only — it proves no tests; X-17's test sequence needs X-08's promotion of `drafts/ci.workflow.yml` (documented on HANDOFF §0.2 item 4 and the X-17 row)
 - X-19 ratchet: `tests/test_architecture.py` records 2 known violations (a11y containment: A11yBrowserLink.kt + AppGraph.kt; run_starts: AppGraph P5-05). `AUTOHOST_ARCH_STRICT=1` = red-team view. New violations fail; stale ratchet entries fail. Do NOT fix the Kotlin from X-19.
 
-## Owner interaction protocol (2026-11-03)
+## Owner interaction protocol (2026-11-03, updated same day)
 - Owner says **"continue"** → I proceed to the next queue task without re-asking.
 - Owner says **"recheck"** → I re-verify the stage just completed (re-run checks, re-read touched files, confirm nothing was lost), then ask "shall I continue?" and wait.
-- Next task when told to continue: **X-07** (Gradle wrapper or pinned-Gradle note) + **X-08** (promote `drafts/ci.workflow.yml`) as one batch.
+- **READ ALL RELATED DOCS STRICTLY** before each plan part (task row + ADRs + gate + named docs + plan section).
+- **BATCH MORE, PUSH LESS** — gather multiple fixes/tasks per push; verification runs once per batch.
+- **EMULATOR CI JOB = NO-GO (D-24)** — removed from ci.yml; never re-add it without an explicit owner decision.
+- Next work: X-17-style JVM test-compile fix loop via CI annotations (app/a11y first), batched.
+
+## Owner interaction protocol (2026-11-03)
 
 ## Blockers / owner actions
 - X-18 phone test, D-23 (blocks X-22), P0-01 device facts — owner-side

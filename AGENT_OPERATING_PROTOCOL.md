@@ -200,6 +200,24 @@ Do not treat the initial documentation update as permission to change product sc
   stage touched, confirm nothing was lost or half-applied (the silent-revert and index-wipe
   incidents are the reason this word exists), update AGENT_STATE/worklog if anything changed,
   then ask the owner "shall I continue?" and wait for the answer.
+- **READ ALL RELATED DOCS, STRICTLY (owner, 2026-11-03):** before doing any plan part, read
+  EVERY `.md`/file related to it — the task row, its ADRs, the gate section, every doc the row
+  names, plus the plan section it cites. No exceptions, no skipping "known" files.
+- **BATCH MORE, PUSH LESS (owner, 2026-11-03):** pushes were too frequent. Do substantially more
+  work before each push — gather multiple fixes/tasks into one commit+push, then verify once.
+  Do not push after every single fix or diagnosis round.
+- **EMULATOR JOB IS A NO-GO (owner, 2026-11-03):** never run the CI emulator job, no matter
+  what. Instrumented/emulator verification is skipped entirely; recorded as D-24. Device
+  evidence comes only from the owner's phones.
+
+## 9a. Owner session-control words (owner instruction, 2026-11-03 — bind every session)
+
+- **"continue"** → proceed to the next task in the queue (no re-confirmation needed; the queue
+  in `HANDOFF.md` §0.2 + `AGENT_STATE.md` decides what "next" is).
+- **"recheck"** → re-verify the stage just completed: re-run its checks, re-read every file the
+  stage touched, confirm nothing was lost or half-applied (the silent-revert and index-wipe
+  incidents are the reason this word exists), update AGENT_STATE/worklog if anything changed,
+  then ask the owner "shall I continue?" and wait for the answer.
 
 ## 10. Every-time checklist (what to check before each step)
 

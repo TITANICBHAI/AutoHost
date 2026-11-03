@@ -94,7 +94,7 @@ class AppManageTest {
     @Test fun `missing grant is permission denied and the switch is upstream`() = runBlocking {
         val provider = AppManageProvider(transports = ShellTransports(listOf(FakeTransport())))
         val envelope = provider.invoke(ctx(grant = false), "force_stop", buildJsonObject { put("package", JsonPrimitive("com.example.app")) })
-        assertEquals(ErrorCode.PERMISSION_DENIED, envelope.errorOrNull()?.codeAsEnum())
+        assertEquals(ErrorCode.PERMISSION_DENIED.name, envelope.error?.code)
     }
 
     @Test fun `destructive methods demand confirm`() = runBlocking {
@@ -102,10 +102,10 @@ class AppManageTest {
         val provider = AppManageProvider(transports = ShellTransports(listOf(transport)))
         for (method in listOf("clear_state", "uninstall")) {
             val envelope = provider.invoke(ctx(), method, buildJsonObject { put("package", JsonPrimitive("com.example.app")) })
-            assertEquals(ErrorCode.SCOPE_VIOLATION, envelope.errorOrNull()?.codeAsEnum())
+            assertEquals(ErrorCode.SCOPE_VIOLATION.name, envelope.error?.code)
         }
         val install = provider.invoke(ctx(), "install", buildJsonObject { put("path", JsonPrimitive("/data/local/tmp/a.apk")) })
-        assertEquals(ErrorCode.SCOPE_VIOLATION, install.errorOrNull()?.codeAsEnum())
+        assertEquals(ErrorCode.SCOPE_VIOLATION.name, install.error?.code)
         assertTrue(transport.commands.isEmpty()) // nothing ran
     }
 
@@ -126,7 +126,7 @@ class AppManageTest {
             "clear_state",
             buildJsonObject { put("package", JsonPrimitive("com.example.app")); put("confirm", JsonPrimitive("true")) },
         )
-        assertEquals(ErrorCode.CAPABILITY_UNAVAILABLE, failed.errorOrNull()?.codeAsEnum())
+        assertEquals(ErrorCode.CAPABILITY_UNAVAILABLE.name, failed.error?.code)
     }
 
     @Test fun `permission names validate before exec`() = runBlocking {
@@ -137,7 +137,7 @@ class AppManageTest {
             "grant_permission",
             buildJsonObject { put("package", JsonPrimitive("com.example.app")); put("permission", JsonPrimitive("CAMERA")) },
         )
-        assertEquals(ErrorCode.INVALID_ARGS, envelope.errorOrNull()?.codeAsEnum())
+        assertEquals(ErrorCode.INVALID_ARGS.name, envelope.error?.code)
         assertTrue(transport.commands.isEmpty())
     }
 
@@ -185,7 +185,7 @@ class AppManageTest {
             "install",
             buildJsonObject { put("path", JsonPrimitive("/data/local/tmp/gone.apk")); put("confirm", JsonPrimitive("true")) },
         )
-        assertEquals(ErrorCode.NOT_FOUND, missing.errorOrNull()?.codeAsEnum())
+        assertEquals(ErrorCode.NOT_FOUND.name, missing.error?.code)
     }
 
     @Test fun `availability needs setup without transports and installer`() {
@@ -197,3 +197,7 @@ class AppManageTest {
         assertEquals(Availability.Available, withUi.availability(DeviceEnv(sdkInt = 29)))
     }
 }
+
+private fun Envelope.errorOrNull() = error
+
+private fun app.autohost.core.model.AhError.codeAsEnum(): ErrorCode = ErrorCode.valueOf(code)

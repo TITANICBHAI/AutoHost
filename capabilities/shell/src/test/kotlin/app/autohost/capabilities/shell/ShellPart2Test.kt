@@ -248,3 +248,8 @@ class DeviceControlProvidersTest {
         assertEquals(ErrorCode.NEEDS_SETUP, envelope.errorOrNull()?.codeAsEnum())
     }
 }
+
+private fun Envelope.errorOrNull() = error
+private fun Envelope.resultOrNull() = result
+
+private fun app.autohost.core.model.AhError.codeAsEnum(): ErrorCode = ErrorCode.valueOf(code)
