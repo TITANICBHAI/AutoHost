@@ -1,6 +1,7 @@
 package app.autohost.capabilities.net
 
 import app.autohost.core.broker.CallContext
+import app.autohost.core.broker.security.InsecureFeatures
 import app.autohost.core.model.Envelope
 import app.autohost.core.model.ErrorCode
 import kotlinx.coroutines.runBlocking

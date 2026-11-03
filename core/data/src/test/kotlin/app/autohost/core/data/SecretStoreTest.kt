@@ -49,6 +49,7 @@ class SecretStoreTest {
 
     private class FixedClock : Clock {
         override fun nowMs(): Long = 1_700_000_000_000
+        override fun monotonicMs(): Long = 1_700_000_000_000
     }
 
     @Test

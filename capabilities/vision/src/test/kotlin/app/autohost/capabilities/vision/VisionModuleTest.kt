@@ -1,5 +1,6 @@
 package app.autohost.capabilities.vision
 
+import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

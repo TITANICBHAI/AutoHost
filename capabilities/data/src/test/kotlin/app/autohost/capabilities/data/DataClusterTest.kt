@@ -200,6 +200,7 @@ private class FakeTelephony : TelephonySeams.Telephony {
 
 private class TestClock(var ms: Long = 0) : app.autohost.core.common.Clock {
     override fun nowMs(): Long = ms
+    override fun monotonicMs(): Long = ms
 }
 
 class SmsTelephonyProvidersTest {

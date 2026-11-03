@@ -187,7 +187,7 @@ class FilesPrivateProviderTest {
     @Test
     fun `write read list delete round trip`() = runBlocking {
         val root = tmp.newFolder("taskdata")
-        val provider = FilesPrivateProvider { root }
+        val provider = FilesPrivateProvider(rootFor = { root })
         provider.invoke(ctx(), "write", buildJsonObject { put("path", "logs/a.txt"); put("content", "hello") })
         val read = provider.invoke(ctx(), "read", buildJsonObject { put("path", "logs/a.txt") })
         assertEquals("hello", (read.result as JsonObject)["content"]!!.jsonPrimitive.content)
@@ -203,7 +203,7 @@ class FilesPrivateProviderTest {
     @Test
     fun `traversal out of the private folder is a scope violation`() = runBlocking {
         val root = tmp.newFolder("taskdata2")
-        val provider = FilesPrivateProvider { root }
+        val provider = FilesPrivateProvider(rootFor = { root })
         val result = provider.invoke(ctx(), "write", buildJsonObject { put("path", "../../escape.txt"); put("content", "x") })
         assertEquals(ErrorCode.SCOPE_VIOLATION.name, result.error?.code)
         assertTrue(!File(root.parentFile, "escape.txt").exists())
@@ -212,7 +212,7 @@ class FilesPrivateProviderTest {
     @Test
     fun `tasks are isolated by taskId`() = runBlocking {
         val root = tmp.newFolder("taskdata-root")
-        val provider = FilesPrivateProvider { taskId -> File(root, taskId) }
+        val provider = FilesPrivateProvider(rootFor = { taskId -> File(root, taskId) })
         provider.invoke(CallContext("r", "task-A", null, emptyMap(), 0), "write", buildJsonObject { put("path", "f.txt"); put("content", "A") })
         provider.invoke(CallContext("r", "task-B", null, emptyMap(), 0), "write", buildJsonObject { put("path", "f.txt"); put("content", "B") })
         val a = provider.invoke(CallContext("r", "task-A", null, emptyMap(), 0), "read", buildJsonObject { put("path", "f.txt") })
