@@ -1,8 +1,10 @@
 # KICKOFF — paste this to the verification agent alongside the repo
 
+> **Merge note (2026-11-03):** the repo-root `KICKOFF.md`, `HANDOFF.md` §0 and `AGENTS.md` are the current instructions and win over this copy; this folder is the generic verification kit.
+
 You're taking over **AutoHost**, a Kotlin Android automation app. `AGENTS.md` sits at the repo root — read it first, then follow its reading order exactly: `HANDOFF.md` → `docs/PROGRESS.md` → `worklog.md` → `docs/GATES.md` → `docs/CONVENTIONS.md` + `docs/REPO_LAYOUT.md`. The tracker files are the only source of state; trust them, not any summary — including this message.
 
-State in one line: **all 11 phases are written** (sessions 1–19 in `worklog.md`), almost nothing is verified — 1/213 tasks ticked, and every JVM test has never been executed.
+State in one line: **all 11 phases are written** (sessions 1–19 in `worklog.md`), almost nothing is verified — read the dashboard in `docs/PROGRESS.md` for counts; the first JVM runs the owner reported (2026-10-26) had failures that are unverified here. v4 (2026-11-01) added planned Phases 12–16 and **Epoch V** (X-07…X-09): prove what exists before building on it (ADR-097).
 
 Your job is the verification epoch (`HANDOFF.md` §5 has the exact order):
 1. Gradle first build + the per-module JVM test sweep (§6 lists the likely first-build failures — fix, don't redesign).

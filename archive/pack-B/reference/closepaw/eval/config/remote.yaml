@@ -1,0 +1,6 @@
+# Remote worker overrides for desktop.
+# runner.py and parallel_runner.py load eval/config/default.yaml first, then
+# deep-merge this file on top.
+
+android_world:
+  adb_path: ~/android-sdk/platform-tools/adb

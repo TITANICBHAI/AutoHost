@@ -12,6 +12,13 @@ This file records the **reference review** that shaped plan v3. Use it when a ta
 | **Mobilerun** framework (`droidrun/mobilerun`) | MIT | Ideas freely; code may be adapted with the MIT notice preserved. |
 | **Google Artemis** (`google/artemis`) | Apache-2.0 (as reported) | Same as Maestro. Review the repo directly before relying on any claim. |
 | **Minitap mobile-use** | Apache-2.0 | Same. Note the public attribution dispute around Artemis: **keep attribution correct.** |
+| **ClosePaw** (v4; read from the owner's `closepaw-0.1.0.zip`) | Apache-2.0 — `LICENSE` and `NOTICE` ("Copyright 2026 ClosePaw Authors") present | Ideas freely; single files may be **adapted** with header + notice row + attribution line + ported tests (`docs/REUSE_MATRIX.md` §0). Its dependency list includes a proprietary SDK (LiquidAI LEAP) that is **not** under that grant and must never become a dependency here. |
+| **opendroid** (v4; `a53f9a1c-opendroid-main.zip`) | Apache-2.0 text with **one word changed** in §4(d) ("if provided" → "if distributed"); header "OpenDroid Contributors"; a fork; no `NOTICE` | Treated as Apache-2.0 at low risk; adapt small files only, each keeping its upstream header; re-read the licence text before the first adaptation. |
+| **android-agent** (v4; `ef862d75-android-agent-main.zip`) | **No LICENSE file** in the archive | **Ideas only.** No code, no closely paraphrased structure. |
+| **sannabotapp** (v4; `7a4aeb67-sannabotapp-main.zip`) | README says "MIT"; **no LICENSE file**; a proprietary wake-word SDK (Picovoice) | **Ideas only** until a LICENSE exists. |
+| **ARIA** (v4; `aria-ai-cpu-only-main.zip`) | **No LICENSE**, no README, no tests; the owner (a possible public repository `TITANICBHAI/Ai-android`) is **UNVERIFIED** | **Anti-reference.** Read for the inventory of ideas; adopt nothing; ask the owner for the licence before reconsidering. |
+
+v4 note: the file-level decisions for the five projects above (what to reuse, adapt, rewrite, reference, defer or reject, with evidence) are in `docs/REUSE_MATRIX.md`; the findings behind them are in `reference/findings/`.
 
 "Clean-room" means: one person (the planner/agent reading this file) distils the *behaviour*; the implementer writes new code from this description. Do not paste snippets from AGPL/GPL projects into the repo, even "just to get started".
 Keep `THIRD_PARTY_NOTICES.md` at the repo root for any Apache/MIT code actually reused.
@@ -52,6 +59,17 @@ Keep `THIRD_PARTY_NOTICES.md` at the repo root for any Apache/MIT code actually 
 | L31 | **Dynamic-first locating** (accessibility node → coordinates/vision), a pre-action **safety net** that detects a system popup about to swallow the tap, failures kept as open **incidents** until a later success resolves them, configurable **verification levels**. | Artemis | `PopupGuard`, run incidents, `verification` policy |
 | L32 | **Toasts** are observable through accessibility notification-state events. | Maestro | `events.toast` |
 | L33 | On-device conveniences exposed by a shell tier: clear app state, grant permissions, mock location, dark mode, orientation, airplane mode. | Maestro | catalog §6.5 |
+| L34 | **Three levels of success** for an action: accepted by the OS, effect observed, effect unverifiable — and a change detector that never claims what it cannot observe. | ClosePaw | `docs/ACTION_HARDENING.md` §2; REUSE_MATRIX RM-A4 (v4) |
+| L35 | **Node-first actions** with an identity guard, refresh-then-verify `set_text` and **awaited** gestures (a callback with a timeout, never fire-and-forget). | ClosePaw | RM-A1/A2; Phase 12 (v4) |
+| L36 | An **app-sensitivity floor**: BLOCKED / CAUTIOUS / NORMAL, the bundled BLOCKED list cannot be overridden, and a BLOCKED app's content never reaches the model. | ClosePaw | `docs/AGENT_RUNTIME.md` §8; RM-B1 (v4) |
+| L37 | **Stuck-loop detection** as a pure policy — but ClosePaw has no production turn, time or token cap, so AutoHost adds hard budgets. | ClosePaw | RM-C2; ADR-091 (v4) |
+| L38 | A model **base-URL validator** as a pure function (scheme, userinfo, host rules). | ClosePaw | RM-D1; `docs/MODEL_GATEWAY.md` §4 (v4) |
+| L39 | **Model-artifact integrity**: pinned revision, size, SHA-256 verified before native load, atomic install, resumable download. | opendroid | RM-E1/E2; `docs/LOCAL_INFERENCE.md` §4 (v4) |
+| L40 | On-device context windows of ~1.3–4 K tokens cannot carry an accessibility-tree agent loop, and a native crash on an over-long prompt is uncatchable. | opendroid | `docs/LOCAL_INFERENCE.md` §2; ADR-092 (v4) |
+| L41 | **One path for every tool call**, so a nested step cannot launder an approval; structural plan mode; approval surfaces with a timeout. | android-agent | RM-B5; `docs/AGENT_RUNTIME.md` §10 (v4) |
+| L42 | LLM-written "learned hints" injected into a system prompt are **persistent prompt injection**. | sannabotapp | RM-B7 (do not adopt); plan §1.5 non-goals (v4) |
+| L43 | A **scripted stub model plus an eval harness** makes agent runs testable without an API key. | android-agent, ClosePaw | RM-G1; `docs/AGENT_RUNTIME.md` §14a (v4) |
+| L44 | A stub engine that reports success, and a Stop swallowed by a broad `catch`, are what to refuse: success must be verified and cancellation must propagate. | ARIA | ADR-091; `docs/CONVENTIONS.md` (v4) |
 
 ## 2. Where to look (study list per module)
 Paths are inside each project's repository. Clean-room rules above apply.
@@ -83,7 +101,13 @@ Paths are inside each project's repository. Clean-room rules above apply.
 | `MANAGE_EXTERNAL_STORAGE`, cleartext HTTP, `allowBackup=true` (Portal) | **Avoid by default**; `full` flavor only for All-files; cleartext off; backup off. |
 | `dataSync` foreground service (Portal) | **Avoid**; use `specialUse` (API 34+) and no type on API 29–33; `mediaProjection` only for the projection service. |
 | Hilt/DI frameworks | **Avoid.** Maestro and Portal construct services manually; workers run in separate processes. Use manual wiring (`AppGraph`). |
-| Python agent loops / cloud connectors (Mobilerun) | **Out of scope**; AutoHost is a script host, not an LLM agent. LLM-driven tasks may exist as ordinary tasks using `net.http`. |
+| Python agent loops / cloud connectors (Mobilerun) | **Its Python agent loop stays out of scope**; AutoHost's own optional agent runtime is host-owned and in-process (plan §7.11, v4) and never runs model-written code. LLM-driven tasks may still exist as ordinary tasks using `net.http`. No stealth drivers. |
 | Stealth/anti-detection drivers (Mobilerun `StealthDriver`) | **Never.** Violates plan §0.4. |
 | Packaging each script into its own APK (Auto.js `apkbuilder`) | **Out of scope** — it is exactly the per-automation app we are avoiding. |
 | XPath selectors (Appium) | **Skip** in v1; relational selectors cover the need. |
+
+## 4. Other AI plans the owner attached (v4 note)
+The owner attached plans produced by other assistants and asked that they be read, "not too much influenced", and used where useful. Honest record:
+- **GPT bundles** (`gpt_plan.zip`, `gpt_plan2.zip`; re-read for this pass): both treat ARIA as read-only (no licence) and ClosePaw as a selective source (Apache-2.0; its `NOTICE` must be kept; the LEAP SDK is outside the grant), both call for a **Kotlin-owned agent runtime** reached through the same broker, and one packaged a **flat `reference/` directory with an exact source-path index and provenance notes**. These ideas agree with this pass's decisions (ADR-086, ADR-088) and shaped the `reference/` layout and the provenance habit; the decisions themselves rest on this pass's own source reading, and no text was copied.
+- **Gemini_plan.md and Glm_plan.md** were read in an earlier session of this work; this pass did not re-read them and attributes nothing specific to them.
+- None of the attached plans was treated as evidence about the code; claims about code in this repository come from reading the code.

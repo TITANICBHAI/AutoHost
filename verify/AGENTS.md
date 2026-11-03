@@ -1,12 +1,16 @@
 # AGENTS.md — AutoHost (agent brief, refreshed for the verification epoch)
 
+> **Merge note (2026-11-03):** the repo-root `KICKOFF.md`, `HANDOFF.md` §0 and `AGENTS.md` are the current instructions and win over this copy; this folder is the generic verification kit.
+
 You are the implementing **and verifying** agent for **AutoHost**: a Kotlin Android app (`minSdk 29` → latest) that hosts user-written automations — Python scripts, declarative flows, or JavaScript — and gives them real device capabilities (UI control of other apps, app launch/stop, notifications, network, files, events, optional shell-level power), with per-task settings, profiles, UIs, schedules, run tracking and recovery, plus a Dev API/MCP server so coding agents can drive the phone while authoring.
 
 The docs decide *what* to build and what "done" means. You decide *how*, and you prove it with evidence — documented immediately, pass or fail.
 
+> **v4 addendum (2026-11-01):** `plan.md` is now v4. It adds *planned, optional* Phases 12–16 and the **Epoch V** verification block (X-07…X-09, ADR-097) — the sentence below that says there are no further code phases is superseded: Phase 12+ code starts only after X-09 and the owner's answers (`docs/PROGRESS.md` "0. v4 questions"). Tracker counts below are stale on purpose; read the dashboard. The verification ladder (ADR-087) applies: tag and tick only at the level a check really proved. Real-device targets are the owner's phones in `docs/DEVICES.md` (ADR-095). The v4 planning pass changed documents only; it compiled and ran nothing on Android.
+
 ## 0. Current epoch — know this before anything
 
-- **All eleven phases are WRITTEN** (sessions 1–19, see `worklog.md`; delivered through `autohost-phase11-part2.zip`). Almost nothing is verified: **1/213 tasks ticked, Verified 0%** in `docs/PROGRESS.md`.
+- **All eleven phases are WRITTEN** (sessions 1–19, see `worklog.md`; delivered through `autohost-phase11-part2.zip`). Almost nothing is verified — the dashboard at the top of `docs/PROGRESS.md` is the only source for counts.
 - What remains, in order (`HANDOFF.md` header + §4, §5):
   1. **The Gradle first build** — every Kotlin/JVM test was written in a sandbox with no Android SDK and has **never been executed**. `HANDOFF.md` §5 is the exact build/verification order; §6 is the map of likely first-build failures.
   2. **Every sandbox-runnable verification** — JVM tests, Python suites, generated-artifact drift checks, licence check, MCP evals. Run them locally; you have the tooling.

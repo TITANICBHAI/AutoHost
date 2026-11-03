@@ -1,0 +1,14 @@
+SystemWifiTurnOn
+SystemWifiTurnOff
+SystemBluetoothTurnOn
+SystemBrightnessMax
+SystemBrightnessMin
+ClockTimerEntry
+ContactsAddContact
+MarkorCreateNote
+FilesMoveFile
+BrowserMultiply
+ExpenseAddSingle
+RecipeAddSingleRecipe
+SimpleSmsSend
+CameraTakePhoto

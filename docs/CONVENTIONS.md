@@ -101,3 +101,18 @@ before marking `(WRITTEN)`. The table records which capabilities have been throu
 - **Plugin capability ids are namespaced `plugin.<vendor>.<name>`** and one permission per method; a describe() that cannot be fully validated rejects the WHOLE plugin (ADR-079) — never ship a partial declaration.
 - **Pack/plugin updates never require task changes** — that is the point (plan §7.10, Gate F4); a task pins nothing: the run result carries the pack version that was used.
 - **Secrets never enter backups** (`secret_names` only, ADR-082); the codec refuses secret-shaped keys from BOTH sides — do not 'helpfully' encode values.
+
+## v4 conventions (planning pass 2026-11-01)
+1. **Adapted files carry a header:** `Adapted from <project> <upstream path> (Apache-2.0, <copyright line>). Changes: <what and why>.` plus a `THIRD_PARTY_NOTICES.md` row, the ClosePaw attribution line where applicable, the ported upstream test and tracker evidence (`docs/REUSE_MATRIX.md` §0). Only ClosePaw and opendroid files are eligible; everything else is clean-room.
+2. **Failing test first for predicted defects** (ADR-089): a finding made by reading code is a prediction until a test or an emulator run reproduces it; write the red test, then fix; if it does not reproduce, record "does not reproduce on <env>", keep the test, skip the fix.
+3. **Evidence vocabulary** (ADR-087): *JVM* (unit-tested), *emulator* (integration-tested), *device* (real-device-verified, evidence carries `device: <model>, Android <n> / API <n>`). Simulator and emulator runs never count as real-device.
+4. **One state tag after a tracker ID** (`(WRITTEN)`, `(COMPILED)`, `(UNIT-TESTED)`, `(INTEGRATION-TESTED)`, or `(FAILING: <reason>)`); never write the literal tag text inside a task title, because the parser reads it as a tag.
+5. **Never swallow `CancellationException`:** rethrow it before any broad `catch (e: Exception)`; classify everything else as retryable or terminal.
+6. **Reserved run-config keys `packs` and `agent`** are host-written only; a task's own `config` property with either name is rejected by the validator and the host payload wins with a logged warning (ADR-080 precedent).
+7. **Untrusted content:** screen text, notification text and web content are data. The agent wraps them in the user role with an explicit untrusted marker, never in the system prompt or a tool description, and they never change grants, budgets or the tool catalog.
+8. **The agent tool catalog is generated and byte-stable** from `schemas/capability-specs.w1.json`; a snapshot test fails on any diff; never hand-edit.
+9. **No model-written code runs.** The agent only calls catalog tools through the broker; there is no second action path.
+10. **Provider keys** live only in `SecretStore` under the reserved host profile and appear only in the engine's `Authorization` header; logs and audit carry sizes and hashes; the canary tests stay green.
+11. **Epoch V first** (ADR-097): Phase 12+ implementation starts after X-09; Python-only and tooling items (generators, checkers, mock servers) may start earlier.
+12. **Reference material stays out of the build:** `reference/` and `drafts/` are never on a Gradle, Python or test source set.
+13. **Docs stay consistent:** run `python3 tools/doc_check.py` before committing doc changes (paths, task/ADR/gate/RM IDs, the docs index).

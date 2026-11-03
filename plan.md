@@ -1,5 +1,5 @@
 # AutoHost — Android-Native Automation Platform
-## Implementation Plan (v3 — reference-informed, Android 10 to latest)
+## Implementation Plan (v4 — v3 + optional agent runtime, hardened actions, measured footprint; Android 10 to latest)
 
 > **Working name:** `AutoHost` (package `app.autohost`, Python SDK module `autohost`). Rename freely; keep the name in one place (`gradle.properties` + `Branding.kt`).
 > **Audience:** the implementing coding agent. The planner does not write code.
@@ -7,7 +7,9 @@
 > **Versions:** this plan does not pin library versions. Look up current stable versions of AGP, Kotlin, Compose BOM, Room, WorkManager, Chaquopy, etc. at implementation time and record them in `docs/VERSIONS.md`.
 > **v3 (reference review):** this version folds in lessons from five reference projects (Mobilerun Portal, Mobilerun, OpenAutoJs, Maestro, Appium) and Google's Artemis — see `docs/REFERENCES.md`. **Licence rule:** Portal is AGPL-3.0 and OpenAutoJs is GPL-3.0 + non-commercial: *concepts only, clean-room, never copy code*. Maestro/Appium (Apache-2.0) and Mobilerun (MIT) may be adapted with notices preserved.
 > **Companion files** (the agent pack): `AGENTS.md` (entry point), `docs/PROGRESS.md` (tickable tracker), `docs/GATES.md`, `docs/REPO_LAYOUT.md`, `docs/ANDROID_MANIFEST.md`, `docs/UI_SPEC.md`, `docs/CONVENTIONS.md`, `docs/FIXTURE_APP.md`, `docs/DECISIONS.md`, `docs/DEVICES.md`, `docs/SPIKES.md`, `docs/REFERENCES.md`, plus `schemas/`, `sdk-python/`, `samples/`, `prompts/`. **Precedence:** this plan defines behaviour; the companion docs define file-level structure and presentation.
-> **Platform floor (v2.1):** the app supports **Android 10 (API 29) through the latest release** — `minSdk = 29`. The user's own phone runs **Android 10**, so it is the primary real test device and the *API-29 code paths* (§3.5) matter most. Behaviour that only exists on newer Android is always an optional provider with a fallback, never an assumption.
+> **Platform floor (v2.1):** the app supports **Android 10 (API 29) through the latest release** — `minSdk = 29`. Older text in this plan and in `AGENTS.md` says the owner's phone runs **Android 10**; the owner-stated device note lists a Realme C3 (Android 11 / API 30) and a Galaxy M31 (Android 12 / API 31), and ADR-095 makes those two phones the default verification targets until an Android 10 phone is confirmed (`docs/DEVICES.md`). API-29 code paths (§3.5) therefore stay **UNVERIFIED-on-hardware** unless someone runs them. Behaviour that only exists on newer Android is always an optional provider with a fallback, never an assumption.
+> **v4 (2026-11-01, planning pass — read this before the rest):** adds (1) an **optional, host-owned agent runtime** — a model that proposes tool calls through the *same* broker, under hard budgets, host-verified completion, approvals and an observation floor (§7.11, §14.7, `docs/AGENT_RUNTIME.md`, `docs/MODEL_GATEWAY.md`); (2) **hardening of the action layer** that scripts, flows and the agent all lean on (`docs/ACTION_HARDENING.md`, Phase 12); (3) a **measure-first footprint track** — Python stays first-class, the interpreter cost is measured, a `lite` flavor is optional (`docs/LANGUAGE_WEIGHT.md`, Phase 15); (4) an **optional local-inference track** that is NO-GO for agent loops until spike S6 passes (`docs/LOCAL_INFERENCE.md`, Phase 16); (5) a file-level **reuse matrix** over ClosePaw, opendroid, android-agent, sannabotapp and ARIA (`docs/REUSE_MATRIX.md`, ADR-088); (6) a **verification ladder** and **Epoch V** — prove what exists before building on it (ADR-087, ADR-097). **Nothing in v4 is built, compiled or verified by this pass** (static reading only; no Gradle, no Android SDK, no phone). ARIA is *not* adopted as the base (ADR-088). Phases 0–11 below are unchanged except where marked "v4:". Decisions: `docs/DECISIONS.md` ADR-086…098. Migration notes: `docs/MIGRATION.md`.
+> **Merge pass (2026-11-03):** this plan is the Phases 12–16 / Epoch V plan with the useful parts of a second, competing v4 plan merged in (repository roles §2.1, language responsibilities §5.8, run-token and secret rules §5.4/§9.1, extra risks, continuation §23) — see `docs/PLAN_MERGE.md`. The crash-fix pass in `CRASH_FIX_PLAN.md` is **Epoch V step 0** (X-17, X-18; ADR-101). Task and ADR numbers are final; `archive/pack-B/` holds the other plan's originals and is **not** instructions.
 
 ---
 
@@ -29,7 +31,10 @@
 - Every capability, SDK function and manifest field gets: spec, docs entry, unit/contract test, and (if it touches the device) an instrumented test against the fixture app.
 - When something is ambiguous, use the default in §21 and log a 5-line ADR in `docs/DECISIONS.md`. Do not block waiting for an answer.
 - **API-level discipline:** `minSdk = 29`. Every behaviour that differs by Android version lives behind the §3.5 matrix: a provider declares its minimum API and its fallback, and `availability(env)` decides. `Build.VERSION.SDK_INT` is never checked ad hoc in feature code — only inside `core:common` (`ApiGate`) and provider availability. Newer-Android paths that cannot be run on real hardware are validated on emulators and marked **UNVERIFIED-on-hardware** in `docs/DEVICES.md` and in the CompatReport.
-- **Primary device = the user's Android 10 phone.** Every gate marked *(real device)* is run on it. A feature must not pass a gate through an API-30+ path that the phone cannot use.
+- **Primary devices = the owner's phones in `docs/DEVICES.md`** (ADR-095). Every gate marked *(real device)* is run on them and its evidence names the device (`device: <model>, Android <n> / API <n>`); an emulator run is integration-tested, never real-device-verified. A feature must not pass a gate through a path the phone under test cannot use.
+- **Epoch V before new code (v4, ADR-097):** finish the JVM sweep, build the debug APK, re-run the Python suites with PyYAML, retag the verification ladder and record X-09 *before* implementing Phase 12 or later. Python-only and tooling items may start earlier.
+- **Predicted defects get a failing test first (v4, ADR-089):** findings made by reading code (A1–A9, the grant/scope gaps of ADR-098) are predictions until a test or an emulator run reproduces them; nothing is fixed blind.
+- **Adapted code takes one route (v4, ADR-088):** only Apache-2.0 files that carry a LICENSE in their own tree (ClosePaw, opendroid) may be adapted, and only as `docs/REUSE_MATRIX.md` §0 says (header, notice row, ported tests, ladder evidence). Everything else is clean-room.
 - Keep commits small and phase-scoped.
 
 ### 0.3 Information to collect from the user before Phase 0 (ask once, record in `docs/DEVICES.md`)
@@ -46,6 +51,8 @@ Design consequences: per-package scopes (§6, §14), a persistent notification +
 
 ### 1.1 Summary
 One Android app (the **host**) that gives scripts the environment and the **real device capabilities** they need to do useful work on a phone, so a new automation costs *a script*, not a new app. The host provides: a Python runtime (first-class, other runtimes pluggable), a tiered capability layer behind a permission broker, a task library with per-task settings, **profiles**, optional UIs, **triggers and schedules**, run tracking with recovery, and debugging tools. Scripts decide what the work is.
+
+**v4:** the host can also run an *optional agent* (§7.11): a model that proposes broker calls under hard budgets. It is off by default; Python, flows and JS remain the primary, deterministic ways to automate.
 
 ### 1.2 Three promises
 1. **Reach** — scripts can do *real work* on the phone: drive other apps' UIs, launch/stop apps, react to notifications and device events, call the network, touch files, present their own UI, and (with explicit grants) reach almost any Android API. Breadth is tiered with graceful degradation (§3, §6).
@@ -67,25 +74,39 @@ One Android app (the **host**) that gives scripts the environment and the **real
 **Task** = installed automation bundle. **Profile** = a named instance of a task's per-account/per-instance settings, secrets, persistent store and history. **Run** = one execution of a task (optionally for one profile). **Capability** = a permissioned thing scripts can do (`device.ui.act`). **Provider** = Kotlin implementation of a capability on some **tier**. **Grant** = user approval of a capability with a **scope**. **Trigger** = what starts a run. **Surface** = a system-level entry/control point (tile, shortcut, widget, notification, bubble).
 
 ### 1.5 Non-goals (v1)
-Play Store distribution; running desktop libraries/tools unchanged (no Playwright/ADB-binary shims — scripts are written for this SDK); hard OS-level sandboxing of hostile scripts (§14 is explicit about this); bypassing the lock screen; Android 9 and below (`minSdk = 29`); iOS.
+Play Store distribution; running desktop libraries/tools unchanged (no Playwright/ADB-binary shims — scripts are written for this SDK); hard OS-level sandboxing of hostile scripts (§14 is explicit about this); bypassing the lock screen; Android 9 and below (`minSdk = 29`); iOS. **v4 non-goals:** model-written code execution; sub-agents/multi-agent; cross-run model memory or auto-learned hints; a hosted inference service run by us; on-device LLM agent loops on the owner's phones until spike S6 passes (Phase 16).
 
 ---
 
 ## 2. Prior art and what we borrow
 
-Full analysis, licence rules and a per-module study list: **`docs/REFERENCES.md`**. Summary:
+Full analysis, licence rules and a per-module study list: **`docs/REFERENCES.md`**; the file-level decisions for the newer references (ClosePaw, opendroid, android-agent, sannabotapp, ARIA) are in **`docs/REUSE_MATRIX.md`**. Summary:
 
 | Project | Licence | Worth borrowing | Lesson / pitfall |
 |---|---|---|---|
 | **Mobilerun Portal** (on-device accessibility service + local API) | AGPL-3.0 — *concepts only* | Hardened tree reads (guard, multi-window roots, bounded read gate with degraded snapshots), custom IME for text/clipboard, MediaProjection auto-accept, keep-awake watchdog, trigger rules, HTTP/WS/ContentProvider/reverse-WS control API, debug fixture activities, policy-class testing | Closest analogue of our T1 tier. Its hardening shows how fragile raw accessibility reads are. We do **not** copy code and we do **not** set `isAccessibilityTool` |
-| **Mobilerun** (Python LLM-agent framework) | MIT | Driver abstraction + recording decorator, guarded macro replay, credential-by-key, app cards, indexed compact UI text, MCP adapter, Skill-format docs | We host scripts, not LLM loops; no stealth drivers |
+| **Mobilerun** (Python LLM-agent framework) | MIT | Driver abstraction + recording decorator, guarded macro replay, credential-by-key, app cards, indexed compact UI text, MCP adapter, Skill-format docs | Its Python agent loop stays out of scope (AutoHost's own optional agent runtime is host-owned, §7.11); no stealth drivers |
 | **Maestro** (YAML mobile UI flows) | Apache-2.0 | Declarative commands, relational selectors, settle-after-action, retry-if-no-change, in-process FakeDriver tests, agent-friendly `AGENTS.md`, MCP server, IME for Unicode, inspector (Studio) | Needs a PC; we run on the phone. Instrumentation (UiAutomation) conflicts with accessibility services |
 | **Appium** | Apache-2.0 | Extension manifests with migrations, insecure-feature gating, doctor checks, command middleware, idle-session timeouts | Server/client protocol is out of scope |
 | **Auto.js family** (OpenAutoJs) | GPL-3.0 + NC — *concepts only* | Selector breadth, click fallbacks, API namespace breadth, volume-key stop, pluggable scheduler backends + reconcile worker, layout inspector | Weak reliability tooling and security; per-script APK packaging is exactly what we avoid |
 | **Google Artemis** (agent, Apache-2.0) | Apache-2.0 | Accessibility helper that avoids the UiAutomation connection, dynamic-first locating, pre-action safety net, incidents, verification levels, MCP tools, web console | LLM-per-step cost; review the repo directly |
 | **SL4A**, **Tasker/MacroDroid**, **Termux:API**, **Shizuku** | various | Curated facade; event triggers + setup UX; per-feature Android permissions; shell-level power without a PC | See `docs/REFERENCES.md` |
+| **ClosePaw** (Android agent app) — v4 | Apache-2.0 (+ NOTICE) — *adapt files with notices* | The real action layer (node-first actions, verified set-text, awaited gestures, three-valued change detector, hotspot promotion), an app-sensitivity floor + policy engine, a base-URL validator, the capsule/overlay UI structure and token grid | No production turn/time/token cap; completion is model-declared; its LLM client is bound to an OpenAI SDK; the dependency list includes a proprietary SDK — adapt single files, never the app |
+| **opendroid** — v4 | Apache-2.0 (one word changed in §4(d); a fork) — *adapt small files with notices* | Model-artifact integrity and resumable download, a prompt-budget guard, a risk lattice, a QA-plan structure for on-device models, the two-window overlay rule | On-device inference unproven (its own QA run was killed by memory pressure before any token); 1.3–4 K-token contexts; an MCP server that exposes a privileged shell; a YOLO mode; simulated actions that report success |
+| **android-agent** — v4 | no licence — *ideas only* | One path for every tool call (nested steps cannot launder approvals), structural plan mode, approval surfaces with timeout, compaction order, event-log projection, a stub-model eval harness | No run-level caps; cleartext allowed globally; a partial tool call is kept after a stream drop |
+| **sannabotapp** — v4 | README says "MIT", no LICENSE file; proprietary wake-word model — *ideas only* | UI tree as state in the first user message; a terminal `finish` tool (here host-verified); per-skill permission/credential declarations | LLM-written "learned hints" injected into the system prompt (persistent prompt injection); gesture-first click; a biometric gate that is only a flag; effectively untested |
+| **ARIA** — v4 | no licence; owner unverified — *anti-reference* | An inventory of ideas only (local VLM pipeline, RL logging) | Stub engine reports success and would click node #1; Stop swallowed by `catch (Exception)`; busy-wait on a static screen; an empty `llama.cpp` directory; hard-coded Windows paths; a safety screen that is not enforced; an unauthenticated HTTP server |
 
 ---
+
+### 2.1 Repository roles (v4, merged)
+| Repository | Role | Rule |
+|---|---|---|
+| **AutoHost** | Product specification and architecture source of truth: goals, capability model, broker, SDK contracts, gates, roadmap | Changed only for a concrete technical reason, recorded as an ADR |
+| **ClosePaw** (Apache-2.0) | Selective implementation reference: the action layer, sensitive-app policy, URL validator, capsule UI structure and tokens | Adapt single files as `docs/REUSE_MATRIX.md` §0 says; never the app; the proprietary Leap SDK is excluded; its name and paw branding are not used |
+| **opendroid** (Apache-2.0, a fork) | Model-artifact integrity and download, prompt budget, QA-plan structure | Small file-level adaptations, only after spike S6 |
+| **ARIA** | **Locked extraction source.** No licence file and the owner is unverified (D-17) | Nothing is copied. Local-inference pieces (JNI bridge, model manager, thermal guard) may be reconsidered only if the owner confirms the licence AND spike S6 shows LiteRT-LM fails; audit in `reference/findings/aria_audit_packB.md`; the snapshot in `reference/aria/` is read-only study material |
+| **android-agent, sannabotapp** | Ideas only (no licence) | Nothing is copied |
 
 ## 3. Android reality: tiers, constraints, installation
 
@@ -149,6 +170,7 @@ The app supports **Android 10 (API 29) → latest**, and the user's own phone is
 
 **Fallback-chain rule:** version-dependent capabilities are ordered provider chains (e.g. `device.screenshot`: Accessibility ≥30 → MediaProjection → Shell → global-action). The CompatReport shows the active link and why better ones are unavailable.
 **Verification status:** each provider/path records the devices it was run on (`VERIFIED_ON`) in `docs/DEVICES.md`; paths exercised only on emulators (for example API 30+ wireless pairing) are labelled **UNVERIFIED-on-hardware** in the docs and in the CompatReport until someone runs them on a real device.
+**v4 API notes (from reading; UNVERIFIED on our builds):** `ACTION_IME_ENTER` needs API 30 and `AccessibilityService.takeScreenshot` API 30 (both already provider-gated); real display metrics come from `WindowManager.maximumWindowMetrics` on API 31+ and `Display.getRealMetrics` below (P12-08, inside `ApiGate`); `PowerManager` thermal status is API 29 (P16-05); Android 15 limits `dataSync` foreground services (relevant to model downloads, P16-03 — UNVERIFIED, decide in `docs/ANDROID_MANIFEST.md`).
 
 ---
 
@@ -166,6 +188,8 @@ The app supports **Android 10 (API 29) → latest**, and the user's own phone is
 11. **Everything passes an interceptor chain.** Auth, grants, scope, insecure-feature gate, rate limit, recorder, audit — as composable interceptors (§5.4).
 12. **Flows for the simple cases, scripts for the rest.** A 10-line declarative flow should not need a Python process (§7.9).
 13. **Drive the phone from your agent.** A Dev API, MCP server and inspector make the authoring loop interactive (§5.6, §13.3).
+14. **A model proposes; the host decides (v4).** An LLM can only call generated, spec-validated broker tools under hard budgets, approvals and host-verified completion; it never writes code, never gets a second action path, and untrusted screen text never widens grants (§7.11, §14.7).
+15. **Measure before claiming (v4).** No performance, CPU or size claim without a recorded measurement on the owner's phones; no failure is called a defect before it is reproduced (ADR-089, ADR-093).
 
 ---
 
@@ -259,6 +283,8 @@ interface ITaskWorker {                             // main → worker
 - **Interceptor chain** (OkHttp-style, ordered, each can short-circuit): `AuthInterceptor` (runToken) → `GrantInterceptor` → `ScopeInterceptor` → `InsecureFeatureInterceptor` (§14.5) → `RateLimitInterceptor` → `RecorderInterceptor` (records actions + pre/post snapshots for the recorder and for run export) → `AuditInterceptor` → provider. Extra interceptors (slow-motion for debugging, tracing, fault injection in tests) are registered by the app, never by tasks.
 - **UiAutomation exclusivity:** a provider built on the UiAutomation connection (instrumentation-style) suppresses ordinary accessibility services. `A11yProvider` and `UiAutomationProvider` are therefore **mutually exclusive**; the broker never activates both, and the active choice is shown in the CompatReport.
 
+- **Run-token invariants (v4, ADR-099, X-13).** The `runToken` is a bearer capability even though `RunSpec` is otherwise secret-free: unpredictable, bound to one run, attempt, profile and grant snapshot with an expiry, reusable only inside that run. The broker rejects expired, revoked, malformed, cross-run, stale-attempt and scope-mismatched tokens before any operation and decides from its own trusted run/grant state (never from claims a worker sends); tokens are revoked on cancel, terminal state and worker death; a token never reaches a model provider, log, event, history row, crash report, screenshot, export or the UI.
+
 ### 5.5 Generated artifacts (single source of truth)
 A Gradle task `generateSdkArtifacts` reads every `CapabilitySpec` and produces: `capabilities.json` (machine-readable catalog), Python `.pyi` stubs plus thin generated call wrappers, `docs/CAPABILITIES.md`, the in-app catalog screen data, and the **agent context pack** (§13.3). A test fails if specs and generated output drift.
 
@@ -281,6 +307,17 @@ A token-authenticated **JSON-RPC 2.0** endpoint hosted by the app (enable in Set
 - All decision logic above lives in **pure `*Policy` classes** with exhaustive JVM tests; API-specific calls live in tiny `*Api30`-style objects.
 
 ---
+
+### 5.8 Language and responsibility boundaries (v4, ADR-100)
+| Layer | Language | Owns | Must not contain |
+|---|---|---|---|
+| Android host | **Kotlin** | app, broker and interceptors, run lifecycle and recovery, accessibility/IME/screen providers, selector engine, schedule and trigger engines, flow runtime, agent runtime, model gateway, Compose UI, Dev API server, storage | – |
+| User automation | **Python** (Chaquopy, worker processes, started on demand) | task scripts (`runtime.type = python`) and the `autohost` SDK | perception, selector matching, scheduling, permission checks, run state, image processing, model inference |
+| PC tooling | **Python** (stdlib) | the `autohost` CLI and MCP server, the fake-device simulator, test and evaluation harnesses | anything the phone needs at run time |
+| Native | **C/C++** | nothing today; only the optional local-inference bridge if spike S6 ever requires it (Phase 16) | business logic |
+| Declarative | **YAML interpreted by Kotlin** | flows (§7.9) | scripting |
+| Extension | JavaScript (QuickJS) | the in-process JS runtime (§7.8) | – |
+Rules. (1) **Hot paths are Kotlin:** tree reads, matching, waits and settle detection, action execution, scheduling, trigger evaluation, redaction. (2) **SDK calls are coarse:** one broker call per wait, act-and-verify or find, so a script never polls. (3) **Choosing a runtime:** a flow for linear automations, Python for logic, loops, HTTP and state, the optional agent only when screens are unknown or vary. (4) **No ratio targets:** the share of Kotlin and Python is measured (`docs/LANGUAGE_WEIGHT.md`) and reported, never targeted. (5) Chaquopy is referenced only from `:runtime:python` (enforced by X-19). (6) **Initial cost budgets — hypotheses, UNMEASURED until P15-01/P15-09/X-20 record numbers:** selector match p95 < 200 ms at 2,000 nodes; an accessibility read ≤ 2.5 s with a degraded-snapshot fallback; Kotlin-side overhead per flow command < 50 ms and per agent step < 150 ms, excluding model latency. (7) **Nothing heavy on the main thread:** OCR, large image transforms and model inference run off it, and cheap signals (events, the semantic tree) are tried before screenshots or OCR. (8) **Idle cost is zero by design (X-20):** with no run, inspector or recorder active there is no tree work, no worker process, no loaded interpreter and no resident model.
 
 ## 6. Capability catalog — the "ultimate tool"
 
@@ -483,6 +520,9 @@ def main():
 ### 7.10 App packs (later, Phase 11)
 Reusable per-app packs (`.aapack`): named selectors, named `Screen` signatures, locale label variants and tips for one package, referenced from tasks (`uses_packs`). They keep brittle app knowledge out of tasks and let a fix ship once for every task.
 
+### 7.11 Agent runtime (optional; v4, Phase 13)
+A fourth runtime, `runtime.type: "agent"`, in-process like flows and JS — no interpreter, no worker process, no native code. A model proposes **tool calls**, validated against the capability specs and executed through the **same broker**: grants, scopes, insecure-feature switches, audit and rate limits apply unchanged; the model never writes code and never gets a second action path (ADR-086). **Safety envelope (ADR-091):** hard budgets (turns, wall clock, model calls, tokens reserved before dispatch, actions, consecutive failures, idle); **host-verified completion** (a supervised confirmation for ad-hoc runs; a `verify` clause for tasks); approvals for risky actions; an **observation floor** (BLOCKED apps are never shown to the model, password nodes are masked, screenshots are off by default); screen and notification text is *untrusted data*; cancellation interrupts the in-flight HTTP and broker calls. **Model access** is a host service (`:core:llm`, `docs/MODEL_GATEWAY.md`): OpenAI-compatible, non-streaming, https-only (loopback cleartext only behind a switch), keys host-held in `SecretStore`. **Stage A** (Phase 13): an internal, user-started, supervised "Ask" run (`builtin.agent.adhoc`); schedules, triggers and the Dev API cannot start agent runs. **Stage B** (only after the Stage-A gates pass on a real device): the manifest `agent{}` block, `verify`, optional unattended scheduling with declared budgets and a per-task grant. Off until the user enables "AI features". The agent never depends on dev-mode grants (ADR-098). Local on-device inference is a separate optional track (Phase 16), NO-GO for agent loops until spike S6 passes.
+
 ---
 
 ## 8. Task packages
@@ -575,7 +615,7 @@ Multiple versions may be installed. Additive config-schema changes migrate autom
 ### 9.1 Model
 - **Config** = task-wide settings (one set per task). **Profile** = per-account/per-instance values + secrets + persistent store (`ctx.profile_store`) + run history. Cloning a profile never duplicates the script.
 - A run is bound to at most one profile. Profiles are archived rather than deleted (history kept; purge optional).
-- Secrets: only fields flagged `x-secret`; stored Keystore-wrapped; delivered to the script only via `ctx.secret(name)` (and `set_text(..., secret=True)`); registered with the redactor so they never appear in logs, evidence text or exports.
+- Secrets: only fields flagged `x-secret`; stored Keystore-wrapped; delivered to the script only via `ctx.secret(name)` (and `set_text(..., secret=True)`); registered with the redactor so they never appear in logs, evidence text or exports. **`x-secret` is valid only inside `profile_schema` (ADR-099, X-12): `config_schema` rejects it, and plaintext secret values never enter RunSpec snapshots, checkpoints, events, history or exports; the SDK and simulator refuse or redact registered secrets on `call`, `kv`, `state`, checkpoint and `emit`.**
 
 ### 9.2 Multi-account patterns (a task chooses; the host supports all)
 | Pattern | How | Trade-offs |
@@ -746,6 +786,9 @@ High-risk capabilities require **both** a per-task grant **and** a global switch
 ### 14.6 Licence hygiene
 AGPL/GPL reference projects are clean-room only (`docs/REFERENCES.md`). Reused Apache/MIT code keeps its notices in `THIRD_PARTY_NOTICES.md`. A CI step fails on dependencies with unknown or incompatible licences. The app's own licence is decided in Phase 0 (`DECISIONS.md`).
 
+### 14.7 AI features: data egress and the safety envelope (v4)
+When AI features are on, **screen text (and, only if the user enables it per provider, screenshots) leaves the device** for the chosen model provider. First use shows a disclosure; logs and audit carry sizes and hashes, not content; full model transcripts are stored only if the user turns "keep model transcripts" on (default off). Provider API keys live in `SecretStore` under a reserved host scope and appear only in the engine's `Authorization` header. The bundled BLOCKED-app list (banking, payments, wallets, password managers) is a floor the user can extend but not remove. Prompt injection is a *design constraint*: screen content cannot widen grants, reach tools outside the generated catalog, or change budgets. Grants and scopes the agent relies on are tracked in X-15/X-16 and P12-16/17 (ADR-098). Details: `docs/AGENT_RUNTIME.md` §5–§13, `docs/MODEL_GATEWAY.md` §4, §8.
+
 ---
 
 ## 15. Compatibility checking
@@ -785,12 +828,15 @@ autohost/
 ├─ build-logic/               # convention plugins (android library, compose, kotlin-jvm)
 ├─ core/
 │  ├─ model/ common/ data/ engine/ broker/
+│  ├─ llm/                    # v4: model gateway — provider-neutral types, OpenAI-compatible codec, URL policy, retry (pure JVM)
 │  ├─ designsystem/           # theme + shared Compose components
 │  └─ devapi/                 # Dev API server (HTTP+WS JSON-RPC, ContentProvider adapter), token auth
 ├─ runtime/
 │  ├─ api/                    # RuntimeProvider SPI
 │  ├─ python/                 # Chaquopy integration, worker services, SDK python sources
-│  └─ flow/                   # declarative flow interpreter (in-process), recorder model, guarded replay
+│  ├─ flow/                   # declarative flow interpreter (in-process), recorder model, guarded replay
+│  ├─ js/                     # QuickJS runtime (in-process)
+│  └─ agent/                  # v4: optional agent runtime (in-process, pure JVM); Phase 13
 ├─ capabilities/
 │  ├─ a11y/                   # service, ReadGate, TraversalGuard, RootResolver, SelectorEngine, gestures, overlays, AutoAcceptGate
 │  ├─ ime/                    # AutoHost keyboard (text commit, clipboard)
@@ -800,18 +846,19 @@ autohost/
 │                             # settings, devtools, taskui (declarative + HTML), surfaces, inspector, recorder
 ├─ plugin-sdk/                # AIDL + helpers for external capability APKs
 ├─ sdk-python/                # python package, .pyi, `autohost` CLI + MCP server, `autohost-sim` simulator
-├─ testing/{fixture-app, fixtures, fakes}
+├─ testing/{fixture-app, fixtures, fakes, golden, stub-model, agent-evals}   # v4: stub-model + agent-evals are PLANNED
 ├─ samples/                   # hello, press-button (py), press-button-flow, settings-reader, http-check, …
-├─ schemas/ docs/ prompts/ tools/
+├─ schemas/ docs/ prompts/ tools/ reference/ drafts/   # v4: reference/ = findings + Apache snapshots (never on a source set); drafts/ = unpromoted schemas
 └─ THIRD_PARTY_NOTICES.md
 ```
-`core:model` and `core:engine` stay pure-JVM-testable. Capability modules depend only on broker interfaces. The Python SDK source is the single source for both the embedded SDK and `sdk-python/` (Gradle copy task). File-level detail: `docs/REPO_LAYOUT.md`.
+`core:model` and `core:engine` stay pure-JVM-testable. Capability modules depend only on broker interfaces. The Python SDK source is the single source for both the embedded SDK and `sdk-python/` (Gradle copy task). File-level detail: `docs/REPO_LAYOUT.md`. The optional isolated `:llm` process module (Phase 16) is added only if spike S6 passes.
 
 ---
 
 ## 18. Phases, deliverables, gates
 
 **Milestones:** **MVP = end of Phase 4** (archetype A on a schedule, with profiles). **Authoring-ready = end of Phase 6** (an agent can inspect the phone, write or record a task, run it and debug it through MCP). **v1 = end of Phase 8.** Phases 9–11 add power tools, browser/vision/hardware, extensibility.
+**v4 additions (planning pass 2026-11-01):** Epoch V (verify what exists, ADR-097) → Phase 12 (hardened actions) → Phase 13 (agent, Stage A) → Phase 14 (run UI) → Phase 15 (footprint) → Phase 16 (optional local inference). Mapping to the owner's six milestones: **1** repo/feasibility audit = this planning pass; **2** prove the foundation = Epoch V (X-07…X-09) — the brief's "prove the ARIA foundation" became "prove the AutoHost foundation" because the audit did not support ARIA (ADR-088); **3** integrate broker and run lifecycle = P13-12…P13-14; **4** first vertical slice = Stage A end to end (G13-a/b); **5** add capabilities = Phases 14–16; **6** validate each milestone = the tracker ladder (`docs/PROGRESS.md`) and the gates (`docs/GATES.md`). Real-device status is tracked separately.
 Task-level checklist: `docs/PROGRESS.md`. Gate procedures and required evidence: `docs/GATES.md`.
 
 ### Phase 0 — Feasibility spikes (throwaway code under `spikes/`; verdicts in `docs/SPIKES.md`)
@@ -877,17 +924,41 @@ Start with spikes: WebView automation with real input events, per-profile cookie
 JavaScript (QuickJS) runtime over the same broker; **plugin APK SDK** + one example external capability plugin; task repository/index import; **app packs**; in-app Task Studio; PC web inspector (`autohost ui`); reverse WebSocket transport; backup/restore (tasks + profiles minus secrets); release signing and verified-developer registration; upgrade/migration tests; user guide; OEM matrix notes. *Optional compatibility exercise:* port any existing Python automation by rewriting it against the SDK, logging every gap as an SDK/capability issue — never as a hack or shim.
 **Gate 11 (final acceptance):** (F1) a brand-new task written from the generated pack with **no Kotlin changes** is installed, profiled and scheduled; (F2) a Python task and a flow task and a JS task coexist with independent state; (F3) an unavailable capability/app yields a clear CompatReport; (F4) a new capability provider (plugin APK or in-app module) is used by two tasks with zero task changes; (F5) all three runtimes run through the same broker.
 
+### Epoch V — verify what exists (gates Phase 12+ code; ADR-097)
+The code for Phases 1–11 was written mostly without Gradle, an Android SDK or a phone; the first JVM runs (2026-10-26, owner-reported) passed `:runtime:js:test`, ran `:core:model:test` with 5 failures and stopped in `:core:engine:testDebugUnitTest`. Epoch V **step 0 (ADR-101): finish the crash-fix pass** — the owner-approved build and tests that `CRASH_FIX_PLAN.md` left open (X-17) and the owner's phone launch test (X-18). Then: finish the JVM sweep (`scripts/test-jvm.sh`), build `app-core-debug.apk` (`scripts/build-android-debug.sh`), re-run the Python suites with PyYAML (`scripts/test-python.sh`), retag the ladder module by module with evidence, restore a verification workflow (X-08), add a Gradle wrapper (X-07), and record the exit review (X-09). Phase 12+ implementation starts after X-09.
+
+### Phase 12 — Hardened actions and scope closure (v4)
+Make the act side of `device.ui` as trustworthy as its read side before the agent leans on it: provider↔spec conformance (the `click.method` drift A6), additive `effect`/`warnings` results, a state-aware change detector, effect-verified click, refresh-then-verify `set_text`, awaited gestures, scroll inside bounds with real display metrics, hotspot promotion, IME-Enter via `ApiGate`, a node identity guard, fixture surfaces, emulator runs, and the scope closure of ADR-098 (ref scoping, `allow_coordinates`/`allow_global`, `device.app`). Every finding is a prediction until reproduced. Sources adapted from ClosePaw per `docs/REUSE_MATRIX.md` §A. Details: `docs/ACTION_HARDENING.md`.
+**Gate 12:** (a) conformance + `effect` vocabulary green across Kotlin, SDK, simulator and vectors; (b) pure units unit-tested with ported tests; (c) emulator reproduce-or-refute of A1–A5 with before/after; (d) *(real device)* the fixture action suite on both owner phones; (e) overlay/touch audit; (f) scope closure tests.
+
+### Phase 13 — Agent runtime, Stage A, and the model gateway (v4)
+`:core:llm` (provider-neutral types, OpenAI-compatible non-streaming codec, URL policy, retry, host-held keys), `:runtime:agent` (loop, budgets, stuck detector, `AgentView`, tool catalog generated from the specs, tool pipeline with policy and approvals, host-verified completion, event log and `.aarun` section), `AgentRuntimeProvider` registered beside the flow runtime, preflight, eval harness, security suite; Stage B manifest block last and only after the real-device gates. Details: `docs/AGENT_RUNTIME.md`, `docs/MODEL_GATEWAY.md`.
+**Gate 13:** (a) every budget class stops a runaway, cancel mid-call ≤ 2 s, no secret/token in any artifact (JVM integration); (b) injection and BLOCKED-app fixtures hold, stub model over loopback (emulator); (c) *(real device)* a cloud-model 5-step run under the **shipped** grant model, Stop ≤ 6 s, supervised confirm (needs X-15); (d) *(real device)* loopback cleartext only with the switch on (needs X-14); (e) eval scenarios with recorded baselines; (f) canary secret/token absent from every artifact.
+
+### Phase 14 — Run UI: capsule, approvals, agent run detail (v4)
+ClosePaw's *structure*, AutoHost's identity (ADR-094): design tokens in `core/designsystem`, one `RunCapsule` + one state holder (in-app bar and overlay), approval sheet with notification actions, agent run detail (thought → action timeline, budgets/usage), AI settings with the data-egress disclosure, the Ask bar, optional glow/visualizer (default off), accessibility and frame-time passes, spike S7.
+**Gate 14:** (a) capsule states and always-visible Stop; (b) approval flow incl. timeout → deny; (c) *(real device)* frame time on both phones; (d) TalkBack pass + S7 recorded.
+
+### Phase 15 — Footprint: measure first (v4)
+A measurement harness (APK size per flavor/ABI, cold start, resident memory, worker spawn), a Python-optional audit, flavor dimension `runtime` = `py` | `lite`, an ABI policy, a 16 KB page-size audit, worker-pool tuning from measured RAM, R8 review, an accessibility event-mask audit. No percentage targets. Details: `docs/LANGUAGE_WEIGHT.md`, ADR-093.
+**Gate 15:** (a) *(real device)* harness numbers recorded in `docs/PERF.md`; (b) `lite` builds and Python tasks get a typed CompatReport; (c) 16 KB audit; (d) *(real device)* every tuning change has before/after numbers.
+
+### Phase 16 — Optional local inference (v4; NO-GO for agent loops until S6 passes)
+Spike S6 first; if it passes: an isolated `:llm` process, a verified model-artifact pipeline, a LiteRT-LM provider behind a `LocalModel` seam, a selection policy that keeps local models to READ_ONLY/REVERSIBLE work, licence acceptance UI, a latency profile; a clean-room llama.cpp fallback only if LiteRT-LM fails. Phase 16 can be dropped without affecting Phases 12–15. Details: `docs/LOCAL_INFERENCE.md`, ADR-092.
+**Gate 16:** (a) *(real device)* S6 verdict on both phones; (b) download → verify → resume → install; (c) killing the `:llm` process leaves the app alive; (d) a helper use within the latency profile, or a recorded NO-GO.
+
 ---
 
 ## 19. Testing strategy
 - **Test layers (no mocks of our own classes — fakes only):** (1) pure unit tests for policies and engines; (2) **in-process integration** with a `FakeDevice` + fake clock (real orchestrator, real broker and interceptors, fake providers); (3) instrumented tests against the fixture app; (4) E2E dogfooding — sample tasks and flows run on device; (5) **API matrix** — the same instrumented suite on emulators for API 30/33/34/latest and the phone, run again whenever a new system image appears. MCP evals: YAML scenarios drive `autohost mcp` tools against `FakeDevice` and the fixture app.
-- **Device/API matrix:** real-device gates run on the Android 10 phone. Unit and Robolectric tests are parameterized over API 29, 30, 33, 34 and the latest; instrumented suites also run on emulators for API 30, 33, 34 and the latest. Every provider/path is recorded as `VERIFIED_ON` (devices) or `UNVERIFIED-on-hardware` in `docs/DEVICES.md`.
+- **Device/API matrix:** real-device gates run on the owner's phones in `docs/DEVICES.md` (ADR-095). Unit and Robolectric tests are parameterized over API 29, 30, 33, 34 and the latest; instrumented suites also run on emulators for API 30, 33, 34 and the latest. Every provider/path is recorded as `VERIFIED_ON` (devices) or `UNVERIFIED-on-hardware` in `docs/DEVICES.md`.
 - **Pure unit (JVM):** manifest validation, selector matching/normalization, `Screen` classification, `ScheduleEngine` (virtual clock), redactor, checkpoint/resume state machine, scope/permission enforcement, import scanner.
 - **Contract tests:** broker envelopes and error codes; SDK ↔ broker using an in-memory fake broker; AIDL compatibility; generated-artifact drift test.
 - **Instrumented (emulator + real device):** fixture-app suites for accessibility/app capabilities; worker kill/restart; foreground-service and notification behaviour; WebView browser; shell tier (device only).
 - **Python SDK tests (PC):** `pytest` + `autohost-sim` using the same SDK source; runs in CI without a phone.
 - **Soak:** scheduler (hours), interpreter memory (workers recycle per run), log/evidence growth.
 - **Security:** canary-secret grep across DB, logs, evidence, exports; out-of-scope node leakage; revoked-token rejection; import-guard bypass attempts (document results).
+- **Agent testing (v4):** a scripted stub model (`testing/stub-model/stub_model.py`, OpenAI-compatible, over `adb reverse`) makes agent runs deterministic with no API key; `testing/agent-evals` scenarios carry `expect` clauses and recorded baselines (only movement fails); injection fixtures (screen text that tries to widen grants), a BLOCKED-package fixture, budget/cancel/approval-timeout tests, and the secret/token canaries. **Failing test first** for every predicted defect (ADR-089).
 - **Fixtures:** sanitized UI-tree JSON from real apps under `testing/fixtures`; never commit credentials or personal screenshots.
 
 ---
@@ -914,6 +985,17 @@ JavaScript (QuickJS) runtime over the same broker; **plugin APK SDK** + one exam
 | Licence contamination from AGPL/GPL references | Low–Med | Clean-room rule, `THIRD_PARTY_NOTICES.md`, licence CI check |
 | Dev API exposes device control on a network | Med | Off by default; token; adb-forward/localhost default; LAN behind an insecure-feature switch; audited |
 | Flow runtime creeping into a full scripting language | Med | Frozen v1 command set; limited expressions; Python is the escalation path |
+| v4: an LLM agent loops, runs up cost, or declares success it did not achieve | Med | Hard budgets reserved before dispatch; host-verified completion; stuck detector; Stop interrupts in-flight calls (ADR-091) |
+| v4: prompt injection through screen/notification text | High | Untrusted-content wrapper in the user role; generated tool catalog only; no grant expansion; observation floor; injection fixtures (G13-b) |
+| v4: screen text and keys leave the device | Med | Opt-in AI features, disclosure, host-held keys, https-only URL policy, no transcript storage by default, BLOCKED floor (§14.7) |
+| v4: dev-mode grant-all and unenforced scope flags let a run exceed its declared access | Med (predicted) | X-15, P12-16/17; the agent never depends on dev-mode grants; preflight refuses unrestricted package grants (ADR-098) |
+| v4: predicted defects in the act layer are "fixed" blind | Med | Failing test first; reproduce-or-refute on emulator and device (ADR-089) |
+| v4: on-device LLM runs out of memory or heat on 2–8 GB phones | High | Optional, NO-GO until S6; isolated `:llm` process; RAM gate on AVAILABLE memory; thermal listener (ADR-092) |
+| v4: footprint claims without measurements | Med | Measure-first Phase 15; no percentage targets (ADR-093) |
+| v4: the verified-everything impression — code exists but was never compiled or run | High | Epoch V; the verification ladder; real-device status tracked separately (ADR-087, ADR-097) |
+| v4: reference code written for another minSdk (ClosePaw is minSdk 31) breaks on API 29/30 | Med | Compile and lint against minSdk 29, `ApiGate`, fixture suite on the owner's phones before any row closes (REUSE_MATRIX compile notes) |
+| v4: proprietary or unlicensed material enters the tree (Leap SDK, unlicensed ARIA files, model weights) | Med | ARIA locked (D-17), Leap SDK excluded, models never bundled with terms shown before download (P16-07), `THIRD_PARTY_NOTICES.md` + licence CI (X-11) |
+| v4: a build is started on the owner's weak PC without approval, or a weak agent "verifies" by reading code | High | ADR-101: no Gradle without the owner's explicit approval; ticks only with command + exit status + environment; X-17 is the only first build |
 
 ---
 
@@ -935,11 +1017,14 @@ JavaScript (QuickJS) runtime over the same broker; **plugin APK SDK** + one exam
 15. Flow format: YAML (JSON accepted); use a vetted parser whose licence fits the app licence.
 16. Scheduler backend `auto`; reconcile worker every ~20 min.
 17. App licence decided in Phase 0 (`DECISIONS.md`); until then reuse only Apache/MIT code and clean-room everything else.
+18. **AI features off** until the user enables them (v4); Stage A agent = internal, supervised, user-started; model access = remote OpenAI-compatible, non-streaming; all budget numbers are placeholders until the eval harness tunes them (`docs/AGENT_RUNTIME.md`).
+19. **Local inference:** NO-GO for agent loops until S6 passes on both owner phones (ADR-092). **Footprint:** measure first, no percentage targets (ADR-093).
+20. **Verification targets:** the two owner-listed phones (ADR-095) until an Android 10 phone is confirmed.
 
 ---
 
 ## 22. Definition of done (platform level)
-- [ ] Gate 10 (F1–F5) demonstrated with recorded evidence.
+- [ ] Gate 11 (F1–F5) demonstrated with recorded evidence.
 - [ ] No task- or service-specific code in `app/`, `core/`, `capabilities/`, `runtime/`.
 - [ ] Every capability in every sample task resolves to an availability state with a reason and a Fix action where one exists.
 - [ ] Cancel, kill, resume and recovery behaviours covered by automated tests.
@@ -947,8 +1032,22 @@ JavaScript (QuickJS) runtime over the same broker; **plugin APK SDK** + one exam
 - [ ] `SECURITY.md` states exactly what is and isn't isolated.
 - [ ] SDK docs, `.pyi` stubs and the agent context pack are generated from specs and complete; a new task can be written from them alone.
 - [ ] Setup & Health takes a fresh device to "ready" without outside instructions.
-- [ ] Gates 0–8 recorded on the Android 10 phone (9–11 as reached); every API 30+ path is validated on an emulator or marked UNVERIFIED-on-hardware.
+- [ ] Gates 0–8 recorded on the primary device(s) in `docs/DEVICES.md` (9–11 as reached); every API 30+ path is validated on an emulator or marked UNVERIFIED-on-hardware.
 - [ ] The Dev API + MCP server drive the phone end to end (inspect → try → write/record → run → debug) with a recorded transcript.
 - [ ] A flow task and a Python task coexist; the flow task runs with no worker process.
 - [ ] Insecure-feature switches default off and are enforced by tests.
 - [ ] `THIRD_PARTY_NOTICES.md` exists and the licence CI check passes.
+- [ ] **v4 (optional features, each independent):** Epoch V exit recorded (X-09); Gate 12 passed on both phones; if the agent ships — Gate 13 passed with the shipped grant model (X-15 closed) and the data-egress disclosure is in the app; Phase 14–16 gates only for the parts that ship; no performance claim without a `docs/PERF.md` measurement.
+
+---
+
+## 23. Continuation from the current code (2026-11-03)
+**Where the code is.** Phases 1–11 are written (never built end to end on a machine the tracker records). The crash-fix pass (`CRASH_FIX_PLAN.md`, `worklog.md` Session 20) edited the launch path, the overlays and two tests as text edits and has **not been compiled**. Verified so far: P1-09 and X-04 (Python suites, 2026-10-27). Nothing of Phases 12–16 exists.
+**Stages** (each closes on evidence in `docs/PROGRESS.md`; phase order limits *starting new scope*, never verification ticks — ADR-084):
+| Stage | Scope | Exit evidence |
+|---|---|---|
+| V0 | Crash-fix wrap-up: X-17 (owner-approved build + JVM sweep), X-18 (owner's phone launch test) | APK sha256 recorded; both phones launch without a crash report |
+| V1 | Epoch V proper: X-07 wrapper, X-08 workflow, the JVM `(FAILING)` tasks, Python suites, ladder retag, **X-09 exit review** | every sandbox-runnable check green and recorded |
+| H | Small test-first hardening that needs no Android: X-12 (SDK half), X-13, X-19, X-21; then X-14, X-15, X-16, X-20, X-22 | tests red-then-green with evidence |
+| D | Owner decisions D-17, D-20…D-23 and the device facts (P0-01) | rows answered in `docs/DECISIONS.md` |
+| 12–16 | Phases 12–16 in order, each only after its predecessor's gates; Phase 16 is droppable | gates G12…G16 |

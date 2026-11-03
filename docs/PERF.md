@@ -45,3 +45,26 @@ code was written in — they prove the harness runs, not the target:
 2. Run the device bench: `gradle :testing:fixture-app:connectedDebugAndroidTest`.
 3. Paste the printed p50/p95 rows into §2, update the Status column to *(verified, <device> <API>)*, tick G3-d
    in `docs/PROGRESS.md` with the test report path.
+
+## 5. v4 harness definitions (PLANNED; every cell below is UNMEASURED — no number was taken by the planning pass)
+Phase 15 (P15-01) builds the harness; G15-a records the numbers on both owner phones; **no percentage targets** (ADR-093). Phase 14 adds frame-time capture (G14-c).
+
+| Metric | How (candidate commands — availability on the phones UNVERIFIED) | Unit |
+|---|---|---|
+| APK size per flavor × ABI | the built APK's byte size; component breakdown with `apkanalyzer` or by listing the zip | bytes |
+| Cold start | `adb shell am start -W <component>` (TotalTime), median of N | ms |
+| Resident memory, app idle / during a Python run / during a flow run / during an agent run | `adb shell dumpsys meminfo <package>` (PSS per process incl. `:wN`), 3 samples | MiB |
+| Worker spawn | time from run start to the first worker log line | ms |
+| Frame time and jank (capsule, run detail, Ask sheet) | `adb shell dumpsys gfxinfo <package> framestats` while scrolling/animating | ms p50/p90/p99, janky % |
+| Thermal / battery note | `dumpsys thermalservice`, qualitative battery note over a 10-minute run | text |
+
+| Metric | Realme C3 (D1) | Galaxy M31 (D2) |
+|---|---|---|
+| APK size, `py` flavor, arm64-v8a | UNMEASURED | UNMEASURED |
+| APK size, `lite` flavor, arm64-v8a | UNMEASURED | UNMEASURED |
+| Cold start | UNMEASURED | UNMEASURED |
+| RSS idle / Python run / flow run / agent run | UNMEASURED | UNMEASURED |
+| Worker spawn | UNMEASURED | UNMEASURED |
+| Capsule frame time p50/p90/p99 | UNMEASURED | UNMEASURED |
+
+Each row needs `device: <model>, Android <n> / API <n>` and the command output path as evidence. A tuning change (worker-pool size, R8 rules, event-mask narrowing) records before and after on the same phone (G15-d).

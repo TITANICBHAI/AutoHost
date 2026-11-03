@@ -723,3 +723,11 @@ Stage Summary:
 **Verification:** Checkpoint A: NOT RUN — owner directed the Gradle run be the plan's very last step on explicit approval (this 10-year-old Windows machine, 3.9 GB RAM; toolchain prepared but idle: local SDK gained `platforms;android-36` + `build-tools;36.0.0` via its own sdkmanager, Gradle 8.13 sha256-verified at `C:\Users\DELL\.cache\autohost\gradle-8.13`). Checkpoint B: pending that build. All batch VERIFY checks (exact text counts) matched and are recorded in CRASH_FIX_PLAN.md §1.3–1.4; `tools/progress.py --check` ok at baseline (2026-10-30). Commits: none — the folder is not a git repository (plan rule 1.1b #5). PRE-EXISTING failures found: none (nothing compiled yet).
 
 **Open:** owner-approved final Gradle build+tests (then update this entry with results and the APK sha256); owner phone test (CRASH_FIX_PLAN.md section 8); owner decisions in its Appendix A.
+
+## Session 21 — plan merge (planning only; NO code changed)
+
+**Scope delivered:** merged the two planning packs (`AutoHost-main_plan.zip` = pack A, `autohost-planning-pack.zip` = pack B) into this tree. Pack A is the base; what was ported from pack B carries new IDs (ADR-099…101, D-20…D-23, X-17…X-22, P13-20, P15-09, spike S8) — the verdict, the port table and what was left out are in `docs/PLAN_MERGE.md`. Pack B verbatim is in `archive/pack-B/`; its ARIA/ClosePaw assessments are notes in `reference/findings/*_packB.md`. The crash-fix pass of Session 20 was folded into the plan as Epoch V step 0 (X-17, X-18). New entry docs for the next agent: `HANDOFF.md` §0 (state, assignment queue, guardrails, Windows commands), `AGENTS.md` rules 16–19, `KICKOFF.md`, `prompts/epoch-v.md`.
+
+**Verification:** `progress.py --check` ok (4/293 tasks, 0/94 gate items); `doc_check.py` ok (53 files); `tests/` 75 OK; `sdk-python` suite 415 OK; `gen_artifacts --check`, `sync_sdk --check`, `licence_check` (25 deps) and `mcp_eval` (PASS ×3) green; `diff -rq` against the original `AutoHost-main` shows no change under any code, build, manifest, schema, SDK or sample folder. Nothing compiled or run beyond Python (Linux sandbox, Python 3.13, no JDK/Gradle).
+
+**Open:** everything in Session 20's Open list. The next agent starts at `HANDOFF.md` §0.2 (orientation checks → ask the owner for build approval → X-19 and the SDK half of X-12 while waiting → X-17).

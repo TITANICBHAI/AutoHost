@@ -1,5 +1,5 @@
 # GATES — how to prove each phase is done
-A gate item is **passed** only when the procedure was executed and the **evidence** is recorded next to the item in `docs/PROGRESS.md` (`evidence:` line) — commit/test name, log or screenshot path, **device + API level**. A green build alone never passes a gate. *(real device)* = the primary Android 10 phone unless stated.
+A gate item is **passed** only when the procedure was executed and the **evidence** is recorded next to the item in `docs/PROGRESS.md` (`evidence:` line) — commit/test name, log or screenshot path, **device + API level**. A green build alone never passes a gate. *(real device)* = a physical phone listed in `docs/DEVICES.md` (ADR-095: the owner's Realme C3 and Galaxy M31 until an Android 10 phone is confirmed) unless stated; the evidence line names it (`device: <model>, Android <n> / API <n>`). An emulator or simulator run is **integration-tested** and never passes a *(real device)* item. Verification ladder (ADR-087, enforced by `tools/progress.py`): planned → `(WRITTEN)` → `(COMPILED)` → `(UNIT-TESTED)` → `(INTEGRATION-TESTED)` → ticked `[x]`; a tick needs evidence; `(FAILING: <reason>)` is never ticked.
 IDs match `PROGRESS.md`. Anchors: `### G1-a` etc.
 
 ## Gate 0 — Spikes
@@ -175,3 +175,71 @@ Written side (session 19, ADR-079): the FULL contract is written and JVM-tested 
 ### G11-e Release hygiene
 Licence CI green, `THIRD_PARTY_NOTICES.md` complete, release build has the Dev API disabled, upgrade/migration tests pass. Evidence: CI run.
 Written side (sessions 18–19): `UpgradeMigrationTest` (manifest migration chain, HOST_TOO_OLD, SemVer §11 ordering, purity) + `SchemaMigrationTest` (Room) exist; `THIRD_PARTY_NOTICES.md` covers every catalog dependency — enforced by `tools/licence_check.py`; the release signing config reads env vars with the keystore outside the repo and `docs/RELEASE.md` carries the hardening checklist (Dev API off, reverse bridge opt-in per session, switches off, backup secret-free by ADR-082). The previously reported `.github/workflows/ci.yml` is absent from the current checkout (only `android-debug-apk.yml` is tracked; ADR-085), so the CI run URL remains blocked until a verification workflow is restored and run.
+
+## Epoch V — verify what exists (v4; ADR-097, ADR-101; tasks X-17, X-18, X-07, X-08, X-09)
+Not a numbered gate: the exit criterion of Epoch V is **X-09**. Order: (1) `scripts/test-jvm.sh` — finish the JVM sweep and record every failing test by name (the owner's 2026-10-26 run reported 5 failing `:core:model` tests and a stop in `:core:engine:testDebugUnitTest`; those reports are unverified here); (2) `scripts/build-android-debug.sh` — `app-core-debug.apk` builds; (3) `scripts/test-python.sh` with PyYAML installed — the three environment-dependent failures resolve or are retagged with a real reason; (4) retag the ladder module by module, each tag with evidence (command, date, environment); (5) restore a verification workflow (X-08) and add a Gradle wrapper (X-07). The three scripts are the canonical commands (ADR-096); no Gradle wrapper and no `ci.yml` are in the checkout (ADR-085). Phase 12+ implementation starts after X-09 is recorded; Python-only and tooling items may start earlier.
+
+**Step 0 — the crash-fix build (X-17, then X-18; ADR-101).** The app crashed at launch and the crash-fix pass (`CRASH_FIX_PLAN.md`, `worklog.md` Session 20) was applied as text edits that were never compiled. Only with the owner's explicit approval: Checkpoint A (`:core:broker:test :capabilities:shell:test :core:engine:test`, then `:app:assembleCoreDebug :testing:fixture-app:assembleDebug`, record the APK sha256) and Checkpoint B (every JVM test, in the order of `scripts/test-jvm.sh`; Windows commands in `HANDOFF.md` §0.4). Then the owner's phone test (X-18, `CRASH_FIX_PLAN.md` §8): uninstall the old build, install, the app opens with no crash report, Setup and Library open, the bubble appears during a UI run, the Inspector survives an app switch; evidence names `device: <model>, Android <n> / API <n>`. Steps (1)–(3) above follow X-17, not before it.
+
+**Work that needs no Gradle (may run while waiting for the owner's approval):** X-19 (`tests/test_architecture.py`) and the SDK/simulator half of X-12 (failing test first, then the fix, then `python tools/sync_sdk.py` and both Python suites). **After the sweep:** the JVM halves of X-12 and X-13, then X-21, X-14, X-15, X-16, X-20 — each starts with a failing test (ADR-089, ADR-098, ADR-099). X-22 waits for the owner's decision D-23.
+
+## Gate 12 — Hardened actions and scope closure *(v4; real device where marked; see `docs/ACTION_HARDENING.md`)*
+*Every finding A1–A9 is a prediction from reading code until a test or an emulator run reproduces it (ADR-089). Failing test first.*
+### G12-a Conformance and vocabulary
+Procedure: the `ReturnShape` parser reads every `returns` string in `schemas/capability-specs.w1.json` and compares it with what the provider returns (JVM test in `capabilities/a11y`); the first red case is `device.ui.click` `method` (A6). After the fix and the additive `effect`/`warnings` fields: `python3 tools/gen_artifacts.py --check`, `python3 tools/sync_sdk.py --check`, the SDK suite, the simulator suite and the flow/schedule vector drift checks are green. Evidence: test names + command output.
+### G12-b Pure units
+Procedure: `ChangeDetector` (changed / unchanged / unverifiable), hotspot refinement, node identity guard and the ported upstream tests (REUSE_MATRIX RM-G2) plus new red-then-green tests run on the JVM. Evidence: test names and run output (tag `(UNIT-TESTED)` only for the units actually run).
+### G12-c Emulator reproduce-or-refute
+Procedure: API 30, 31 and 34 images, fixture app with the Phase 12 surfaces (plain field, toggle, delayed transition, silent-failure field, large clickable container with an off-centre child, nested scrollable, slow gesture target). For each of A1–A5: run **before** the fix and record *reproduces* or *does not reproduce*, then after. Evidence per item: image, API level, test name, before/after result. Integration-tested only.
+### G12-d Real-device fixture action suite *(real device)*
+Procedure: on **both** owner phones run the fixture action suite: `set_text` on a plain field (no doubled text), one click on the toggle (state flips once, never twice), `scroll_until` to a target in a nested scrollable, awaited tap/swipe/long-press complete; record `adb shell wm size` (settles A4). Evidence: run logs + `device: <model>, Android <n> / API <n>` for each phone. With one phone only, record that phone's result and leave the item unticked.
+### G12-e Overlay and touch audit
+Procedure: audit every overlay window (bubble, capsule, glow) for touchable/focusable flags against injected gestures (REUSE_MATRIX RM-F4, two-window rule); the tap-through test injects a tap at a point under the bubble and asserts it reaches the app below (emulator). Evidence: audit table + test name.
+### G12-f Scope closure
+Procedure (P12-16, P12-17): JVM tests — a ref minted in run A does not resolve in run B; `device.ui.act` with a ref whose package is outside the grant fails with `SCOPE_VIOLATION`; `allow_coordinates=false` refuses a coordinate click; `allow_global=false` refuses a global action; `device.app` `list` and `foreground` return only granted packages. Repeat on the emulator with the fixture app plus a second app. Evidence: test names.
+
+## Gate 13 — Agent runtime, Stage A *(v4; optional feature; see `docs/AGENT_RUNTIME.md` §14a)*
+*Never count a scripted-model run as a real model. A `(real device)` item without a `device:` clause is not passed.*
+### G13-a JVM integration
+Procedure: real `RunOrchestrator` + `BrokerPipeline` + a fake provider + `FakeLlm`. For each budget class (turns, wall clock, model calls, tokens, actions, consecutive failures, idle) a scripted runaway ends with that class's reason code; cancel during a model call and during a broker call completes within 2 s; the secret and token canaries are absent from events, audit and evidence. Evidence: test names.
+### G13-b Injection and BLOCKED fixtures *(emulator)*
+Procedure: the PC `testing/stub-model/stub_model.py` over `adb reverse` (loopback, `ai_cleartext_loopback` on). The fixture app shows on-screen text that tries to widen grants or call tools outside the catalog — the run's tool calls stay inside the catalog and the grant; a fixture in a BLOCKED package is never shown to the model (check the stub's request log) and an action there is refused. Evidence: stub request log + run export + test names.
+### G13-c Cloud-model run *(real device; needs X-15)*
+Procedure: with the owner's own provider key, a 5-step fixture task succeeds under the **shipped** grant model (the evidence states the grant mode; dev-mode grant-all does not count); Stop completes within 6 s; the supervised confirm path ends the run only after the user confirms. Evidence: run export + `.aarun` + `device:` clause.
+### G13-d Loopback cleartext *(real device; needs X-14)*
+Procedure: with `ai_cleartext_loopback` off an `http://127.0.0.1` endpoint is refused with a typed reason; with it on, the stub model over `adb reverse` works; a non-loopback `http://` URL is refused in both states. Evidence: logs + `device:` clause.
+### G13-e Eval baselines
+Procedure: `testing/agent-evals` scenarios (each with `expect` clauses) run against the fixture app; baselines are recorded once; only movement from the baseline fails the run. Evidence: eval report + the recorded baselines file.
+### G13-f Canaries
+Procedure: a canary secret and a canary run token are registered; run an agent task; grep logs, events, audit, evidence text, `.aarun` and a backup export — zero hits. Evidence: test name + grep output.
+
+## Gate 14 — Run UI: capsule, approvals, agent run detail *(v4)*
+### G14-a Capsule states
+Procedure: every capsule state is reachable in state-holder tests (one holder serves the in-app bar and the overlay); Stop is visible in every running state. Evidence: test names + screenshots.
+### G14-b Approval flow *(emulator)*
+Procedure: a risky action raises an approval (`ui.prompt.ask kind:"choice"`); approve and deny from the sheet and from the notification action; no answer within the window → deny. Evidence: recording + test names.
+### G14-c Frame time *(real device)*
+Procedure: capsule, run detail and Ask sheet on **both** owner phones: frame-time and jank numbers (`dumpsys gfxinfo`) recorded in `docs/PERF.md`. Evidence: numbers + `device:` clause per phone.
+### G14-d Accessibility pass
+Procedure: TalkBack walk-through of Ask, approval and capsule recorded; spike S7 (overlay indicator on the owner phones) recorded in `docs/SPIKES.md`. Evidence: recording + SPIKES section.
+
+## Gate 15 — Footprint: measure first *(v4)*
+### G15-a Harness numbers *(real device)*
+Procedure: the measurement harness records, per flavor and ABI, APK size, cold start, resident memory idle and during a run, and worker spawn time on **both** phones; numbers go to `docs/PERF.md`. No percentage targets (ADR-093). Evidence: numbers + `device:` clauses.
+### G15-b Lite flavor
+Procedure: flavor dimension `runtime` = `py` | `lite`; `lite` builds; a Python task on `lite` gets a typed CompatReport row instead of a crash; flow, JS and agent runs work (JVM + emulator). Evidence: build output + test names.
+### G15-c 16 KB audit
+Procedure: for every shipped native library record the ELF segment alignment (e.g. with `llvm-readelf -lW` or `zipalign -c -P 16`) and the Chaquopy wheel status; the audit table lists each library and the verdict. Evidence: audit table. *(Play's 16 KB requirement applies from 2027-02-01 for targetSdk ≥ 35 — verify the current rule before acting on it.)*
+### G15-d Tuning before/after *(real device)*
+Procedure: each tuning change (worker-pool size, R8 rules, event-mask narrowing) records before and after numbers from the harness on the same phone. Evidence: before/after table + `device:` clause.
+
+## Gate 16 — Optional local inference *(v4; NO-GO for agent loops until S6 passes; see `docs/LOCAL_INFERENCE.md`)*
+*Phase 16 can be dropped without affecting Phases 12–15; a recorded NO-GO is a valid outcome for G16-a and G16-d.*
+### G16-a S6 verdict *(real device)*
+Procedure: run spike S6 (`docs/SPIKES.md`) on **both** owner phones against the recorded criteria (peak memory on AVAILABLE RAM, tokens/s, time-to-first-token, thermal behaviour, survival of a background kill). Evidence: S6 section with numbers per phone.
+### G16-b Model artifact pipeline *(real device)*
+Procedure: download a small model, verify its hash, kill the app mid-download, resume, install. Evidence: log + hash + `device:` clause.
+### G16-c Process isolation *(real device)*
+Procedure: kill the `:llm` process (and, separately, drive it out of memory); the app and its runs stay alive and report a typed local-model failure. Evidence: `adb shell ps` before/after + run export.
+### G16-d Helper use *(real device)*
+Procedure: one local helper use (classification or extraction) runs inside the latency profile recorded in G16-a, **or** the NO-GO is recorded with the reason. Evidence: latency table or the NO-GO entry in `docs/SPIKES.md`.

@@ -1,0 +1,967 @@
+package ai.closepaw.ui.settings
+
+import ai.closepaw.agent.cognition.prompt.AssetAppSkillRepository
+import ai.closepaw.app.MemoryEditGate
+import ai.closepaw.memory.MemoryScope
+import ai.closepaw.memory.MemoryStore
+import ai.closepaw.ui.theme.Fleuron
+import ai.closepaw.ui.theme.PageMastheadDrillDown
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import ai.closepaw.protocol.ApprovalMode
+import ai.closepaw.protocol.AppTier
+import ai.closepaw.tool.AppClassifier
+import ai.closepaw.ui.theme.closePaw
+import ai.closepaw.ui.theme.foldedPaper
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+private enum class AppFilter(val label: String) {
+    All("All"),
+    Allow("Allow"),
+    Ask("Ask"),
+    Reject("Reject"),
+}
+
+internal const val APP_ROW_TRAILING_CHEVRON_TAG = "app-row-trailing-chevron"
+internal const val APP_ROW_ADD_MEMORY_TAG = "app-row-add-memory"
+internal const val APP_ROW_MEMORY_CHIP_TAG = "app-row-memory-chip"
+internal const val APP_ROW_SKILL_CHIP_TAG = "app-row-skill-chip"
+internal const val APP_ROW_MEMORY_CREATE_ERROR_TAG = "app-row-memory-create-error"
+
+private const val APP_MEMORY_CREATE_FAILED_MESSAGE = "Could not create app memory. Try again."
+
+private enum class AddMemoryOutcome { Created, AlreadyExists, Aborted, WriteFailed }
+
+private sealed interface AppRowsState {
+    data object Loading : AppRowsState
+    data class Loaded(val rows: List<AppRow>) : AppRowsState
+    data class Error(val message: String) : AppRowsState
+}
+
+@Composable
+internal fun AppAccessSettingsPage(
+    appClassifier: AppClassifier,
+    memoryStore: MemoryStore,
+    gate: MemoryEditGate,
+    approvalMode: ApprovalMode = ApprovalMode.SMART,
+    onBack: () -> Unit,
+    onClose: () -> Unit,
+    contentIndex: AppAccessContentIndex? = null,
+    skillLoader: (suspend (String) -> String?)? = null,
+    rowsOverride: List<AppRow>? = null,
+    ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+) {
+    val context = LocalContext.current
+    val overrides by appClassifier.userOverrides.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
+
+    val index = remember(context, contentIndex) {
+        contentIndex ?: AppAccessContentIndex(
+            memoryPackages = AppAccessContentIndex.memoryLister(memoryStore),
+            skillPackages = AppAccessContentIndex.assetSkillLister(context.assets),
+        )
+    }
+    val summaries by index.summaries.collectAsState()
+
+    val effectiveSkillLoader: suspend (String) -> String? = if (skillLoader != null) {
+        skillLoader
+    } else {
+        val repo = remember(context) { AssetAppSkillRepository(context.assets) }
+        remember(repo) { { pkg: String -> repo.load(pkg) } }
+    }
+
+    LaunchedEffect(index) { index.load() }
+
+    var appRowsReloadKey by remember { mutableStateOf(0) }
+    val rowsState by produceState<AppRowsState>(
+        initialValue = AppRowsState.Loading,
+        context,
+        rowsOverride,
+        appRowsReloadKey,
+    ) {
+        value = AppRowsState.Loading
+        if (rowsOverride != null) {
+            value = AppRowsState.Loaded(rowsOverride)
+        } else {
+            value = try {
+                AppRowsState.Loaded(withContext(ioDispatcher) { loadInstalledAppRows(context) })
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: SecurityException) {
+                AppRowsState.Error("ClosePaw does not have permission to read the installed app list.")
+            } catch (e: RuntimeException) {
+                AppRowsState.Error("Could not read the installed app list. Retry from Settings.")
+            }
+        }
+    }
+
+    var query by rememberSaveable { mutableStateOf("") }
+    var filter by rememberSaveable { mutableStateOf(AppFilter.All) }
+    val expandedPackages = remember { mutableStateMapOf<String, Boolean>() }
+    // Per-package one-shot nonce: bumped whenever "+ Memory" creates a fresh
+    // file, threaded into MemoryFileEditor so the editor lands in EDIT
+    // immediately rather than VIEW. Map survives recomposition only — process
+    // death drops the signal, which is correct (file already exists).
+    val startInEditNonces = remember { mutableStateMapOf<String, String>() }
+    val memoryCreateFailures = remember { mutableStateMapOf<String, Boolean>() }
+    var openFullMemoryPackage by rememberSaveable { mutableStateOf<String?>(null) }
+    val locked by gate.memoryEditLocked.collectAsStateWithLifecycle()
+
+    val commitTier: (String, AppTier) -> Unit = { pkg, tier ->
+        coroutineScope.launch(Dispatchers.IO) {
+            appClassifier.setOverride(pkg, tier)
+        }
+    }
+
+    val onMemoryPresenceChanged: (String, Boolean) -> Unit = { pkg, hasMemory ->
+        val existing = summaries[pkg] ?: AppContentSummary.NONE
+        coroutineScope.launch {
+            index.update(pkg, existing.copy(hasMemory = hasMemory))
+        }
+        if (hasMemory) {
+            memoryCreateFailures.remove(pkg)
+        }
+    }
+
+    val fullEditorPackage = openFullMemoryPackage
+    BackHandler(enabled = fullEditorPackage != null) {
+        openFullMemoryPackage = null
+    }
+    if (fullEditorPackage != null) {
+        MemoryFileEditorPage(
+            title = "App Memory",
+            memoryStore = memoryStore,
+            scope = MemoryScope.APP,
+            packageName = fullEditorPackage,
+            gate = gate,
+            onBack = { openFullMemoryPackage = null },
+            onClose = onClose,
+            onDeleted = {
+                onMemoryPresenceChanged(fullEditorPackage, false)
+                expandedPackages.remove(fullEditorPackage)
+                memoryCreateFailures.remove(fullEditorPackage)
+            },
+            ioDispatcher = ioDispatcher,
+        )
+        return
+    }
+
+    val onAddMemory: (String) -> Unit = { pkg ->
+        // UI-layer gate: chip is also disabled when locked, but the click can
+        // race the lock flipping true mid-recomposition. Drop the click here
+        // before launching to avoid spawning an aborted coroutine.
+        if (!locked) {
+            memoryCreateFailures.remove(pkg)
+            coroutineScope.launch {
+                // Two safety layers around the write:
+                //  - Idempotent: re-read inside the coroutine. If a file
+                //    already exists (page mounted with a stale empty index,
+                //    or two "+ Memory" taps raced), skip the write so an
+                //    existing apps/<pkg>.md is never blanked.
+                //  - Gate TOCTOU: re-check `gate.isLockedNow()` right before
+                //    the write. If a session began between click and IO,
+                //    abort with the standard toast. `isLockedNow()` reads
+                //    the upstream state directly so it cannot lag the lock.
+                val outcome = withContext(ioDispatcher) {
+                    if (gate.isLockedNow()) {
+                        AddMemoryOutcome.Aborted
+                    } else if (memoryStore.read(MemoryScope.APP, pkg) != null) {
+                        AddMemoryOutcome.AlreadyExists
+                    } else {
+                        when (memoryStore.write(MemoryScope.APP, pkg, "")) {
+                            ai.closepaw.memory.SaveResult.Success ->
+                                AddMemoryOutcome.Created
+                            else -> AddMemoryOutcome.WriteFailed
+                        }
+                    }
+                }
+                when (outcome) {
+                    AddMemoryOutcome.Created, AddMemoryOutcome.AlreadyExists -> {
+                        memoryCreateFailures.remove(pkg)
+                        val existing = summaries[pkg] ?: AppContentSummary.NONE
+                        index.update(pkg, existing.copy(hasMemory = true))
+                        expandedPackages[pkg] = true
+                        // Fresh nonce: editor consumes it once and switches to EDIT.
+                        startInEditNonces[pkg] =
+                            "${System.currentTimeMillis()}-${startInEditNonces.size}"
+                    }
+                    AddMemoryOutcome.Aborted -> {
+                        Toast.makeText(context, MEMORY_EDIT_ABORT_TOAST, Toast.LENGTH_SHORT).show()
+                    }
+                    AddMemoryOutcome.WriteFailed -> {
+                        memoryCreateFailures[pkg] = true
+                    }
+                }
+            }
+        } else {
+            Toast.makeText(context, MEMORY_EDIT_ABORT_TOAST, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        PageMastheadDrillDown(title = "App Access", onBack = onBack, onClose = onClose)
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = MaterialTheme.closePaw.spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.closePaw.spacing.md),
+        ) {
+            if (approvalMode == ApprovalMode.AUTO_APPROVE) {
+                SettingsAlertCard(
+                    message = "Auto-Approve is on. Per-app rules below only apply in Per-App mode.",
+                    tone = AlertTone.Warning,
+                )
+            }
+            SearchField(query = query, onQueryChange = { query = it })
+            FilterChipsRow(selected = filter, onSelect = { filter = it })
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        when (val state = rowsState) {
+            AppRowsState.Loading -> LoadingState()
+            is AppRowsState.Error -> {
+                AppRowsErrorState(
+                    message = state.message,
+                    onRetry = { appRowsReloadKey += 1 },
+                )
+            }
+            is AppRowsState.Loaded -> {
+                val filtered = remember(state.rows, overrides, query, filter) {
+                    filterRows(state.rows, appClassifier, query.trim(), filter)
+                }
+                AppList(
+                    rows = filtered,
+                    classifier = appClassifier,
+                    summaries = summaries,
+                    expanded = expandedPackages,
+                    startInEditNonces = startInEditNonces,
+                    memoryCreateFailures = memoryCreateFailures,
+                    addMemoryLocked = locked,
+                    onToggleExpand = { pkg ->
+                        expandedPackages[pkg] = !(expandedPackages[pkg] ?: false)
+                    },
+                    onPickTier = { pkg, tier -> commitTier(pkg, tier) },
+                    onAddMemory = onAddMemory,
+                    onOpenFullMemoryEditor = { pkg -> openFullMemoryPackage = pkg },
+                    onMemoryPresenceChanged = onMemoryPresenceChanged,
+                    memoryStore = memoryStore,
+                    gate = gate,
+                    skillLoader = effectiveSkillLoader,
+                    ioDispatcher = ioDispatcher,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchField(query: String, onQueryChange: (String) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = MaterialTheme.closePaw.spacing.md, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Search,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Box(modifier = Modifier.weight(1f)) {
+                if (query.isEmpty()) {
+                    Text(
+                        text = "Search apps or package name",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.closePaw.inkFaint,
+                    )
+                }
+                BasicTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    singleLine = true,
+                    textStyle = LocalTextStyle.current.copy(
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = MaterialTheme.typography.bodyMedium.fontSize,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilterChipsRow(selected: AppFilter, onSelect: (AppFilter) -> Unit) {
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        AppFilter.entries.forEachIndexed { index, filter ->
+            SegmentedButton(
+                selected = selected == filter,
+                onClick = { onSelect(filter) },
+                shape = SegmentedButtonDefaults.itemShape(
+                    index = index,
+                    count = AppFilter.entries.size,
+                ),
+                icon = {},
+            ) {
+                Text(
+                    text = filter.label,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+private fun appDetailsLabel(appLabel: String, isExpanded: Boolean): String {
+    return if (isExpanded) {
+        "Collapse $appLabel app details"
+    } else {
+        "Expand $appLabel app details"
+    }
+}
+
+private fun appExpansionStateDescription(isExpanded: Boolean): String {
+    return if (isExpanded) "Expanded" else "Collapsed"
+}
+
+@Composable
+private fun LoadingState() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(MaterialTheme.closePaw.spacing.lg),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        AppAccessNoticeCard(
+            title = "Loading apps",
+            message = "Reading installed apps and access rules.",
+            loading = true,
+        )
+    }
+}
+
+@Composable
+private fun AppRowsErrorState(message: String, onRetry: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(MaterialTheme.closePaw.spacing.lg),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        AppAccessNoticeCard(
+            title = "Could not load apps",
+            message = message,
+            action = {
+                TextButton(onClick = onRetry) {
+                    Text("Retry")
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun AppAccessNoticeCard(
+    title: String,
+    message: String,
+    modifier: Modifier = Modifier,
+    loading: Boolean = false,
+    action: (@Composable () -> Unit)? = null,
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .foldedPaper(MaterialTheme.shapes.medium),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Row(
+            modifier = Modifier.padding(MaterialTheme.closePaw.spacing.cardPadding),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.closePaw.spacing.md),
+        ) {
+            if (loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    strokeWidth = 2.dp,
+                )
+            }
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            action?.invoke()
+        }
+    }
+}
+
+@Composable
+private fun AppList(
+    rows: List<AppRow>,
+    classifier: AppClassifier,
+    summaries: Map<String, AppContentSummary>,
+    expanded: Map<String, Boolean>,
+    startInEditNonces: Map<String, String>,
+    memoryCreateFailures: Map<String, Boolean>,
+    addMemoryLocked: Boolean,
+    onToggleExpand: (String) -> Unit,
+    onPickTier: (pkg: String, tier: AppTier) -> Unit,
+    onAddMemory: (String) -> Unit,
+    onOpenFullMemoryEditor: (String) -> Unit,
+    onMemoryPresenceChanged: (String, Boolean) -> Unit,
+    memoryStore: MemoryStore,
+    gate: MemoryEditGate,
+    skillLoader: suspend (String) -> String?,
+    ioDispatcher: CoroutineDispatcher,
+) {
+    val listState = rememberLazyListState()
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = MaterialTheme.closePaw.spacing.lg, vertical = MaterialTheme.closePaw.spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.closePaw.spacing.sm),
+    ) {
+        if (rows.isEmpty()) {
+            item {
+                AppAccessNoticeCard(
+                    title = "No apps match",
+                    message = "Try a different search or filter.",
+                    modifier = Modifier.padding(top = MaterialTheme.closePaw.spacing.sm),
+                )
+            }
+        } else {
+            items(rows, key = { it.info.packageName }) { row ->
+                val pkg = row.info.packageName
+                val isBundledBlocked = classifier.bundledTier(pkg) == AppTier.BLOCKED
+                val summary = summaries[pkg] ?: AppContentSummary.NONE
+                AppRowItem(
+                    row = row,
+                    effectiveTier = classifier.classify(pkg),
+                    isBundledBlocked = isBundledBlocked,
+                    summary = summary,
+                    isExpanded = expanded[pkg] ?: false,
+                    addMemoryLocked = addMemoryLocked,
+                    startInEditNonce = startInEditNonces[pkg],
+                    memoryCreateFailed = memoryCreateFailures[pkg] == true,
+                    onToggleExpand = { onToggleExpand(pkg) },
+                    onAddMemory = { onAddMemory(pkg) },
+                    onOpenFullMemoryEditor = { onOpenFullMemoryEditor(pkg) },
+                    onPickTier = { tier -> onPickTier(pkg, tier) },
+                    onMemoryPresenceChanged = { has -> onMemoryPresenceChanged(pkg, has) },
+                    memoryStore = memoryStore,
+                    gate = gate,
+                    skillLoader = skillLoader,
+                    ioDispatcher = ioDispatcher,
+                )
+            }
+            item { Fleuron() }
+        }
+    }
+}
+
+@Composable
+private fun AppRowItem(
+    row: AppRow,
+    effectiveTier: AppTier,
+    isBundledBlocked: Boolean,
+    summary: AppContentSummary,
+    isExpanded: Boolean,
+    addMemoryLocked: Boolean,
+    startInEditNonce: String?,
+    memoryCreateFailed: Boolean,
+    onToggleExpand: () -> Unit,
+    onAddMemory: () -> Unit,
+    onOpenFullMemoryEditor: () -> Unit,
+    onPickTier: (AppTier) -> Unit,
+    onMemoryPresenceChanged: (Boolean) -> Unit,
+    memoryStore: MemoryStore,
+    gate: MemoryEditGate,
+    skillLoader: suspend (String) -> String?,
+    ioDispatcher: CoroutineDispatcher,
+) {
+    val pkg = row.info.packageName
+    val icon by produceState<ImageBitmap?>(initialValue = null, pkg) {
+        value = row.iconLoader()
+    }
+    val hasContent = summary.hasMemory || summary.hasSkill
+    val effectivelyBlocked = effectiveTier == AppTier.BLOCKED
+    val expansionLabel = appDetailsLabel(row.info.label, isExpanded)
+    val expansionStateDescription = appExpansionStateDescription(isExpanded)
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .foldedPaper(MaterialTheme.shapes.medium),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Column(modifier = Modifier.padding(MaterialTheme.closePaw.spacing.md)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AppIcon(bitmap = icon)
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        // Tap row body (not the trailing slot, not tier chips) to expand.
+                        // Only active when there is something to show — empty rows
+                        // route through the "+ Memory" affordance instead.
+                        .let { base ->
+                            if (hasContent) {
+                                base
+                                    .minimumInteractiveComponentSize()
+                                    .clickable(
+                                        role = Role.Button,
+                                        onClickLabel = expansionLabel,
+                                        onClick = onToggleExpand,
+                                    )
+                                    .semantics {
+                                        contentDescription = expansionLabel
+                                        stateDescription = expansionStateDescription
+                                    }
+                            } else {
+                                base
+                            }
+                        },
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = row.info.label,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        if (isBundledBlocked) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.Outlined.Lock,
+                                contentDescription = "Sensitive app",
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.closePaw.inkFaint,
+                            )
+                        }
+                        if (summary.hasMemory) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            SummaryChip(text = "Memory", testTag = APP_ROW_MEMORY_CHIP_TAG)
+                        }
+                        if (summary.hasSkill) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            SummaryChip(text = "Skill", testTag = APP_ROW_SKILL_CHIP_TAG)
+                        }
+                    }
+                    Text(
+                        text = pkg,
+                        style = MaterialTheme.closePaw.monoSmall,
+                        color = MaterialTheme.closePaw.inkFaint,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (isBundledBlocked) {
+                        Text(
+                            text = "Permanently restricted",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                TrailingSlot(
+                    hasContent = hasContent,
+                    isExpanded = isExpanded,
+                    addMemoryLocked = addMemoryLocked,
+                    onToggleExpand = onToggleExpand,
+                    onAddMemory = onAddMemory,
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            if (isBundledBlocked) {
+                RejectOnlyChip()
+            } else {
+                TierSegmentedSelector(selected = effectiveTier, onPick = onPickTier)
+            }
+            if (memoryCreateFailed) {
+                Spacer(modifier = Modifier.height(10.dp))
+                MemoryCreateFailureCard(
+                    onRetry = onAddMemory,
+                    retryEnabled = !addMemoryLocked,
+                )
+            }
+            AnimatedVisibility(visible = isExpanded && hasContent) {
+                Column {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    AppRowExpansion(
+                        packageName = pkg,
+                        isBlocked = effectivelyBlocked,
+                        showMemoryEditor = summary.hasMemory,
+                        skillLoader = skillLoader,
+                        memoryStore = memoryStore,
+                        gate = gate,
+                        startInEditNonce = startInEditNonce,
+                        onMemoryPresenceChanged = onMemoryPresenceChanged,
+                        onAddMemory = onAddMemory,
+                        addMemoryLocked = addMemoryLocked,
+                        onOpenFullMemoryEditor = onOpenFullMemoryEditor,
+                        ioDispatcher = ioDispatcher,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MemoryCreateFailureCard(
+    onRetry: () -> Unit,
+    retryEnabled: Boolean,
+) {
+    SettingsAlertCard(
+        message = APP_MEMORY_CREATE_FAILED_MESSAGE,
+        tone = AlertTone.Error,
+        icon = Icons.Outlined.Warning,
+        modifier = Modifier.testTag(APP_ROW_MEMORY_CREATE_ERROR_TAG),
+        action = {
+            TextButton(onClick = onRetry, enabled = retryEnabled) {
+                Text("Retry")
+            }
+        },
+    )
+}
+
+@Composable
+private fun TrailingSlot(
+    hasContent: Boolean,
+    isExpanded: Boolean,
+    addMemoryLocked: Boolean,
+    onToggleExpand: () -> Unit,
+    onAddMemory: () -> Unit,
+) {
+    if (hasContent) {
+        val expansionLabel = if (isExpanded) "Collapse app details" else "Expand app details"
+        val expansionStateDescription = appExpansionStateDescription(isExpanded)
+        Surface(
+            onClick = onToggleExpand,
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier
+                .minimumInteractiveComponentSize()
+                .size(32.dp)
+                .semantics {
+                    role = Role.Button
+                    contentDescription = expansionLabel
+                    stateDescription = expansionStateDescription
+                }
+                .testTag(APP_ROW_TRAILING_CHEVRON_TAG),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = if (isExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+    } else {
+        // UI-layer enforcement of the single-writer rule for "+ Memory" — the
+        // action-layer re-check still happens inside the click coroutine, but
+        // disabling here also stops the visible affordance from looking
+        // tappable while a session is open.
+        Surface(
+            onClick = onAddMemory,
+            enabled = !addMemoryLocked,
+            shape = MaterialTheme.shapes.small,
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 1.dp,
+            modifier = Modifier
+                .minimumInteractiveComponentSize()
+                .semantics {
+                    role = Role.Button
+                    contentDescription = "Create app memory"
+                    if (addMemoryLocked) {
+                        stateDescription = "Disabled while memory edits are locked"
+                    }
+                }
+                .testTag(APP_ROW_ADD_MEMORY_TAG),
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val tint = if (addMemoryLocked) MaterialTheme.closePaw.inkFaint
+                else MaterialTheme.colorScheme.onSurface
+                Icon(
+                    imageVector = Icons.Outlined.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = tint,
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "Memory",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = tint,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SummaryChip(text: String, testTag: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = MaterialTheme.shapes.small,
+        tonalElevation = 1.dp,
+        modifier = Modifier.testTag(testTag),
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+@Composable
+private fun AppIcon(bitmap: ImageBitmap?) {
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(MaterialTheme.shapes.small)
+            .background(MaterialTheme.colorScheme.surface),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap,
+                contentDescription = null,
+                modifier = Modifier.size(32.dp),
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.closePaw.inkFaint),
+            )
+        }
+    }
+}
+
+@Composable
+private fun TierSegmentedSelector(
+    selected: AppTier,
+    onPick: (AppTier) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        SegmentChip(
+            label = "Allow",
+            isSelected = selected == AppTier.NORMAL,
+            onClick = { onPick(AppTier.NORMAL) },
+            modifier = Modifier.weight(1f),
+        )
+        SegmentChip(
+            label = "Ask",
+            isSelected = selected == AppTier.CAUTIOUS,
+            onClick = { onPick(AppTier.CAUTIOUS) },
+            modifier = Modifier.weight(1f),
+        )
+        SegmentChip(
+            label = "Reject",
+            isSelected = selected == AppTier.BLOCKED,
+            onClick = { onPick(AppTier.BLOCKED) },
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun RejectOnlyChip() {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Surface(
+            modifier = Modifier.weight(1f),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            shape = MaterialTheme.shapes.small,
+            tonalElevation = 2.dp,
+        ) {
+            Row(
+                modifier = Modifier.padding(vertical = MaterialTheme.closePaw.spacing.sm, horizontal = MaterialTheme.closePaw.spacing.sm),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Lock,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Reject",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun SegmentChip(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .minimumInteractiveComponentSize()
+            .selectable(
+                selected = isSelected,
+                role = Role.RadioButton,
+                onClick = onClick,
+            )
+            .semantics {
+                contentDescription = label
+                selected = isSelected
+                stateDescription = if (isSelected) "Selected" else "Not selected"
+            },
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.surface,
+        shape = MaterialTheme.shapes.small,
+        tonalElevation = if (isSelected) 2.dp else 0.dp,
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(vertical = MaterialTheme.closePaw.spacing.sm, horizontal = MaterialTheme.closePaw.spacing.sm),
+            style = MaterialTheme.typography.labelMedium,
+            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+            else MaterialTheme.colorScheme.onSurface,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+        )
+    }
+}
+
+// --- filter helpers ---
+
+private fun filterRows(
+    rows: List<AppRow>,
+    classifier: AppClassifier,
+    query: String,
+    filter: AppFilter,
+): List<AppRow> {
+    val q = query.lowercase()
+    return rows.filter { row ->
+        val matchesQuery = q.isEmpty() ||
+            row.info.label.lowercase().contains(q) ||
+            row.info.packageName.lowercase().contains(q)
+        if (!matchesQuery) return@filter false
+
+        val pkg = row.info.packageName
+        when (filter) {
+            AppFilter.All -> true
+            AppFilter.Allow -> classifier.classify(pkg) == AppTier.NORMAL
+            AppFilter.Ask -> classifier.classify(pkg) == AppTier.CAUTIOUS
+            AppFilter.Reject -> classifier.classify(pkg) == AppTier.BLOCKED
+        }
+    }
+}

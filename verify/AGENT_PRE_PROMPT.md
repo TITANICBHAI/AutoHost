@@ -1,8 +1,12 @@
 # AutoHost verification agent — pre-prompt
 
+> **Merge note (2026-11-03):** the repo-root `KICKOFF.md`, `HANDOFF.md` §0 and `AGENTS.md` are the current instructions and win over this copy; this folder is the generic verification kit.
+
 You are the implementing **and verifying** agent for AutoHost, a Kotlin Android automation
 platform. Continue the verification epoch; do not start new product phases or invent features.
 The implementation may need narrowly scoped fixes when verification exposes a real defect.
+
+v4 note (2026-11-01): `plan.md` now also contains planned, optional Phases 12–16 and Epoch V (X-07…X-09). Your job is still Epoch V; Phase 12+ code starts only after X-09 is recorded. Follow the verification ladder (ADR-087): tag and tick only at the level a check proved; an emulator run is never real-device-verified.
 
 ## Read the repository before acting
 
@@ -24,7 +28,8 @@ Treat the rest of this file as a starting map, not authority over newer reposito
 
 ## Starting point observed on 2026-10-26 — re-check it
 
-- `docs/PROGRESS.md` reports 1 of 213 tasks verified, 0 of 70 gates verified, 0% verified, and
+- (Merged repo, 2026-11-03: `docs/PROGRESS.md` now reports 4 of 293 tasks and 0 of 94 gate items verified — run `python tools/progress.py` for today's numbers; the next bullet is the 2026-10-26 handoff state.)
+- `docs/PROGRESS.md` reported 1 of 213 tasks verified, 0 of 70 gates verified, 0% verified, and
   59% of code written but unverified. It identifies Phase 0 as blocked; P0-01 awaits device facts,
   P0-02 is complete, and the Phase 0 gates remain open.
 - Its focus text and `HANDOFF.md` / the latest `worklog.md` entry say Phases 1–11 are written and
@@ -71,7 +76,7 @@ history.
 
 - No additional code phases or features. Work only on the verification queue and defects it
   exposes.
-- Android 10 / API 29 is the primary real-device baseline. Keep newer-only paths honest and mark
+- The real-device baseline is the owner's phones in `docs/DEVICES.md` (ADR-095: Realme C3, Android 11 / API 30; Galaxy M31, Android 12 / API 31) — API 29 paths stay UNVERIFIED-on-hardware. Keep newer-only paths honest and mark
   them `UNVERIFIED-on-hardware` where appropriate.
 - Never claim physical-device evidence without actually performing the procedure on the specified
   device. Ask the owner only for required device facts, physical actions, or decisions that change

@@ -1,0 +1,49 @@
+Your phone, on autopilot.
+
+ClosePaw is an AI agent for Android that operates your phone for you. Tell it what you need in plain English — book a ride, catch up on emails, compare prices, summarize a thread — and watch it tap through the apps to get it done.
+
+
+HOW IT WORKS
+
+• Type a task in natural language ("Open Amazon, find the cheapest AirPods Pro")
+• The agent reads your screen, plans the steps, and executes them
+• Watch every tap and swipe through the Smart Capsule overlay
+• Pause or take over at any time
+
+
+FEATURES
+
+• Natural-language task execution across any Android app
+• Smart Capsule — a floating panel that works inside any app, so you never leave your current context
+• Choose your AI provider: OpenAI, OpenRouter, or any OpenAI-compatible endpoint
+• Optional voice input — dictate tasks via Android's built-in SpeechRecognizer (microphone permission requested only when you use it)
+• Real-time action visualization — see exactly what the agent is doing
+• Full control — pause, take over, or stop any task instantly
+• Cross-session memory — the agent remembers what worked
+
+
+PRIVACY BY DESIGN
+
+• No root required
+• No continuous screen recording. The agent does capture point-in-time screenshots when its perception mode requires them (screenshot or hybrid mode) and attaches them to the LLM prompt for that step — never a background video feed.
+• No third-party analytics or telemetry. Session traces and debug logs (which may include screenshots and the text you typed) are written only to on-device storage so you can review what the agent saw; clear them anytime from Settings.
+• Your API key stays on device
+• Screen content goes only to your chosen AI provider, and only during active tasks
+• Open source under Apache 2.0
+
+
+REQUIREMENTS
+
+• Android 12 or later (API 31+)
+• Accessibility service permission (so ClosePaw can read the screen and tap on your behalf)
+• "Display over other apps" permission (for the Smart Capsule overlay)
+• An API key from OpenAI, OpenRouter, or any OpenAI-compatible endpoint you configure (microphone permission only if you want voice input)
+
+
+ABOUT THE ACCESSIBILITY SERVICE
+
+ClosePaw uses Android's Accessibility Service to read screen content and perform actions on your behalf. The service is ONLY active during explicit task execution — it does not monitor your activity in the background, and you can stop any task at any time. This is the same API used by Voice Access, Switch Access, and other assistive Android apps.
+
+
+Source code: https://github.com/imoonkey/closepaw
+License: Apache 2.0

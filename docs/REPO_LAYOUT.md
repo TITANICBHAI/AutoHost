@@ -14,6 +14,7 @@ autohost/
 │                               #   autohost.android.app
 ├─ app/  core/  runtime/  capabilities/  feature/  plugin-sdk/  sdk-python/  testing/
 ├─ samples/  schemas/  docs/  prompts/  tools/  spikes/(P0 only, deleted at Gate 1)
+├─ reference/  drafts/          # v4: findings + verbatim Apache-2.0 snapshots (never on a source set); unpromoted drafts
 ├─ AGENTS.md  plan.md  HANDOFF.md  THIRD_PARTY_NOTICES.md  README.md
 └─ .github/workflows/ (or equivalent CI)  ci.yml: check (tests+ktlint+detekt), APK build, progress --check
 ```
@@ -234,3 +235,24 @@ tests/ …  tests/mcp-evals/*.yaml
 | `plugin-sdk/src/main/aidl/**` | same path (Phase 11) |
 | `sdk-python/autohost/**/*.pyi` | same path |
 | `schemas/*`, `samples/*`, `prompts/*`, `tools/progress.py`, `docs/*`, `AGENTS.md`, `plan.md`, `THIRD_PARTY_NOTICES.md` | same path |
+
+## 7. v4 additions (PLANNED — nothing here exists in the tree unless marked *exists*)
+Source of truth for scope: `plan.md` §7.11, §17 and Phases 12–16; task IDs in `docs/PROGRESS.md`.
+
+| Path | What | Tasks | State |
+|---|---|---|---|
+| `core/llm/` → `:core:llm` (pure JVM) | provider-neutral types, OpenAI-compatible non-streaming codec, URL policy (`BaseUrlValidator`), retry, reason codes, host-key reader seam, `LlmGateway`; the production `HttpUrlConnection` engine is wired in `:app` | P13-01…07 | PLANNED |
+| `runtime/agent/` → `:runtime:agent` (pure JVM, in-process) | loop and budgets, stuck detector, `AppSensitivity`, generated tool catalog, `AgentView`, tool pipeline/policy and approvals, completion verifier, event log | P13-08…P13-17 (the provider glue P13-12 lives in `:app`) | PLANNED |
+| `app/.../AgentRuntimeProvider` | registered beside the flow runtime; started only by the internal "Ask" path in Stage A | P13-12 | PLANNED |
+| `testing/stub-model/stub_model.py` | scripted OpenAI-compatible server reached with `adb reverse` | P13-06 | PLANNED |
+| `testing/agent-evals/` | scenarios with `expect` clauses + recorded baselines | P13-16 | PLANNED |
+| `testing/golden/` | golden vectors (codec, tool catalog) | Phase 13 | PLANNED |
+| `core/designsystem` tokens, `RunCapsule`, `RunCapsuleState` | Phase 14 | P14-01, P14-02 | PLANNED |
+| Gradle flavor dimension `runtime` = `py` \| `lite` | second dimension beside the existing `tier` (`app/build.gradle.kts:24`) | P15-03 | PLANNED |
+| optional `:llm` process module | isolated local inference, **only if spike S6 passes** | P16-02 | PLANNED |
+| `reference/` | findings, verbatim Apache-2.0 snapshots (ClosePaw/opendroid files named in `docs/REUSE_MATRIX.md`), manifests; **never** on any Gradle/Python/test source set; `INDEX.md` lists every file with its licence status | v4 pass | *exists* |
+| `drafts/` | `agent.schema.draft.json` (+ README); promoted by P13-18 or deleted | v4 pass | *exists* |
+| `docs/` new files | `REUSE_MATRIX`, `ACTION_HARDENING`, `AGENT_RUNTIME`, `MODEL_GATEWAY`, `LANGUAGE_WEIGHT`, `LOCAL_INFERENCE`, `MIGRATION`, `VALIDATION_REPORT` | v4 pass | *exists* |
+| `tools/doc_check.py`, `tests/test_doc_check.py` | doc-integrity checker (paths, task/ADR/gate/RM IDs, index) | v4 pass | *exists* |
+
+Rules: the planned modules are **not** added to `settings.gradle.kts` by this pass; modules are added by their tasks after Epoch V (X-09). `:core:llm` keeps `:runtime:agent` free of Android types (no `android.util.Log`, no `org.json`).

@@ -55,3 +55,8 @@ Tool results are text (JSON where structured data helps); `--export-dir` (defaul
 
 ## 5. CLI (`autohost`)
 `push <dir>` · `run <task> [--profile P]` · `logs [-f] [--run ID]` · `ui dump [--compact]` · `ui try '<selector>'` · `screenshot [-o file]` · `pull-run <id> [-o dir]` · `doctor` · `enable-shell` (PC-assisted) · `grant-secure-settings` · `docs --pack [-o dir]` · `mcp` · `sim <task>` · `ui` (web inspector, Phase 11). Exit codes: `0` ok, `1` error, `127` doctor found major issues.
+
+## v4 notes (no new methods; planning pass 2026-11-01)
+- **Grant model vs documentation.** §1 says the synthetic `developer` run token gets grants configured in Settings → Developer → *Dev API grants* (default: observe + act on listed packages; shell/raw disabled). Reading the code, `AppGraph` builds `GrantBuilder(permissionIndex, devMode = true)` (`AppGraph.kt:170`, `:347`), which suggests dev mode grants everything — **PREDICTED from reading, not run** (ADR-098, X-15). Do not rely on the documented restriction until a test pins it.
+- **Agent runs are not startable through the Dev API in Stage A** (internal supervised "Ask" only; `docs/AGENT_RUNTIME.md` §4). If Phase 13 later exposes them, it needs its own ADR, grants and an approval path.
+- The synthetic token does not widen what an agent run may do: agent runs use their own run token and the shipped grant model (G13-c requires it).

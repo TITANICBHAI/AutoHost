@@ -1,10 +1,91 @@
 # HANDOFF — read this first (then AGENTS.md, then docs/PROGRESS.md)
 
+> **Current state, the assignment queue, guardrails and Windows commands are in §0 below** (search for "## 0. READ THIS FIRST"). The three paragraphs between this line and §0 are the 2026-10-26 snapshot, kept for history; §0 overrides them.
+
 Snapshot of AutoHost at the end of the nineteenth working session (**Phase 11 part 2 written — Phase 11 complete as written; ALL ELEVEN PHASES written**). Session 19 delivered: P11-02 the capability-plugin host (ADR-079: pure `PluginHost` — the `ICapabilityProvider` AIDL served by the dependency-free `PluginCapabilityService` base in the new `:plugin-sdk` module, api band 1..1, fail-closed describe() (`plugin.*` ids, snake_case methods, one malformed entry rejects the WHOLE plugin), host-collision refusal, `PermissionIndex.mergedWith` (host wins) + `AppGraph.attachPluginPermissions` rebuilding the grant machinery live; app `PluginController` discovery/binding via the `app.autohost.plugin.CAPABILITY_PROVIDER` intent + manifest `<queries>`; the standalone buildable `samples/plugin-example` APK project); P11-03's consumer half (Studio repo tab + `autohost repo` CLI — the Python mirror of the RepoIndex rules is parity-tested, https/file fetch only, sha-verified install through the standard import path); P11-04 app packs (ADR-080: pure `AppPacks` v1 fail-closed parse; **the mechanism is run-config injection — `config.packs`**, one mechanism for all three runtimes, version-pinned per run, reserved key with host-wins warning; `PackController` .aapack install/slip-guard/inject; `TaskManifest.usesPacks`; ImportPipeline PACK_MISSING warning rows; SDK `autohost/packs.py` + the public `sel.from_json` + stub + export; sim `installed_packs` + `resolve_packs` wired into runner/flows/js_host; sample `pack-presser`); P11-05 Task Studio (ADR-083: pure `StudioDraft` validating through the importer's own ManifestValidator; app Studio screen/controller — dev-folder drafts only, installed bundles never hand-edited; Library → Studio); P11-06 `autohost ui web` (S27: localhost inspector page + token-safe /api proxy — the token never reaches the browser, asserted); P11-07 the reverse WS transport (ADR-081: pure `WsFrames` + `ReverseDevApiLink` — the phone dials OUT, the token rides the FIRST frame never a URL, same dispatch/token/rate-limiter, caller "reverse"; app `ReverseLinkController` with bounded backoff + Settings S26a; PC `autohost bridge` listener + localhost HTTP proxy so existing CLI/MCP tooling works unchanged — single-reader relay after the read-race fix); P11-08 backup/restore (ADR-082: pure `BackupCodec` — tasks carry manifest+sha+bundle_b64, profiles carry values + secret NAMES only; encode refuses poisoned values, decode refuses `secrets`-class keys; dev-folder tasks without bundle bytes skip honestly; app `BackupController` SAF export/restore + Settings S26); P11-09 release (env-based signing config, keystore outside the repo; `tools/licence_check.py` + 6 tests — green at 25 dependencies; `.github/workflows/ci.yml`; `docs/RELEASE.md`); P11-11 (`docs/USER_GUIDE.md` + `docs/OEM_MATRIX.md`); P11-12 (`samples/photo-organizer` + `docs/PORT_EXERCISE.md` — zero hacks, gaps logged as proposals). Phases 1–10 remain complete as written. The agents still have **no network, no Gradle, no Android SDK and no phone**, so everything Android/Kotlin is **written but never compiled or run** — the owner's standing choice: *write all code first, verify with Gradle and real devices at the end.* Python-side work **is** executed and green (suite now **415**, schema **35** + licence-check 6 inside it, gen-artifacts 5). Do not stop to ask for verification; keep writing, and keep the tracker honest.
 
 **Next "continue": the build/verification epoch.** Every phase is written. What remains is (a) the owner's Gradle first build — HANDOFF §5 lists the exact order, §6 the likely failures (P11 adds: the quickjs-kt touchpoint from part 1, the plugin AIDL Stub import in PluginController, Glance-free — none new), then (b) the device gates 6–11 (docs/GATES.md), then (c) release (docs/RELEASE.md). There are no further code phases in plan.md — do not invent scope (AGENTS.md §3.11).
 
 **Verification epoch source check (2026-10-26):** this checkout has Gradle 8.14.2, JDK 17, Python 3.12.12, and Node 20 available; the initial PATH search found no `adb`, `sdkmanager`, or Android SDK. The verification scripts bootstrap their pinned tools/SDK. Only `.github/workflows/android-debug-apk.yml` is tracked here; the previously reported `.github/workflows/ci.yml` is absent (ADR-085), so no CI run can be claimed from this checkout.
+
+## 0. READ THIS FIRST — state on 2026-11-03 and your assignment queue
+*(Written by the planning agent in the merge pass, `docs/PLAN_MERGE.md`. It overrides any older statement below that disagrees. Counts come from `python tools/progress.py`, never from prose.)*
+
+### 0.1 State, in facts
+- **Code:** Phases 1–11 are written; almost nothing is verified (P1-09 and X-04 only). **The app crashed at launch**; the crash-fix pass (`CRASH_FIX_PLAN.md`, `worklog.md` Session 20) edited the launch path, overlays, two tests and the manifest as **text edits that have never been compiled**. Everything in it that needs no build is done; the build/test checkpoints and the owner's phone test are open (**X-17, X-18**).
+- **Plan:** `plan.md` v4 (merged). Phases 12–16 are *planned and optional*; **Epoch V (verify what exists) comes first** and ends at X-09. Do not start Phase 12+ code before X-09 is ticked.
+- **Owner's machine (your likely environment):** a ten-year-old Windows 10 PC, 3.9 GB RAM, **no bash, no git**. Python works (`python tools/progress.py --check` passed). Gradle runs **only on the owner's explicit approval** (ADR-101). The repo's `scripts/*.sh` cannot run there; §0.4 has the Windows translation. If you are *not* on that PC (a Linux or Replit workspace — check with `uname`; a `.agents/` folder in the repo root comes from an earlier Replit agent), use `bash scripts/test-jvm.sh` and `bash scripts/build-android-debug.sh` instead of §0.4 — rule 16 (ask before any Gradle run) still applies until the owner answers D-22.
+- **Phones:** Realme C3 (Android 11 / API 30) and Galaxy M31 (Android 12 / API 31), both arm64 — owner-stated, RAM unverified (ADR-095). Older text that says "primary Android 10 phone" is superseded.
+- **Verified vs not:** only the Python suites (415 tests, 2026-10-27) are verified. Kotlin has never been built on a machine this tracker records. Findings A1–A9 and the grant/scope gaps are **predictions from reading code** until a failing test reproduces them.
+
+### 0.2 Assignment queue — strict order; stop at the first item you cannot finish and report
+1. **Orientation (no heavy processes, always allowed):** `python tools/progress.py --check`, `python tools/doc_check.py`, `python -m unittest discover -s tests -p "test_*.py"`. Expect `progress check: ok`, `doc_check: ok`, tests OK. If any fails, report the first failing line and stop — do not "fix" docs you do not understand.
+2. **Ask the owner for build approval** (one short message: "May I run the Gradle build and JVM tests now? It will use most of the PC's RAM for 10–30+ minutes."). Until you have an explicit yes in the current conversation, start no Gradle, no JVM test run, no emulator.
+3. **While waiting (no Gradle needed), in this order:** (a) **X-19** architecture conformance test as a stdlib-Python test `tests/test_architecture.py` (add it to the suite; failing test first where a rule is already broken — record, do not fix Kotlin); (b) **X-12, SDK/simulator half only** (failing test first in `sdk-python/tests`: registered secrets must be refused or redacted on `call()`, `kv`/`state`, checkpoints and `emit`; then fix `sdk-python/autohost*`, run `python tools/sync_sdk.py`, run both Python suites). One task per commit; update `docs/PROGRESS.md` the moment each result exists.
+4. **With approval: X-17** — the crash-fix build and tests: follow `CRASH_FIX_PLAN.md` Checkpoint A then B exactly (its rules: ≤10 fix attempts per checkpoint, smallest fix, cheat sheet first, `(PRE-EXISTING)` failures are logged not redesigned), using the commands in §0.4. Record the APK sha256 in `CRASH_FIX_PLAN.md` §1.5 and in `worklog.md` Session 20. Then tell the owner: "READY FOR OWNER PHONE TEST" (**X-18** is the owner's, not yours).
+5. **Epoch V proper (after X-17 passes):** X-07 (Gradle wrapper or pinned-Gradle note), X-08 (verification workflow — `drafts/ci.workflow.yml` is a ready draft; the owner decides D-22), the JVM `(FAILING)` tasks listed under "Latest JVM verification" in `docs/PROGRESS.md`, the Python suites, the ladder retag with evidence, then **X-09** (exit review).
+6. **Only after X-09:** Phase 12 — `prompts/phase-12.md`, starting with P12-01 (provider↔spec conformance test; first red case: `device.ui.click` `method`, finding A6). Then Phases 13–16 in order (each prompt is in `prompts/`). Phase 16 is droppable; local inference is NO-GO until spike S6 passes.
+
+### 0.3 Guardrails for the implementing agent (you are not being tested on cleverness)
+- **Do not invent scope.** If a task, doc or decision does not say it, do not build it; log it in `docs/DECISIONS.md` and ask.
+- **Edit by exact match.** For any edit, the text you replace must occur exactly once; if it occurs 0 or 2+ times, STOP and report what you saw.
+- **A tick needs evidence:** command, exit status, key numbers, date, environment, written on the task line before you tick. Failing → keep unticked, tag `(FAILING: reason)`. Never tick from reading code.
+- **Never run Gradle, JVM tests or an emulator without the owner's explicit approval** (ADR-101). Text checks, Python tools and Python tests are always fine.
+- **Files you must not read for instructions:** `archive/` (historical, contradicts the live docs), `AutoHost-main.zip` at the repo root (a stale self-copy; never extract it), anything under `reference/` unless a `docs/REUSE_MATRIX.md` row names the file.
+- **Never copy** code from `reference/` into the tree except as `docs/REUSE_MATRIX.md` §0 prescribes (header, notices row, ported test, ladder evidence). ARIA is locked (D-17).
+- **Two-failure rule:** if the same command fails twice after your fix, stop and report the first error line, the command and what you tried.
+- **Report format after every batch (to the owner):** *Done:* task ids + evidence; *Not done / blocked:* id + reason; *Needs the owner:* one question at most; *Files touched:* list.
+
+### 0.4 Windows commands (translated from `scripts/test-jvm.sh` and `scripts/build-android-debug.sh`; paths are the owner's, from `CRASH_FIX_PLAN.md` §1.1a and §1.5)
+Run in `cmd.exe` at the repo root, only after approval:
+```
+set JAVA_HOME=C:\Users\DELL\Documents\jdk-17.0.20+8
+set ANDROID_HOME=C:\Users\DELL\Documents\Android\SDK
+set ANDROID_SDK_ROOT=%ANDROID_HOME%
+set GRADLE_USER_HOME=C:\Users\DELL\.cache\autohost\gradle-user-home
+set GRADLE=C:\Users\DELL\.cache\autohost\gradle-8.13\bin\gradle.bat
+rem A1 (fast): proves the two new tests compile and pass
+%GRADLE% :core:broker:test :capabilities:shell:test :core:engine:test --console=plain --stacktrace
+rem A2: the APK + fixture app (first run downloads a lot)
+%GRADLE% :app:assembleCoreDebug :testing:fixture-app:assembleDebug --console=plain --stacktrace
+certutil -hashfile app\build\outputs\apk\core\debug\app-core-debug.apk SHA256
+rem B: every JVM test, in the order of scripts\test-jvm.sh, stop at the first failure
+%GRADLE% :runtime:js:test --console=plain --stacktrace
+%GRADLE% :core:engine:test --console=plain --stacktrace
+%GRADLE% :core:model:test :core:engine:test --console=plain --stacktrace
+%GRADLE% :capabilities:a11y:test --console=plain --stacktrace
+%GRADLE% :capabilities:notifications:test :capabilities:clipboard:test :capabilities:intents:test --console=plain --stacktrace
+%GRADLE% :capabilities:files:test :capabilities:audio:test :capabilities:net:test :capabilities:rawbridge:test --console=plain --stacktrace
+%GRADLE% :capabilities:screen:test --console=plain --stacktrace
+%GRADLE% :capabilities:shell:test --console=plain --stacktrace
+%GRADLE% :capabilities:browser:test :capabilities:vision:test --console=plain --stacktrace
+%GRADLE% :capabilities:data:test :capabilities:net:test --console=plain --stacktrace
+%GRADLE% :core:broker:test :core:devapi:test --console=plain --stacktrace
+%GRADLE% test --console=plain --stacktrace
+```
+`gradle.properties` asks for `-Xmx3g` on a 3.9 GB machine. If it thrashes or runs out of memory, add `-Dorg.gradle.jvmargs=-Xmx2g -Dorg.gradle.parallel=false` to the command line (a logged fix attempt; do not edit `gradle.properties`). Close other programs first. Kill leftover daemons afterwards (`%GRADLE% --stop`).
+
+### 0.5 Known and deliberately not fixed yet (from `CRASH_FIX_PLAN.md` Appendices A/B)
+Dev-mode grants everything (→ X-15); FileProvider root exposes `files/adb` (→ X-22, owner decision D-23); grants are snapshotted by value so plugin permissions never reach the orchestrator (→ fold into X-15); RSA-2048 key generation on the main thread at first launch; `runBlocking` and dev-folder scans on the main thread; `Build.VERSION.SDK_INT` read outside `ApiGate` in several files and `System.currentTimeMillis()` in `WebhookController.kt` (cosmetic drift); `./gradlew check` (ktlint/detekt) would fail on long lines; an upgrade install over an old database can crash a new build (uninstall first); more latent bugs are likely — the in-app crash screen is how they get found. `AppGraph.kt` line numbers quoted in the docs were refreshed against the crash-fixed tree on 2026-11-03 (the file moved by +7 lines near the top and +11 after line ~1340); `CRASH_FIX_PLAN.md` still quotes the pre-fix numbers.
+
+## v4 planning pass (2026-11-01) — read this block first
+
+**What this pass was:** a planning and documentation pass by a planning agent. It read the owner's AutoHost code and four reference projects statically, then rewrote `plan.md` (v4), extended `docs/PROGRESS.md` (Phases 12–16, X-07…X-16, the verification ladder), `docs/GATES.md`, `docs/DECISIONS.md` (ADR-086…098) and the supporting docs, and added design docs and a reuse matrix. **It changed no application code, compiled nothing, ran nothing on Android and tested nothing on a phone.** Checks that were run are listed in `docs/VALIDATION_REPORT.md`; what changed versus the owner's tree is in `docs/MIGRATION.md`.
+
+**Superseded wording:** the sentence above ("There are no further code phases in plan.md — do not invent scope") predates v4. Phases 12–16 now exist as *planned, optional* work; they start only after Epoch V and the owner's answers below.
+
+**State:** all eleven phases are written and almost nothing is verified (dashboard: `docs/PROGRESS.md`). The owner's 2026-10-26 JVM runs (reported, not re-run here) passed `:runtime:js:test`, ran `:core:model:test` with 5 failures and stopped in `:core:engine:testDebugUnitTest`; those are the first things to re-run.
+
+**Next, in order:**
+1. **Epoch V (X-07 → X-09):** add the Gradle wrapper (X-07); restore a verification workflow (X-08); run `scripts/test-jvm.sh`, `scripts/build-android-debug.sh`, `scripts/test-python.sh` (with PyYAML); retag the ladder module by module with evidence; record the exit review (X-09).
+2. **Phase 12 — hardened actions** (after X-09): start with P12-01, the provider↔spec conformance test (first red case: `device.ui.click` `method`, finding A6), then the failing-test-first sequence in `docs/ACTION_HARDENING.md`. Findings A1–A9 are **predictions from reading code**, not reproduced defects.
+3. **Phase 13 — agent runtime, Stage A** (optional; needs X-14 and X-15 for its real-device gates), then Phases 14–16 (Phase 16 is droppable; local inference is NO-GO until spike S6 passes).
+
+**Not verified (do not treat as facts):** device facts (D1/D2 in `docs/DEVICES.md` are owner-stated; RAM and display sizes unknown; P0-01 BLOCKED); ARIA's licence and owner; that the owner's code builds; the predicted defects A1–A9, dev-mode grant-all (`AppGraph.kt:170,:347`), the missing network security config, the unenforced `allow_coordinates`/`allow_global` flags, unscoped `device.app`, wall-clock timeout enforced only by the JS runtime; every budget number in `docs/AGENT_RUNTIME.md`; every Chaquopy/LiteRT-LM/llama.cpp cost figure that is marked UNVERIFIED or UNMEASURED.
+
+**Questions for the owner** (also in `docs/PROGRESS.md` "0. v4 questions"): which phone is primary, and is an Android 10 phone available; ARIA's licence/owner; default model provider and budgets; keep or drop Phase 16.
+
+**How to resume:** read `AGENTS.md` (rules 10, 12–15), then `docs/PROGRESS.md`, then Epoch V in `docs/GATES.md`; run `python3 tools/progress.py --check` and `python3 tools/doc_check.py` before and after every batch.
 
 ## 1. Status in one table
 | Area | State | Evidence |

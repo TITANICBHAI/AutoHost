@@ -1,0 +1,147 @@
+# Virtual Display Platform
+
+> Shizuku-based virtual display implementation for isolated app execution.
+> -> See: [platform.md](platform.md) for AndroidPlatform interface and AccessibilityPlatform.
+> Last updated: 2026-05-26 (VD task cleanup before display release)
+
+## Architecture
+
+> See: `platform/virtualdisplay/VirtualDisplayPlatform.kt`
+
+```
+VirtualDisplayPlatform (orchestrator)
+├── VdLifecycleArbiter                 # State machine + concurrency arbiter
+├── VirtualDisplayWindowAccessor       # A11y window/root filtered by displayId
+├── NodeActionPerformer                # Shared node actions (root via WindowAccessor)
+├── VirtualDisplayInputInjector        # Input injection (reflection + shell fallback)
+├── VirtualDisplayCaptureCoordinator   # A11y tree + screenshot capture
+├── VirtualDisplaySurfaceController    # Surface switching (ImageReader ↔ SurfaceView)
+├── VirtualDisplayScreenshotProcessor  # Bitmap → ScreenImage + trace
+├── VirtualDisplayAppController        # App launch on VD
+├── VirtualDisplayViewerTouchHandler   # Forward viewer touch to VD
+├── ActionVisualizerManager            # Optional real-screen touch feedback
+└── ShizukuClient                      # Binder wrapper (display, input, activity-task)
+```
+
+## Lifecycle State Machine
+
+> See: `platform/virtualdisplay/VdLifecycleArbiter.kt`
+
+All VD operations go through `VdLifecycleArbiter`, which serializes lifecycle transitions and protects in-flight operational calls.
+
+### States
+
+| State | Description |
+|-------|-------------|
+| `Stopped` | No display. Initial and final state. |
+| `Running(displayId, imageReader)` | Display active, operational calls allowed. |
+| `Draining(displayId, imageReader)` | Transient during stop: rejects new leases but keeps resources accessible for in-flight ops. |
+| `Broken(reason, displayId, imageReader)` | Unrecoverable error (binder death). Carries resources for cleanup. |
+
+### Concurrency Model
+
+- **Lifecycle transitions** (`start`, `stop`, binder death): Take exclusive access via `lifecycleMutex`. `stop()` transforms state to `Draining` via `preDrainTransform` — this rejects new leases while keeping `displayId`/`imageReader` accessible for in-flight ops through providers.
+- **Operational calls** (`captureScreen`, `performAction`, `launchApp`): Run under `withRunningLease` — increment atomic counter, check state is `Running`, execute, decrement. Lifecycle transitions wait for in-flight ops to drain (5s timeout).
+- **Binder death**: `markBroken()` is an emergency transition outside the mutex. Preserves `displayId` and `imageReader` from `Running` or `Draining` state for later cleanup.
+- **Providers**: `displayIdProvider` and `imageReaderProvider` read from both `Running` and `Draining` states, returning `INVALID_DISPLAY`/`null` only for `Stopped` and `Broken`.
+
+### start() Rollback
+
+If any step after VD creation fails (binder listener, state transition), `start()` rolls back: removes listener, releases display, closes reader, clears proxies, resets to `Stopped`. If called from `Broken`, cleans up the old resources before allocating new ones.
+
+## Hybrid Surface Model
+
+`VirtualDisplaySurfaceController` manages two modes:
+
+| Mode | Surface | Capture Method | When |
+|------|---------|----------------|------|
+| `IMAGE_READER` | `ImageReader` | `acquireLatestImage()` | Default — agent operating or viewer hidden |
+| `LIVE_PREVIEW` | `SurfaceView` from viewer | `PixelCopy.request()` | Viewer visible — user watching live |
+
+- `switchToLivePreview(surfaceView)` redirects VD output to viewer's `SurfaceView`. Allows surface replacement if the viewer is recreated. Resets PixelCopy fail counter on every successful switch.
+- `switchToImageReader()` reverts to `ImageReader` surface
+- `PixelCopy` fallback: after 2 consecutive failures, auto-reverts to `IMAGE_READER`
+- `PixelCopy` timeout: bitmap is NOT recycled (framework may still write); explicit failure recycles safely
+
+## Bounded Callbacks
+
+> See: `platform/BoundedCallback.kt`
+
+All callback-driven framework APIs use `boundedCallback()` — a shared helper that wraps `suspendCancellableCoroutine` with `withTimeoutOrNull` and `invokeOnCancellation` cleanup.
+
+| API | Timeout | Cleanup |
+|-----|---------|---------|
+| `takeScreenshot` | 5s | Late callback closes `HardwareBuffer` |
+| `takeScreenshotOfWindow` | 5s | Late callback closes `HardwareBuffer` |
+| `PixelCopy.request` | 3s | None (PixelCopy has no cancellation API) |
+
+## Input Injection
+
+> See: `platform/virtualdisplay/VirtualDisplayInputInjector.kt`
+
+Before injected touch actions, `VirtualDisplayPlatform` emits the shared action visualizer on the
+real screen: click/tap/long-press draw a ripple and raw `Swipe` draws a trail. This is intentionally
+outside `VirtualDisplayInputInjector`; the injector owns transport only, while the platform owns
+user-visible feedback and action dispatch ordering.
+
+### Primary Path: MotionEvent + setDisplayId
+
+Events are constructed via `MotionEvent.obtain()` and targeted to the VD via `InputEvent.setDisplayId()` (hidden API, reflection). A round-trip verification test runs once on first use: sets displayId=42, reads it back. If verification fails, falls back to shell.
+
+### Shell Fallback: `input -d <displayId>`
+
+When `setDisplayId` reflection doesn't work (HiddenApiBypass failure on some ROMs), all injection methods fall back to shell commands via Shizuku:
+
+| Action | Shell Command |
+|--------|---------------|
+| Tap | `input -d <id> tap <x> <y>` |
+| Long press | `input -d <id> swipe <x> <y> <x> <y> <duration>` |
+| Swipe | `input -d <id> swipe <x1> <y1> <x2> <y2> <duration>` |
+| Key event | `input -d <id> keyevent <keycode>` |
+
+### Cancellation Safety
+
+Long-press and swipe track gesture ownership after `ACTION_DOWN`. On cancellation or mid-gesture failure, `sendBestEffortCancel()` sends `ACTION_CANCEL` to release the target UI from pressed/dragging state.
+
+## Window Selection
+
+> See: `platform/virtualdisplay/VirtualDisplayWindowAccessor.kt`
+
+- **Single-root** (`getRootOnDisplay`): Picks topmost (highest-layer) `TYPE_APPLICATION` window, excluding overlays and IME. Used by `NodeActionPerformer` and `getCurrentPackageName()`.
+- **Multi-root** (`getRootsOnDisplay`): All non-overlay/non-IME windows sorted by layer ascending (bottom-to-top for capture ordering).
+- **Accessibility side** (`AccessibilityPlatform`): Same topmost-window policy for `getCurrentPackageName()`. Screenshot targets the topmost window ID.
+
+## Display Metrics
+
+> See: `platform/virtualdisplay/VirtualDisplayConfig.kt`
+
+`fromPhysicalDisplay()` uses `WindowManager.maximumWindowMetrics.bounds` (API 31+) for full physical display dimensions including nav bar and cutout. Pre-API 31 falls back to `getRealMetrics()`.
+
+## Resource Cleanup
+
+- `clearCachedProxies()` called during `stop()`, binder death, and `start()` rollback
+- `stop()` resets the VD surface, removes root tasks currently on the VD display via
+  `IActivityTaskManager.getAllRootTaskInfosOnDisplay(displayId)` + `removeTask(taskId)`,
+  then releases the virtual display. Cleanup is display-scoped and best-effort; failures log
+  and teardown continues.
+- `getCurrentPackageName()` recycles root node on both platforms
+- `isKeyboardVisibleOnMainDisplay()` recycles all window objects
+- Debug screenshots capped at 20 files (both accessibility and VD paths)
+
+## ShizukuClient
+
+> See: `platform/virtualdisplay/ShizukuClient.kt`
+
+Thin wrapper for privileged Shizuku binder calls:
+
+| Method | Underlying API |
+|--------|---------------|
+| `createVirtualDisplay(...)` | `IDisplayManager.createVirtualDisplay()` (API 33+ `VirtualDisplayConfig` vs legacy) |
+| `releaseVirtualDisplay(displayId)` | `IDisplayManager.releaseVirtualDisplay()` |
+| `setVirtualDisplaySurface(displayId, surface)` | `IDisplayManager.setVirtualDisplaySurface()` |
+| `injectInputEvent(event, mode)` | `IInputManager.injectInputEvent()` |
+| `removeRootTasksOnDisplay(displayId)` | `IActivityTaskManager.getAllRootTaskInfosOnDisplay()` + `removeTask()` |
+| `clearCachedProxies()` | Clears proxy provider + display transport caches |
+| `bypassHiddenApis()` | `HiddenApiBypass` for `setDisplayId()` and `ServiceManager` |
+
+Supporting files: `ShizukuServiceProxyProvider`, `ShizukuDisplayTransport`, `ShizukuInputTransport`, `ShizukuActivityTaskTransport`, `ShizukuActivityLauncher`, `ShizukuShellExecutor`, `ShizukuRuntimeGateway`.

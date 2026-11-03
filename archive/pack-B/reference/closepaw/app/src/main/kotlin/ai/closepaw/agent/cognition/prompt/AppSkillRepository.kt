@@ -1,0 +1,50 @@
+package ai.closepaw.agent.cognition.prompt
+
+import ai.closepaw.agent.cognition.skills.SkillFrontmatterParser
+import android.content.res.AssetManager
+import android.util.Log
+import java.io.FileNotFoundException
+import java.io.IOException
+
+internal interface AppSkillRepository {
+    fun load(packageName: String): String?
+}
+
+internal object EmptyAppSkillRepository : AppSkillRepository {
+    override fun load(packageName: String): String? = null
+}
+
+internal class AssetAppSkillRepository(
+    private val assets: AssetManager
+) : AppSkillRepository {
+
+    override fun load(packageName: String): String? {
+        val normalizedPackage = packageName.trim()
+        if (!PACKAGE_NAME_REGEX.matches(normalizedPackage)) {
+            return null
+        }
+
+        val assetPath = "$APP_SKILLS_ROOT/$normalizedPackage/SKILL.md"
+        val content = try {
+            assets.open(assetPath).bufferedReader().use { it.readText() }
+        } catch (_: FileNotFoundException) {
+            return null
+        } catch (e: IOException) {
+            Log.w(TAG, "Failed to load app skill: $assetPath", e)
+            return null
+        }
+
+        val parsed = SkillFrontmatterParser.parse(content)
+        if (parsed == null) {
+            Log.w(TAG, "Malformed or missing frontmatter in app skill: $assetPath")
+            return null
+        }
+        return parsed.body.ifEmpty { null }
+    }
+
+    companion object {
+        private const val TAG = "AssetAppSkillRepo"
+        private const val APP_SKILLS_ROOT = "app_skills"
+        private val PACKAGE_NAME_REGEX = Regex("^[A-Za-z0-9_]+(?:\\.[A-Za-z0-9_]+)+$")
+    }
+}

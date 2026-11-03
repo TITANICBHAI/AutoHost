@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autohost.app/schemas/drafts/agent.schema.draft.json",
+  "title": "DRAFT \u2014 AutoHost task manifest `agent` block (Stage B, not wired in)",
+  "description": "DRAFT, derived only from docs/AGENT_RUNTIME.md section 4.2 (config.agent) and section 15 (Stage B sketch). Not referenced by schemas/task.schema.json, ManifestValidator or any generator; promoted in P13-18 after the Stage-A gates pass on a real device. All numbers are placeholders. Semantics the draft cannot express (tools must be a subset of the generated catalog; budgets may only tighten host ceilings; unattended runs need verify, declared budgets and a visible Stop notification) are enforced by the future validator and preflight, not by this file.",
+  "type": "object",
+  "required": [
+    "goal",
+    "supervised"
+  ],
+  "additionalProperties": false,
+  "patternProperties": {
+    "^x-": {}
+  },
+  "properties": {
+    "goal": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The task the model is asked to do; may be templated from the task's config (templating syntax UNDECIDED, P13-18)."
+    },
+    "supervised": {
+      "type": "boolean",
+      "description": "true = a human confirms completion (ui.prompt.ask confirm). false = unattended: requires budgets and verify."
+    },
+    "tools": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "description": "Names from the generated tool catalog (AGENT_RUNTIME section 6); may only narrow the default set. Uniqueness and catalog membership are checked by the validator."
+    },
+    "packages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+$"
+      },
+      "description": "Android package names that scope the package-scoped grants. Whether a task declares them here or through the existing manifest grant mechanism is UNDECIDED (P13-18, X-15)."
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "May only tighten the host ceilings (AGENT_RUNTIME section 7). Placeholder defaults live in the host, not here.",
+      "properties": {
+        "max_turns": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_wall_clock_s": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_model_calls": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_total_tokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_output_tokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_actions": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_consecutive_failures": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_nodes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_chars": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "screenshots": {
+          "type": "boolean",
+          "description": "Default false; a screenshot leaves the device only if the user enabled it for the provider (plan 14.7)."
+        }
+      }
+    },
+    "confirm_timeout_s": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Supervised confirmation window (placeholder 120)."
+    },
+    "verify": {
+      "type": "object",
+      "description": "Host-evaluated completion checks (selector/state checks through broker reads after finish). Structure UNDECIDED \u2014 to be fixed in P13-18; required when supervised is false."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "supervised": {
+            "const": false
+          }
+        },
+        "required": [
+          "supervised"
+        ]
+      },
+      "then": {
+        "required": [
+          "budgets",
+          "verify",
+          "tools"
+        ]
+      }
+    }
+  ]
+}

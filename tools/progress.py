@@ -12,25 +12,41 @@ import argparse, html, pathlib, re, sys
 SIZE_W = {"S": 1, "M": 2, "L": 4}
 GATE_W = 2
 ITEM = re.compile(r"^- \[(?P<x>[ xX])\] \*\*(?P<id>.+?)\*\*\s*(?P<rest>.*)$")
-SIZE = re.compile(r"\[(S|M|L)\]\s*$")
+SIZE = re.compile(r"\[(S|M|L)\]")  # the LAST marker on the line wins; tags may follow it
 EVID = re.compile(r"^\s+-\s+evidence:\s*(.*)$", re.I)
 PHASE = re.compile(r"^##\s+Phase\s+(\d+)\s*[—-]\s*(.*)$")
 H2 = re.compile(r"^##\s+(.*)$")
 START, END = "<!-- DASHBOARD:START -->", "<!-- DASHBOARD:END -->"
 PLACEHOLDERS = {"", "tbd", "todo", "...", "…", "_", "n/a?"}
 
+# Verification ladder (ADR-087). An unticked item climbs by carrying ONE state tag; the tick is the top rung.
+#   planned (no tag) < implemented (WRITTEN) < compiled < unit-tested < integration-tested < verified ([x])
+# "real-device-verified" is not a rung: it is a tick on an item whose text says "(real device)".
+STATE_TAGS = (("implemented", "(WRITTEN)"), ("compiled", "(COMPILED)"),
+              ("unit-tested", "(UNIT-TESTED)"), ("integration-tested", "(INTEGRATION-TESTED)"))
+LADDER = ("planned", "implemented", "compiled", "unit-tested", "integration-tested", "verified")
+TAG_TEXT = dict(STATE_TAGS)
+CLAIMS_A_RUN = {"compiled", "unit-tested", "integration-tested"}  # these tags need an evidence line (any size)
+DEVICE_CLAUSE = re.compile(r"device:\s*([^;\n]+)", re.I)
+API_LEVEL = re.compile(r"\bAPI\s*\d{2}\b|\bAndroid\s*\d{1,2}\b", re.I)
+NOT_A_PHONE = re.compile(r"\b(emulator|avd|simulator|simulated|robolectric)\b", re.I)
+
 
 class Item:
     def __init__(self, id_, done, rest, section, line):
         self.id, self.done, self.rest, self.section, self.line = id_, done, rest, section, line
-        m = SIZE.search(rest)
-        self.size = m.group(1) if m else None
+        sizes = SIZE.findall(rest)
+        self.size = sizes[-1] if sizes else None
         self.evidence = None  # None = no evidence line present
         self.kind = ("gate" if re.match(r"^G\d+-", id_) else "cap" if id_.startswith("CAP-")
                      else "cross" if id_.startswith("X-") else "task")
         self.wip = "(WIP)" in rest
         self.blocked = "(BLOCKED" in rest
-        self.written = "(WRITTEN)" in rest
+        self.state_tags = [name for name, tag in STATE_TAGS if tag in rest]
+        self.written = bool(self.state_tags)  # every state tag implies the code exists
+        self.failing = "(FAILING" in rest
+        self.failing_reason = re.search(r"\(FAILING:\s*\S", rest) is not None
+        self.device_class = "(real device)" in rest.lower()
         pm = re.match(r"^[PG](\d+)-", id_)
         self.phase = int(pm.group(1)) if pm else None
 
@@ -41,6 +57,12 @@ class Item:
         return SIZE_W.get(self.size or "S", 1)
 
     @property
+    def level(self):
+        if self.done:
+            return "verified"
+        return max(self.state_tags, key=LADDER.index) if self.state_tags else "planned"
+
+    @property
     def needs_evidence(self):
         return self.kind == "gate" or self.size in ("M", "L")
 
@@ -48,6 +70,20 @@ class Item:
     def has_evidence(self):
         return self.evidence is not None and self.evidence.strip().lower() not in PLACEHOLDERS \
             and not self.evidence.strip().startswith("<")
+
+    @property
+    def device_problem(self):
+        """None when the evidence carries a proper `device:` clause (physical phone + API level), else why not."""
+        if not self.has_evidence:
+            return "real-device item needs 'device:' in its evidence — e.g. device: SM-M315F (arm64-v8a), Android 12 / API 31"
+        m = DEVICE_CLAUSE.search(self.evidence)
+        if not m:
+            return "real-device item needs 'device:' in its evidence — e.g. device: SM-M315F (arm64-v8a), Android 12 / API 31"
+        if NOT_A_PHONE.search(m.group(1)):
+            return "its device clause names an emulator/simulator; a real-device item needs the physical phone"
+        if not API_LEVEL.search(m.group(1)):
+            return "its device clause needs the Android/API level"
+        return None
 
 
 def parse(text):
@@ -86,11 +122,17 @@ def stats(group):
     return done, total, (100 * done / total if total else 0)
 
 
-def written_pct(group):
-    """Share of points whose code is written (ticked or tagged (WRITTEN)); verification is tracked by the tick."""
+def level_pct(group, min_level):
+    """Share of points at `min_level` or higher on the ladder (cumulative: a ticked item counts at every rung)."""
+    idx = LADDER.index(min_level)
     total = sum(i.weight for i in group)
-    w = sum(i.weight for i in group if i.done or i.written)
-    return (100 * w / total if total else 0)
+    n = sum(i.weight for i in group if LADDER.index(i.level) >= idx)
+    return 100 * n / total if total else 0
+
+
+def written_pct(group):
+    """Share of points whose code is written (ticked or any state tag); verification is tracked by the tick."""
+    return level_pct(group, "implemented")
 
 
 def compute(items, titles):
@@ -113,7 +155,7 @@ def compute(items, titles):
         else:
             status = "NOT_STARTED"
         rows.append((p, titles.get(p, ""), status, tasks_done, len(tasks), gates_done, len(gates), pct,
-                     written_pct(grp)))
+                     written_pct(grp), level_pct(grp, "compiled"), level_pct(grp, "unit-tested")))
         overall_items += grp
     cross = [i for i in items if i.kind == "cross"]
     caps = [i for i in items if i.kind == "cap"]
@@ -130,22 +172,31 @@ def dashboard(items, titles):
     blocked = sum(1 for i in items if i.blocked and not i.done)
     cur = next((r for r in rows if r[2] in ("IN_PROGRESS", "GATE_PENDING", "BLOCKED")), None) \
         or next((r for r in rows if r[2] == "NOT_STARTED"), None)
+    counts = {lv: sum(1 for i in allitems if i.level == lv) for lv in LADDER}
+    device_items = [i for i in allitems if i.device_class]
+    device_ok = sum(1 for i in device_items if i.done and i.device_problem is None)
+    failing = sum(1 for i in allitems if i.failing and not i.done)
+    ladder = ("**Ladder (items):** " + " · ".join(f"{lv} {counts[lv]}" for lv in LADDER)
+              + f" · real-device-verified {device_ok}/{len(device_items)} · failing {failing}")
     out = [
         f"**Verified: {opct:.0f}%** (weighted {od}/{ot} points)  {bar(opct, 20)}",
         f"**Code written (unverified): {written_pct(allitems):.0f}%**  {bar(written_pct(allitems), 20)}",
         f"Tasks {sum(i.done for i in tasks)}/{len(tasks)} · Gate items {sum(i.done for i in gates)}/{len(gates)} · "
         f"Capabilities {sum(i.done for i in caps)}/{len(caps)} · WIP {wip} · Blocked {blocked}",
+        ladder,
         f"**Current phase:** {('Phase %d — %s [%s]' % (cur[0], cur[1], cur[2])) if cur else 'all done'}",
         "",
-        "| Phase | Status | Tasks verified | Verified | Written | Gate |",
-        "|---|---|---|---|---|---|",
+        "| Phase | Status | Tasks verified | Verified | Written | Compiled | Tested | Gate |",
+        "|---|---|---|---|---|---|---|---|",
     ]
-    for p, title, status, td, tt, gd, gt, pct, wp in rows:
-        out.append(f"| {p} {title} | {status} | {td}/{tt} | {bar(pct)} {pct:.0f}% | {wp:.0f}% | {gd}/{gt} |")
+    for p, title, status, td, tt, gd, gt, pct, wp, cpl, tst in rows:
+        out.append(f"| {p} {title} | {status} | {td}/{tt} | {bar(pct)} {pct:.0f}% | {wp:.0f}% | {cpl:.0f}% | {tst:.0f}% | {gd}/{gt} |")
     cd, ct, cp = stats(cross) if cross else (0, 0, 0)
-    out.append(f"| X Cross-cutting | – | {sum(i.done for i in cross)}/{len(cross)} | {bar(cp)} {cp:.0f}% | {written_pct(cross):.0f}% | – |")
+    out.append(f"| X Cross-cutting | – | {sum(i.done for i in cross)}/{len(cross)} | {bar(cp)} {cp:.0f}% | "
+               f"{written_pct(cross):.0f}% | {level_pct(cross, 'compiled'):.0f}% | {level_pct(cross, 'unit-tested'):.0f}% | – |")
     kd, kt, kp = stats(caps) if caps else (0, 0, 0)
-    out.append(f"| CAP Capabilities | – | {sum(i.done for i in caps)}/{len(caps)} | {bar(kp)} {kp:.0f}% | {written_pct(caps):.0f}% | – |")
+    out.append(f"| CAP Capabilities | – | {sum(i.done for i in caps)}/{len(caps)} | {bar(kp)} {kp:.0f}% | "
+               f"{written_pct(caps):.0f}% | {level_pct(caps, 'compiled'):.0f}% | {level_pct(caps, 'unit-tested'):.0f}% | – |")
     return "\n".join(out)
 
 
@@ -160,6 +211,24 @@ def validate(items, text):
             errors.append(f"{i.id}: ticked but evidence is missing (line {i.line})")
         if i.done and (i.wip or i.blocked):
             warns.append(f"{i.id}: ticked but still tagged (WIP)/(BLOCKED)")
+        # --- verification ladder (ADR-087) ---
+        if len(i.state_tags) > 1:
+            tags = ", ".join(TAG_TEXT[s] for s in i.state_tags)
+            errors.append(f"{i.id}: more than one state tag ({tags}) — keep only the highest (line {i.line})")
+        claims = [s for s in i.state_tags if s in CLAIMS_A_RUN]
+        if claims and not i.has_evidence:
+            errors.append(f"{i.id}: tagged {TAG_TEXT[claims[0]]} but evidence is missing — record the command, "
+                          f"exit status and environment (line {i.line})")
+        if i.done and i.state_tags:
+            warns.append(f"{i.id}: ticked but still carries a state tag ({TAG_TEXT[i.state_tags[0]]}) — remove it")
+        if i.failing and not i.failing_reason:
+            errors.append(f"{i.id}: (FAILING) needs a reason — write (FAILING: why) (line {i.line})")
+        if i.failing and i.done:
+            errors.append(f"{i.id}: ticked but tagged (FAILING…) — a failing item cannot be done (line {i.line})")
+        if i.done and i.device_class and not (i.needs_evidence and not i.has_evidence):
+            problem = i.device_problem
+            if problem:
+                errors.append(f"{i.id}: {problem} (line {i.line})")
     phases = sorted({i.phase for i in items if i.phase is not None})
     for k in phases:
         gates = [i for i in items if i.phase == k and i.kind == "gate" and i.done]
@@ -190,15 +259,18 @@ summary{cursor:pointer;font-weight:600}li{list-style:none;margin:4px 0}.ev{color
     parts.append(f"<h1>AutoHost — build progress</h1><div class='sub'>Overall {opct:.0f}% ({od}/{ot} points)</div>")
     parts.append(f"<div class='bar' style='width:100%;height:14px'><i style='width:{opct:.0f}%'></i></div>")
     parts.append("<table><tr><th>Phase</th><th>Status</th><th>Tasks</th><th>Progress</th><th>Gate</th></tr>")
-    for p, title, status, td, tt, gd, gt, pct, wp in rows:
+    for p, title, status, td, tt, gd, gt, pct, wp, cpl, tst in rows:
         parts.append(f"<tr class='{status}'><td>{p} — {esc(title)}</td><td><span class='st {status}'>{status}</span></td>"
-                     f"<td>{td}/{tt}</td><td><span class='bar'><i style='width:{pct:.0f}%'></i></span> {pct:.0f}% verified · {wp:.0f}% written</td><td>{gd}/{gt}</td></tr>")
+                     f"<td>{td}/{tt}</td><td><span class='bar'><i style='width:{pct:.0f}%'></i></span> {pct:.0f}% verified · "
+                     f"{tst:.0f}% tested · {cpl:.0f}% compiled · {wp:.0f}% written</td><td>{gd}/{gt}</td></tr>")
     parts.append("</table>")
     def block(title, group):
         d, t, pc = stats(group)
         s = [f"<details><summary>{esc(title)} — {pc:.0f}%</summary><ul style='padding-left:0'>"]
         for i in group:
-            mark = "✅" if i.done else ("⛔" if i.blocked else ("📝" if i.written else ("🟡" if i.wip else "⬜")))
+            mark = ("✅" if i.done else "❌" if i.failing else "⛔" if i.blocked
+                    else {"integration-tested": "🧪", "unit-tested": "🔬", "compiled": "🔧", "implemented": "📝"}
+                    .get(i.level) or ("🟡" if i.wip else "⬜"))
             ev = f"<div class='ev'>evidence: {esc(i.evidence.strip())}</div>" if i.evidence and i.evidence.strip() else ""
             desc = re.sub(r"\s*\[(S|M|L)\]\s*$", "", i.rest)
             s.append(f"<li><span class='t'>{mark}</span><b>{esc(i.id)}</b> {esc(desc)} <span class='sz'>{i.size or ''}</span>{ev}</li>")

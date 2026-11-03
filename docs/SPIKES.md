@@ -100,3 +100,38 @@ providers already behave correctly for the "engine missing / old WebView" outcom
   downgrades to TIMEOUT honestly.
 - **Evidence (paths/links):** PENDING-ON-HARDWARE
 - **Follow-ups / ADRs:** ADR-072 (vision engines + licences); PERF.md row.
+
+---
+
+## v4 spikes (planned 2026-11-01 — measured at the phone; nothing has been run)
+
+### S6 — Local inference feasibility (Phase 16; gates the whole of Phase 16 and any on-device agent loop)
+- **Question:** can a small on-device model run safely and usefully on the Realme C3 (Android 11 / API 30) and the Galaxy M31 (Android 12 / API 31), isolated in an `:llm` process — and is it good enough for helper use or for a UI-agent loop? (Decision: ADR-092; design and evidence: `docs/LOCAL_INFERENCE.md`.)
+- **Setup:** debug build with a throwaway harness under `spikes/s6-local-inference/` (not on any Gradle source set); a LiteRT-LM engine in a bound service with `android:process=":llm"`; one small model per phone chosen by the executor (record file name, size, quantisation, context length, licence status); both phones charged, screen on, no other heavy apps; `adb shell dumpsys meminfo`, `dumpsys thermalservice`, `getprop ro.build.version.release`.
+- **Procedure:** the six criteria of `docs/LOCAL_INFERENCE.md` §5, verbatim: (1) 10 load → 3 prompts → unload cycles, peak PSS and `availMem` before load; (2) force-kill `:llm` during generation, app survives with a typed failure; (3) time-to-first-token and tokens/s at 1 K/2 K/4 K prompt tokens, median and worst of 5; (4) 10-minute continuous run, thermal status reached; (5) 10 fixed extraction/classification prompts, correct count and malformed-JSON count; (6) a 5-step fixture task at the real `AgentView` size inside the agent budgets (separate verdict). Structure borrowed (ideas only, attribution in `THIRD_PARTY_NOTICES.md` if the QA text is adapted): opendroid's QA plan groups checks into environment gate, acquisition, inference, failure and switching.
+- **Results (numbers):** PENDING-ON-HARDWARE
+- **Verdict:** PENDING (PASS helper / PASS helper+agent / FAIL / NO-GO; thresholds are placeholders to be confirmed by the owner)
+- **Fallback chosen (if any):** FAIL or NO-GO ⇒ Phase 16 stays unbuilt (or only the clean-room llama.cpp fallback P16-06 is tried); the agent keeps using the remote gateway.
+- **Evidence (paths/links):** PENDING-ON-HARDWARE (`device: <model>, Android <n> / API <n>` on every line)
+- **Follow-ups / ADRs:** ADR-092; tasks P16-01…P16-08; gates G16-a…G16-d.
+
+### S7 — Overlay indicator and glow: cost and touch-through (Phase 14)
+- **Question:** what do the run capsule overlay and the optional glow cost in frame time and battery on the owner phones, and do they ever swallow injected or real touches meant for the app below?
+- **Setup:** debug build; capsule overlay with the two-window rule (REUSE_MATRIX RM-F4: one touchable window for the capsule, one non-touchable for decoration); fixture app with a scrollable list and a button under the capsule's position; `adb shell dumpsys gfxinfo <pkg> framestats`.
+- **Procedure:** 1) scroll the list for 60 s with the capsule hidden, shown, and shown with glow — frame-time p50/p90/p99 and jank count each; 2) inject a tap at a point under the glow region and under the capsule's non-touchable window — the button under it receives it; 3) the capsule's own Stop button receives a real touch while an injected gesture runs; 4) battery/thermal note over a 10-minute run with glow on (qualitative unless `dumpsys batterystats` is read); 5) TalkBack: capsule state is announced, Stop reachable.
+- **Results (numbers):** PENDING-ON-HARDWARE
+- **Verdict:** PENDING (glow stays default-off regardless; a measurable jank or touch loss ⇒ glow removed, capsule kept)
+- **Fallback chosen (if any):** capsule without glow; status-bar notification only.
+- **Evidence (paths/links):** PENDING-ON-HARDWARE
+- **Follow-ups / ADRs:** ADR-094; tasks P14-01…P14-09; gates G14-c, G14-d.
+
+### S8 — Agent feasibility: does one supervised "Ask" run work end to end? (Phase 13; run BEFORE P13-10)
+- **Question:** through the planned path (compact observation → model tool call → broker action → host-verified completion), does a supervised agent run finish simple tasks on the owner's phones, at what success rate, latency, token count and cost — and does the BLOCKED-app denial behave on the owner's real installed-app list?
+- **Setup:** debug build; the stub model first (deterministic scripted tool calls), then one cloud model of the owner's choice through the gateway of `docs/MODEL_GATEWAY.md` (key in `SecretStore`, `ai_cleartext_loopback` off); the fixture app or Settings; Realme C3 (API 30) and Galaxy M31 (API 31) as available. Run it after Epoch V and the Phase 12 action fixes, so the actions measured are the hardened ones (`docs/ACTION_HARDENING.md`) and the spike does not measure defects A1–A9 instead of the agent.
+- **Procedure:** at least 10 single-step runs per model per phone; per run record the host-verified outcome, steps, wall time, input and output tokens, and cost; then the denial test: ask the agent to open each app of the owner's real installed-app list that the tier policy marks BLOCKED and record false positives and false negatives; compare every measured number with the placeholder budgets in `docs/AGENT_RUNTIME.md`.
+- **Results (numbers):** PENDING-ON-HARDWARE
+- **Verdict:** PENDING (thresholds are placeholders; the owner confirms them. A FAIL reduces Phase 13 to the gateway, approvals and stub runs, or stops it — the owner decides)
+- **Fallback chosen (if any):** the agent stays off; scripts and flows are unaffected.
+- **Evidence (paths/links):** PENDING-ON-HARDWARE (`device: <model>, Android <n> / API <n>` on every line)
+- **Follow-ups / ADRs:** task P13-20; feeds G13-e; ADR-091.
+

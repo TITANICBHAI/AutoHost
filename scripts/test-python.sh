@@ -51,6 +51,7 @@ check_generated_file_unchanged testing/golden/schedule_vectors.json
 echo
 echo "== Licence and MCP checks =="
 run "$PYTHON_BIN" tools/licence_check.py
+run "$PYTHON_BIN" tools/doc_check.py
 run "$PYTHON_BIN" tools/mcp_eval.py
 
 echo "Finished: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"

@@ -1,0 +1,81 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK
+        run: |
+          sdkmanager "ndk;27.1.12297006" "build-tools;35.0.0"
+
+      - name: Create local.properties
+        run: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Cache NDK build outputs
+        uses: actions/cache@v4
+        with:
+          path: app/.cxx
+          key: ndk-${{ runner.os }}-${{ hashFiles('app/src/main/cpp/**') }}
+          # No restore-keys — a stale NDK cache causes linker failures when
+          # llama.cpp adds new Vulkan shader targets (flash_attn etc.) that
+          # the cached ninja build files don't know about.
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Install Vulkan HPP headers and glslc
+        run: |
+          sudo apt-get update -y -q
+          sudo apt-get install -y -q libvulkan-dev glslang-tools
+          # glslc comes bundled with the NDK — add it to PATH so CMake can find it
+          NDK_SHADER_TOOLS="$ANDROID_SDK_ROOT/ndk/27.1.12297006/shader-tools/linux-x86_64"
+          echo "$NDK_SHADER_TOOLS" >> $GITHUB_PATH
+          echo "vulkan.hpp path: $(find /usr/include -name 'vulkan.hpp' 2>/dev/null | head -1)"
+          echo "glslc path: $NDK_SHADER_TOOLS/glslc"
+          ls "$NDK_SHADER_TOOLS/glslc" && echo "glslc OK" || echo "glslc NOT FOUND at expected path"
+
+      - name: Build debug APK (native-only mode)
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.daemon=false"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: aria-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
