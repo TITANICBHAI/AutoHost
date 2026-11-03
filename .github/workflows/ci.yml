@@ -5,6 +5,8 @@
 # emulator-instrumented: the instrumented suite on an API 30 emulator (integration-tested rung;
 #   real-device gates stay with the owner — docs/GATES.md).
 # Gradle is pinned to 8.13 (docs/VERSIONS.md; X-07 chose the documented-pin route, no wrapper).
+# Failing steps tee their log and emit the failure lines as ::error:: annotations — run logs need
+# admin access to download, annotations are readable by anyone on the run page.
 name: ci
 
 on:
@@ -30,25 +32,42 @@ jobs:
         with:
           python-version: "3.12"
       - name: SDK + simulator suite
-        run: cd sdk-python && python3 -m unittest discover -s tests -t tests -p "test_*.py"
+        working-directory: sdk-python
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -m unittest discover -s tests -t tests -p "test_*.py" 2>&1 | tee /tmp/sdk_suite.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^(FAIL|ERROR): " /tmp/sdk_suite.log | head -25 | while read -r l; do echo "::error::$l"; done
+            exit "$rc"
+          fi
       - name: Root suite (schemas, tracker, docs, architecture)
-        run: python3 -m unittest discover -s tests -p "test_*.py"
-      - name: Progress tracker consistency
-        run: python3 tools/progress.py --check
-      - name: Docs consistency
-        run: python3 tools/doc_check.py
-      - name: Generated artifacts drift
-        run: python3 tools/gen_artifacts.py --check
-      - name: Bundled SDK copy drift
-        run: python3 tools/sync_sdk.py --check
-      - name: Golden flow vectors
-        run: python3 tools/gen_flow_vectors.py && git diff --exit-code testing/golden/flow_vectors.json
-      - name: Golden schedule vectors
-        run: python3 tools/gen_schedule_vectors.py && git diff --exit-code testing/golden/schedule_vectors.json
-      - name: Licence check (Gate 11-e)
-        run: python3 tools/licence_check.py
-      - name: MCP evals
-        run: python3 tools/mcp_eval.py
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -m unittest discover -s tests -p "test_*.py" 2>&1 | tee /tmp/root_suite.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^(FAIL|ERROR): " /tmp/root_suite.log | head -25 | while read -r l; do echo "::error::$l"; done
+            exit "$rc"
+          fi
+      - name: Consistency and drift checks
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 tools/progress.py --check
+          python3 tools/doc_check.py
+          python3 tools/gen_artifacts.py --check
+          python3 tools/sync_sdk.py --check
+          python3 tools/licence_check.py
+          python3 tools/mcp_eval.py
+      - name: Golden vectors drift
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 tools/gen_flow_vectors.py > /dev/null && git diff --exit-code testing/golden/flow_vectors.json
+          python3 tools/gen_schedule_vectors.py > /dev/null && git diff --exit-code testing/golden/schedule_vectors.json
 
   jvm-tests:
     name: All JVM unit tests
@@ -56,7 +75,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -67,7 +86,15 @@ jobs:
         with:
           gradle-version: "8.13"
       - name: All JVM tests
-        run: gradle test --console=plain --stacktrace
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle test --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "error: |warning: |FAILED|FAILURE: Build|What went wrong|Caused by|> Task .* FAILED|Compilation error" /tmp/jvm.log | head -40 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@v4
@@ -83,7 +110,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -126,17 +153,30 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          avdmanager --sdk_root="$ANDROID_HOME" create avd -n ci -k "system-images;android-30;google_apis;x86_64" -d pixel --force
-          emulator -avd ci -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -camera-back none -camera-front none &
+          avdmanager --sdk_root="$ANDROID_HOME" create avd -n ci -k "system-images;android-30;google_apis;x86_64" -d pixel --force 2>&1 | tail -5
+          emulator -avd ci -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -camera-back none -camera-front none > /tmp/emulator.log 2>&1 &
           adb wait-for-device
-          timeout 300 bash -c 'while [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" != "1" ]; do sleep 5; done'
+          if ! timeout 300 bash -c 'while [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" != "1" ]; do sleep 5; done'; then
+            echo "::error::emulator did not reach sys.boot_completed within 300 s"
+            tail -40 /tmp/emulator.log | while read -r l; do echo "::error::${l:0:250}"; done
+            adb devices
+            exit 1
+          fi
           adb shell settings put global window_animation_scale 0
           adb shell settings put global transition_animation_scale 0
           adb shell settings put global animator_duration_scale 0
           adb devices
 
       - name: Run instrumented tests
-        run: gradle :app:connectedCoreDebugAndroidTest --console=plain --stacktrace
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle :app:connectedCoreDebugAndroidTest --console=plain --stacktrace 2>&1 | tee /tmp/connected.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "error: |FAILED|FAILURE: Build|What went wrong|Caused by|> Task .* FAILED|Tests on|Tests failed" /tmp/connected.log | head -40 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
 
       - name: Upload connected-test results
         if: failure()
