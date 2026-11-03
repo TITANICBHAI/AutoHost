@@ -92,7 +92,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          gradle test --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          gradle test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log   # --continue: surface every failing module in one run
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
             grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
