@@ -51,7 +51,7 @@ class AppManageProvider(
     override val tier: String = "T3"
 
     override fun availability(env: DeviceEnv): Availability {
-        if (installer != null && stopUi != null) return Availability.Available
+        if (installer != null || stopUi != null) return Availability.Available  // either door (UI stop or installer) makes the capability usable; per-method gates stay fail-closed at invoke
         return when (transports?.firstLive()) {
             null -> Availability.NeedsSetup("SHELL_TIER_NOT_PAIRED", "OPEN_SHELL_SETUP")
             else -> Availability.Available
