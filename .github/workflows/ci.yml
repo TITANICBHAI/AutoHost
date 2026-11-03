@@ -31,6 +31,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install test dependencies (PyYAML — SDK stays stdlib-only)
+        run: python3 -m pip install --quiet -r sdk-python/requirements-test.txt
       - name: SDK + simulator suite
         working-directory: sdk-python
         shell: bash
@@ -94,7 +96,8 @@ jobs:
           gradle test --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
-            tail -9 /tmp/jvm.log | while read -r l; do echo "::error::${l:0:250}"; done
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            grep -E "^e: " /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
             exit "$rc"
           fi
       - name: Upload test reports
@@ -145,11 +148,21 @@ jobs:
       - name: Install the API 30 system image
         shell: bash
         run: |
-          set -o pipefail
+          set +e
           yes | sdkmanager --sdk_root="$ANDROID_HOME" --licenses > /dev/null || true
-          sdkmanager --sdk_root="$ANDROID_HOME" \
-            "platform-tools" "platforms;android-30" "system-images;android-30;google_apis;x86_64" \
-            2>&1 | tail -5
+          ok=0
+          for attempt in 1 2 3; do
+            sdkmanager --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-30" "system-images;android-30;google_apis;x86_64" > /tmp/sdk_install.log 2>&1
+            rc=$?
+            if [ "$rc" -eq 0 ]; then ok=1; break; fi
+            echo "::warning::sdkmanager attempt $attempt failed (rc=$rc); retrying"
+            sleep 10
+          done
+          if [ "$ok" -ne 1 ]; then
+            echo "::error::sdkmanager failed after 3 attempts"
+            tail -8 /tmp/sdk_install.log | while read -r l; do echo "::error::${l:0:250}"; done
+            exit 1
+          fi
 
       - name: Boot the emulator
         shell: bash
