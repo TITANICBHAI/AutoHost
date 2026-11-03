@@ -35,7 +35,7 @@ jobs:
         working-directory: sdk-python
         shell: bash
         run: |
-          set -o pipefail
+          set +e   # GitHub's shell: bash implies -e; a failing pipeline must not exit before the guard
           python3 -m unittest discover -s tests -t tests -p "test_*.py" 2>&1 | tee /tmp/sdk_suite.log
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
@@ -46,7 +46,7 @@ jobs:
       - name: Root suite (schemas, tracker, docs, architecture)
         shell: bash
         run: |
-          set -o pipefail
+          set +e
           python3 -m unittest discover -s tests -p "test_*.py" 2>&1 | tee /tmp/root_suite.log
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
@@ -90,7 +90,7 @@ jobs:
       - name: All JVM tests
         shell: bash
         run: |
-          set -o pipefail
+          set +e
           gradle test --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
@@ -180,7 +180,7 @@ jobs:
       - name: Run instrumented tests
         shell: bash
         run: |
-          set -o pipefail
+          set +e
           gradle :app:connectedCoreDebugAndroidTest --console=plain --stacktrace 2>&1 | tee /tmp/connected.log
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
