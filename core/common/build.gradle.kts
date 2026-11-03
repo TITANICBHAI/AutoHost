@@ -19,5 +19,6 @@ dependencies {
     api(project(":core:model"))
     implementation(libs.kotlinx.coroutines.core)
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test) // the tests use runTest
     testFixturesImplementation(libs.kotlinx.coroutines.core)
 }

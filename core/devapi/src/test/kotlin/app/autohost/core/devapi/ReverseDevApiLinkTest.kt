@@ -50,7 +50,7 @@ class ReverseDevApiLinkTest {
             output.write(WsFrames.encodeText(requestJson, mask = false))
             output.flush()
             // read the phone's response (masked)
-            return readFrame(input, expectMasked = true)
+            return readFrame(input, expectMasked = true).text
         }
 
         private fun readFrame(input: InputStream, expectMasked: Boolean): WsFrames.Frame {

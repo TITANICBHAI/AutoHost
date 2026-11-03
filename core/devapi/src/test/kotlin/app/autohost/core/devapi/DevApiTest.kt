@@ -50,7 +50,7 @@ class JsonRpcTest {
     }
 
     @Test
-    fun `token store issues, matches and revokes; compares in constant time`() {
+    fun `token store issues, matches and revokes - compares in constant time`() {
         val tokens = TokenStore()
         val token = tokens.issue()
         assertEquals(64, token.length)
@@ -153,7 +153,7 @@ class RpcRouterTest {
     }
 
     @Test
-    fun `method set matches docs/DEVAPI (v0 + P5 full surface)`() {
+    fun `method set matches docs DEVAPI (v0 + P5 full surface)`() {
         val expected = setOf(
             "system.ping", "system.info", "system.capabilities",
             "health.run", "health.checks",

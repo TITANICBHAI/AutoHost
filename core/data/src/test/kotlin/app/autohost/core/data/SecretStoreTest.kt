@@ -53,7 +53,7 @@ class SecretStoreTest {
     }
 
     @Test
-    fun `put encrypts and get decrypts; values never appear as plaintext rows`() = runTest {
+    fun `put encrypts and get decrypts - values never appear as plaintext rows`() = runTest {
         val dao = FakeDao()
         val registry = SecretRegistry()
         val store = SecretStore(dao, FakeAead(), registry, FixedClock())
@@ -69,7 +69,7 @@ class SecretStoreTest {
     }
 
     @Test
-    fun `allOf and keysOf expose the profile snapshot; deleteForProfile removes blobs`() = runTest {
+    fun `allOf and keysOf expose the profile snapshot - deleteForProfile removes blobs`() = runTest {
         val dao = FakeDao()
         val store = SecretStore(dao, FakeAead(), SecretRegistry(), FixedClock())
         store.put("p1", "user", "alice")
