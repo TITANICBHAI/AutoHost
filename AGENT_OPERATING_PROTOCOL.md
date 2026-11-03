@@ -191,3 +191,48 @@ Do not treat the initial documentation update as permission to change product sc
 - If the same command fails twice after a fix attempt, stop and report the first error, command and attempts. Do not brute-force.
 - Stop on conflicting requirements, unexpected untracked/modified owner files, an incorrect remote, remote divergence, missing CI authentication, an owner-only phone action, or a licence/security/scope decision. Do not improvise around these.
 - After every batch report: **Done** (IDs + evidence), **Blocked** (ID + reason), **Needs owner** (at most one concrete question/action), **Files touched**, **Commit/push** (SHA/branch or not pushed yet), and **Actions** (run URL, status, tested SHA, or reason not run).
+
+## 10. Every-time checklist (what to check before each step)
+
+*Added 2026-11-03 from the first working session's incidents. This checklist is the "how you
+will do it / what you check each time" contract; everything else in this file is the detail.*
+
+### Before starting a task
+1. `git fetch origin && git status -sb` — tree clean, branch `main` in sync with `origin/main`,
+   remote is `TITANICBHAI/AutoHost`. Unexpected state (emptied index = hundreds of staged
+   deletions, detached HEAD, divergence) → STOP and report; the index fix is a plain
+   `git reset` (never `--hard`).
+2. Re-read the task row in `docs/PROGRESS.md` and the docs its evidence names (ADR, gate).
+   Blocked/dependency rows are not eligible.
+3. Confirm the task needs no local Gradle/JVM/emulator (heavy work = hosted CI only, D-22).
+4. Confirm no other agent session is active in this checkout (owner confirmed "only this
+   session" on 2026-11-03; re-confirm if signs of concurrent edits appear — e.g. an Edit tool
+   "modified since read" error you cannot explain, or a tick that silently reverts).
+
+### Before every edit
+1. Exact-match rule: the text you replace must occur exactly once; 0 or 2+ occurrences → STOP.
+2. For tracker ticks: tick + evidence line in one edit, then IMMEDIATELY `grep -c "^- \[x\]"`
+   (before AND after `python tools/progress.py`). A silent no-op write was observed once
+   (2026-11-03, PROGRESS.md) — never trust an unverified edit.
+3. Never hand-edit generated artifacts (`docs/CAPABILITIES.md`, `docs/SDK.md`,
+   `sdk-python/**/_generated`, golden vectors, the broker resource copy) — run the generator.
+4. Edits sweep only the task's named files; anything else you notice goes to the worklog as an
+   observation (with a prediction test per ADR-089), not an opportunistic fix.
+
+### Before every commit / push
+1. Checks green: `python tools/progress.py --check`, `python tools/doc_check.py`, plus the
+   suites the batch touched.
+2. `git fetch origin` → confirm `origin/main` is where you last saw it; if it moved or the
+   tree changed unexpectedly → STOP and report (never merge blindly, never force).
+3. Stage files BY NAME (no `git add -A`); review `git diff --cached`; no secrets, keystores,
+   `local.properties`, screenshots, or unrelated owner changes.
+4. Commit message: task id first (`X-19: ...`). Plain fast-forward push to `main` only —
+   no force, no amend/rebase of published commits, no history rewriting.
+5. Push once per batch (2–3 tasks), not per task.
+
+### After every push
+1. Fetch the run via the anonymous GitHub API (`curl -s https://api.github.com/repos/
+   TITANICBHAI/AutoHost/actions/runs?per_page=3`) — `gh` is NOT installed on this PC.
+2. Verify which jobs actually ran: the APK workflow proves NO tests (ADR-085, §2).
+3. Record run URL, SHA, conclusion on the task row; update `AGENT_STATE.md`; verify the ticks
+   persisted.

@@ -27,7 +27,15 @@ def press_device(**kw):
     return FakeDevice(PRESS_SCREENS, launch_map={"com.example.app": "home"}, clock=VirtualClock(), **kw)
 
 
+def device(**kw):
+    """A bare FakeDevice with no screens — for SDK-boundary tests that never touch the UI."""
+    return FakeDevice({}, launch_map={}, clock=VirtualClock(), **kw)
+
+
 def runtime_for(device, *, config=None, profile=None, secrets=None):
+    register = getattr(device, "register_secrets", None)
+    if callable(register) and secrets:
+        register(secrets)  # X-12: the device mirrors the broker's secret registry
     rt = Runtime(SimTransport(device), config=config, profile=profile, profile_id=device.profile_id,
                  secrets=secrets, clock=device.clock)
     return install(rt)

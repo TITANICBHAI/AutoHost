@@ -49,7 +49,9 @@ class KV:
         return value
 
     def __setitem__(self, key: str, value: Any) -> None:
-        current().call("store", "set", {"scope": self._scope, "key": key, "value": value})
+        rt = current()
+        rt.refuse_secrets(value, f"{self._scope}_store['{key}']")  # X-12: secrets never persist
+        rt.call("store", "set", {"scope": self._scope, "key": key, "value": value})
 
     def __contains__(self, key: str) -> bool:
         return self._lookup(key) is not _MISSING
@@ -131,6 +133,7 @@ class Ctx:
         return current().secret(name)
 
     def result(self, code: str, data: dict | None = None) -> Result:
+        current().refuse_secrets(data, "result data")  # X-12: the result rides run history
         res = Result(code, data)
         current().result = res
         return res
@@ -158,6 +161,7 @@ class Ctx:
 
     def save(self) -> None:
         rt = current()
+        rt.refuse_secrets(dict(rt.state), "state checkpoint")  # X-12: secrets never persist
         rt.call("state", "set", {"state": dict(rt.state)})
 
     def once(self, name: str, fn: Callable[[], Any]) -> Any:
@@ -167,6 +171,7 @@ class Ctx:
         if key in rt.state:
             return rt.state[key]
         value = fn()
+        rt.refuse_secrets(value, f"checkpoint '{name}'")  # X-12: checkpoints outlive the run
         rt.state[key] = value
         self.save()
         return value

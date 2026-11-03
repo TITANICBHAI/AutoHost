@@ -92,6 +92,7 @@ class FakeDevice:
         self.screenshots: list[dict] = []
         self.calls: list[tuple] = []
         self.profile_id = "p1"
+        self.registered_secrets: list[str] = []  # X-12: mirrors the host's secret registry
         # P8 part 1: notifications buffer, hub event ring, focus flag, dispatched intents.
         self.system_notifications: list[dict] = []
         self.hub_events: list[dict] = []
@@ -1071,6 +1072,29 @@ class FakeDevice:
                         "provider": "sim", "chain": ["sim"]}
         return out
 
+    def register_secrets(self, secrets: dict) -> None:
+        """X-12 (ADR-099): the simulator mirrors the broker — registered secret VALUES are
+        refused on every persistence path (store.set / state.set), even if a caller bypasses
+        the SDK-side guard."""
+        self.registered_secrets = [v for v in (secrets or {}).values()
+                                   if isinstance(v, str) and v]
+
+    def _refuse_persisted_secrets(self, value) -> None:
+        def walk(v):
+            if isinstance(v, str):
+                for secret in self.registered_secrets:
+                    if secret and secret in v:
+                        raise SimError("INVALID_ARGS",
+                                       "a registered secret value must never be persisted "
+                                       "(ADR-099/X-12); keep it in call args only")
+            elif isinstance(v, dict):
+                for x in v.values():
+                    walk(x)
+            elif isinstance(v, (list, tuple)):
+                for x in v:
+                    walk(x)
+        walk(value)
+
     def dispatch(self, capability: str, method: str, args: dict) -> Any:
         self.calls.append((capability, method, dict(args)))
         handlers: dict[str, Callable] = {
@@ -1298,6 +1322,7 @@ class FakeDevice:
             k = key_of(a["key"])
             return {"value": self.kv[k]} if k in self.kv else {}
         if method == "set":
+            self._refuse_persisted_secrets(a["value"])  # X-12
             self.kv[key_of(a["key"])] = a["value"]
             return {"ok": True}
         if method == "delete":
@@ -1313,6 +1338,7 @@ class FakeDevice:
         if method == "get":
             return {"state": dict(self.state_blob)}
         if method == "set":
+            self._refuse_persisted_secrets(a["state"])  # X-12
             self.state_blob = dict(a["state"])
             return {"ok": True}
         raise SimError("INVALID_ARGS", f"state.{method} is not simulated")

@@ -58,6 +58,9 @@ def run_task(task_dir: str | Path, *, device: FakeDevice, config: dict | None = 
     device.profile_id = profile_id
     config = resolve_packs(manifest, dict(config or {}), device)
 
+    register = getattr(device, "register_secrets", None)
+    if callable(register) and secrets:
+        register(secrets)  # X-12: the device mirrors the broker's secret registry
     rt = Runtime(SimTransport(device), task_id=manifest["id"], config=config, profile=profile,
                  profile_id=profile_id, secrets=secrets, clock=device.clock,
                  trigger_type=trigger_type, trigger_payload=trigger_payload)
