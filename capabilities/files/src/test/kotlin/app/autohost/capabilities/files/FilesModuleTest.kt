@@ -111,7 +111,7 @@ class FilesSharedProviderTest {
         }
         val written = provider.invoke(ctx(mapOf("files.shared" to grant)), "write", args)
         assertEquals(true, written.ok)
-        assertEquals("hello", system.files["sub/data.txt"].toString(Charsets.UTF_8))
+        assertEquals("hello", system.files["sub/data.txt"]!!.toString(Charsets.UTF_8))
         val read = provider.invoke(ctx(mapOf("files.shared" to grant)), "read", buildJsonObject {
             put("tree", "content://tree/one")
             put("path", "sub/data.txt")

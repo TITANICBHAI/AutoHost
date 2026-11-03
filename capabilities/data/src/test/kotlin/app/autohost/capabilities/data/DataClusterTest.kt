@@ -127,10 +127,10 @@ class PersonalDataProvidersTest {
 
     @Test fun `contacts availability follows the lazy permission`() {
         val provider = ContactsProvider(FakeContacts())
-        val needsSetup = provider.availability(app.autohost.core.broker.DeviceEnv())
+        val needsSetup = provider.availability(app.autohost.core.broker.DeviceEnv(sdkInt = 29))
         assertEquals("RUNTIME_PERMISSION:contacts.read", (needsSetup as app.autohost.core.model.Availability.NeedsSetup).reason)
         provider.granted = true
-        assertTrue(provider.availability(app.autohost.core.broker.DeviceEnv()) is app.autohost.core.model.Availability.Available)
+        assertTrue(provider.availability(app.autohost.core.broker.DeviceEnv(sdkInt = 29)) is app.autohost.core.model.Availability.Available)
     }
 
     @Test fun `contacts insert requires write and returns an id`() = runBlocking {
@@ -247,13 +247,13 @@ class SmsTelephonyProvidersTest {
 
     @Test fun `sms availability is flavor-gated honestly`() {
         val provider = SmsProvider(FakeSms(), TestClock())
-        val unsupported = provider.availability(app.autohost.core.broker.DeviceEnv())
+        val unsupported = provider.availability(app.autohost.core.broker.DeviceEnv(sdkInt = 29))
         assertEquals("UNSUPPORTED_FLAVOR", (unsupported as app.autohost.core.model.Availability.Unsupported).reason)
         provider.flavorFull = true
-        val needsSetup = provider.availability(app.autohost.core.broker.DeviceEnv())
+        val needsSetup = provider.availability(app.autohost.core.broker.DeviceEnv(sdkInt = 29))
         assertTrue((needsSetup as app.autohost.core.model.Availability.NeedsSetup).reason.startsWith("RUNTIME_PERMISSION"))
         provider.granted = true
-        assertTrue(provider.availability(app.autohost.core.broker.DeviceEnv()) is app.autohost.core.model.Availability.Available)
+        assertTrue(provider.availability(app.autohost.core.broker.DeviceEnv(sdkInt = 29)) is app.autohost.core.model.Availability.Available)
     }
 
     @Test fun `place_call never claims the call connected`() = runBlocking {

@@ -31,5 +31,6 @@ dependencies {
     implementation(project(":core:engine"))
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.core) // the tests use runBlocking
     testImplementation(testFixtures(project(":core:common")))
 }

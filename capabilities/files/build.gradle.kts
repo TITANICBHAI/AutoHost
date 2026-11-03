@@ -29,5 +29,6 @@ dependencies {
     implementation(project(":core:common"))
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.core) // the tests use runBlocking
     testImplementation(testFixtures(project(":core:common")))
 }

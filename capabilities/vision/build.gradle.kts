@@ -34,5 +34,6 @@ dependencies {
     implementation(libs.zxing.core)             // QR decode
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.core) // the tests use runBlocking
     testImplementation(testFixtures(project(":core:common")))
 }

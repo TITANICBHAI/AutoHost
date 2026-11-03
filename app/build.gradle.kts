@@ -131,6 +131,7 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.core) // the tests use runBlocking
     androidTestImplementation(libs.junit)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation("androidx.test:runner:1.6.2")
