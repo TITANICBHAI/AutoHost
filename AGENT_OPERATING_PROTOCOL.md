@@ -192,6 +192,15 @@ Do not treat the initial documentation update as permission to change product sc
 - Stop on conflicting requirements, unexpected untracked/modified owner files, an incorrect remote, remote divergence, missing CI authentication, an owner-only phone action, or a licence/security/scope decision. Do not improvise around these.
 - After every batch report: **Done** (IDs + evidence), **Blocked** (ID + reason), **Needs owner** (at most one concrete question/action), **Files touched**, **Commit/push** (SHA/branch or not pushed yet), and **Actions** (run URL, status, tested SHA, or reason not run).
 
+## 9a. Owner session-control words (owner instruction, 2026-11-03 — bind every session)
+
+- **"continue"** → proceed to the next task in the queue (no re-confirmation needed; the queue
+  in `HANDOFF.md` §0.2 + `AGENT_STATE.md` decides what "next" is).
+- **"recheck"** → re-verify the stage just completed: re-run its checks, re-read every file the
+  stage touched, confirm nothing was lost or half-applied (the silent-revert and index-wipe
+  incidents are the reason this word exists), update AGENT_STATE/worklog if anything changed,
+  then ask the owner "shall I continue?" and wait for the answer.
+
 ## 10. Every-time checklist (what to check before each step)
 
 *Added 2026-11-03 from the first working session's incidents. This checklist is the "how you
