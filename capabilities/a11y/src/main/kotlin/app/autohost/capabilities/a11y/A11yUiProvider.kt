@@ -244,11 +244,14 @@ class A11yUiProvider(
     private fun keyboardState(packages: Set<String>?): KeyboardState.State {
         val snap = reader.read(packages)
         val focused = snap.nodes.firstOrNull { it.has("focused") }
-        return KeyboardState.evaluate(
+        val byWindows = KeyboardState.evaluate(
             windows = snap.windows,
             focusedId = focused?.id?.ifEmpty { null },
             focusedEditable = focused?.has("editable") == true,
         )
+        // The reader's direct IME observation wins; the window-list heuristic is the fallback
+        // (a snapshot may carry keyboardVisible without an input_method window entry).
+        return if (snap.keyboardVisible) byWindows.copy(visible = true) else byWindows
     }
 
     private fun dump(args: JsonObject, packages: Set<String>?): Envelope {
@@ -309,14 +312,14 @@ class A11yUiProvider(
         args: JsonObject,
         actPackages: Set<String>?,
         observePackages: Set<String>?,
-    ): AhResult<android.view.accessibility.AccessibilityNodeInfo> {
+    ): AhResult<android.view.accessibility.AccessibilityNodeInfo?> {
         val resolved = resolveTarget(args, actPackages, observePackages)
         val info = when (resolved) {
             is AhResult.Ok -> resolved.value
             is AhResult.Err -> return AhResult.err(resolved.error)
         }
         // Popup guard: a higher-layer window above the target's window refuses blind taps (plan §5.7).
-        val targetWindowId = UiTreeBuilder.safeWindowId(info)
+        val targetWindowId = info?.let { UiTreeBuilder.safeWindowId(it) } ?: -1
         if (targetWindowId >= 0) {
             val windows = reader.windows()
             val snap = lastSnapshotFor(observePackages)
@@ -581,7 +584,7 @@ class A11yUiProvider(
         args: JsonObject,
         actPackages: Set<String>?,
         observePackages: Set<String>?,
-    ): AhResult<android.view.accessibility.AccessibilityNodeInfo> {
+    ): AhResult<android.view.accessibility.AccessibilityNodeInfo?> {
         args["ref"]?.let { it as? JsonPrimitive }?.content?.let { ref -> return resolveHandle(ref) }
         args["target"]?.let { target ->
             (target as? JsonObject)?.get("ref")?.let { r ->
@@ -596,11 +599,12 @@ class A11yUiProvider(
         return AhResult.err(app.autohost.core.model.AhError.of(ErrorCode.INVALID_ARGS, "click needs 'ref' or 'selector'"))
     }
 
-    private fun resolveHandle(ref: String): AhResult<android.view.accessibility.AccessibilityNodeInfo> =
+    private fun resolveHandle(ref: String): AhResult<android.view.accessibility.AccessibilityNodeInfo?> =
         when (val result = registry.resolve(ref)) {
             is AhResult.Err -> AhResult.err(result.error)
-            is AhResult.Ok -> result.value?.let { AhResult.ok(it) }
-                ?: AhResult.err(ErrorCode.STALE_NODE, "node ref '$ref' has no live handle")
+            // A registry entry without a live handle is not stale — the node was seen. The action
+            // seam turns a null handle into an honest unverified outcome (ServiceUiActions).
+            is AhResult.Ok -> AhResult.ok(result.value)
         }
 
     private fun mapResolveError(e: AhError, fallback: String): Envelope = when (e.code) {

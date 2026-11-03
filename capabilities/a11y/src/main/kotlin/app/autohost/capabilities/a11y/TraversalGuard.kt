@@ -29,7 +29,7 @@ class TraversalGuard(
     fun enter(key: Int, depth: Int): Decision = when {
         depth > maxDepth -> Decision.Skip("DEPTH_CAP").also { truncated = true }   // the walk was cut short
         key in onPath -> Decision.Skip("CYCLE") // child references an ancestor: record nothing, descend nowhere
-        visited >= maxNodes -> Decision.Skip("NODE_BUDGET").also { truncated = true }
+        visited > maxNodes -> Decision.Skip("NODE_BUDGET").also { truncated = true }
         else -> {
             visited++
             onPath.add(key)
