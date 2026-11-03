@@ -62,7 +62,11 @@ object SetTextChain {
             }
         return when (nextStrategy) {
             null -> {
-                val rejected = attempts.any { it.outcome == REJECTED }
+                // Rejected means the field refused everything we were ALLOWED to try. One refused
+                // strategy among uncertain outcomes (COMMIT_OUTCOME_UNKNOWN, ACCEPTED_UNVERIFIED,
+                // INPUT_SESSION_CHANGED) is honest uncertainty, not a rejection — report Unverified.
+                val rejected = attempts.any { it.outcome == REJECTED } &&
+                    attempts.none { it.outcome != VERIFIED && it.outcome != REJECTED }
                 if (rejected) Decision.Rejected(attempts) else Decision.Unverified(attempts)
             }
             else -> Decision.Next(nextStrategy)
