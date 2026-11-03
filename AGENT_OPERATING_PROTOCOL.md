@@ -247,6 +247,12 @@ will do it / what you check each time" contract; everything else in this file is
    observation (with a prediction test per ADR-089), not an opportunistic fix.
 
 ### Before every commit / push
+0. **RECHECK LOOP (owner, 2026-11-04 — mandatory, repeat until clean):** after making edits,
+   re-check EVERYTHING the batch touched (syntax by eye where no compiler exists, file
+   line-endings, comment syntax per language, YAML validity, the exact texts you replaced).
+   If ANY error is found: fix it, then RE-RUN THE WHOLE RECHECK — repeat the fix→recheck loop
+   until a full round finds ZERO problems. Only then commit. Never commit straight after an
+   edit without a clean recheck round; never commit while any known error is open.
 1. Checks green: `python tools/progress.py --check`, `python tools/doc_check.py`, plus the
    suites the batch touched.
 2. `git fetch origin` → confirm `origin/main` is where you last saw it; if it moved or the

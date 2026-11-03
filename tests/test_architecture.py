@@ -178,6 +178,17 @@ class ArchitectureConformanceTest(unittest.TestCase):
         ]
         self.assertEqual(bad, [], "settings.gradle.kts wires reference/ or archive/ into the build: %s" % bad)
 
+    def test_no_hash_comments_in_kotlin_sources(self):
+        """Kotlin/KTS comments are // and /* */ — a line starting with '#' is shell/YAML syntax
+        pasted into the wrong language (caught in CI as a build-script parse error, 2026-11-03)."""
+        findings = []
+        for rel, text in repo_files({".kt", ".kts"}):
+            for line in text.splitlines():
+                if line.lstrip().startswith("#") and not line.lstrip().startswith("#!"):
+                    findings.append(f"{rel}: {line.strip()[:60]}")
+                    break
+        self.assertEqual(findings, [], "shell/YAML-style '#' comments in Kotlin sources: %s" % findings)
+
     def test_no_reference_project_package_names_in_compiled_sources(self):
         findings = [
             rel

@@ -34,6 +34,7 @@
 - Owner says **"recheck"** → I re-verify the stage just completed (re-run checks, re-read touched files, confirm nothing was lost), then ask "shall I continue?" and wait.
 - **READ ALL RELATED DOCS STRICTLY** before each plan part (task row + ADRs + gate + named docs + plan section).
 - **BATCH MORE, PUSH LESS** — gather multiple fixes/tasks per push; verification runs once per batch.
+- **RECHECK LOOP BEFORE EVERY COMMIT (owner, 2026-11-04):** re-verify everything touched (syntax per language, line-endings, YAML, replaced texts); if an error is found, fix it and REPEAT the whole recheck; loop until a round finds ZERO problems; only then commit.
 - **EMULATOR CI JOB = NO-GO (D-24)** — removed from ci.yml; never re-add it without an explicit owner decision.
 - Next work: X-17-style JVM test-compile fix loop via CI annotations (app/a11y first), batched.
 
