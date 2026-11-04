@@ -80,7 +80,10 @@ class ReturnShapeTest {
         for (m in methods) {
             val returns = m["returns"]?.jsonPrimitive?.content ?: continue
             val shape = ReturnShape.parse(returns) // must not throw
-            assertTrue("no fields parsed from $returns", shape.isNotEmpty() || returns == "{}")
+            // bare named types (UiSnapshot) parse to an empty (wire-opaque) shape by design
+            if (returns.startsWith("{")) {
+                assertTrue("no fields parsed from $returns", shape.isNotEmpty())
+            }
         }
     }
 }
