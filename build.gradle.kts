@@ -11,6 +11,20 @@ plugins {
     alias(libs.plugins.detekt) apply false
 }
 
+// CI failure details: every failing test prints its full exception into the Gradle log, which the
+// ci.yml diagnostics grep (annotations are the only failure channel readable without admin access).
+subprojects {
+    tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+        testLogging {
+            events("failed")
+            exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+            showExceptions = true
+            showCauses = true
+            showStackTraces = false
+        }
+    }
+}
+
 // Lint is applied centrally to every module (ADR-030) because we deferred convention plugins.
 // `gradle check` then runs unit tests + ktlintCheck + detekt in one command (AGENTS.md §6).
 subprojects {
