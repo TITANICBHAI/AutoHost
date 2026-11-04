@@ -125,7 +125,10 @@ class ReverseDevApiLinkTest {
         val serverSocket = ServerSocket(0)
         Thread({
             val client = serverSocket.accept()
+            val reader = java.io.BufferedReader(java.io.InputStreamReader(client.getInputStream()))
+            while (reader.readLine()?.isNotEmpty() == true) {}
             client.getOutputStream().write("HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n".encodeToByteArray())
+            client.getOutputStream().flush()
             client.close()
         }).apply { isDaemon = true; start() }
         val link = ReverseDevApiLink(

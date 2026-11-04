@@ -101,15 +101,16 @@ object WsFrames {
         }
         val header = ByteArray(1 + lengthBits + maskLength)  // opcode byte + length field + mask key
         header[0] = (0x80 or opcode).toByte() // FIN + opcode (single frame, no fragmentation)
+        val maskBit = if (mask) 0x80 else 0
         when (lengthBits) {
-            1 -> header[1] = payload.size.toByte()
+            1 -> header[1] = (maskBit or payload.size).toByte()
             3 -> {
-                header[1] = (0x80 or 126).toByte()
+                header[1] = (maskBit or 126).toByte()
                 header[2] = ((payload.size shr 8) and 0xFF).toByte()
                 header[3] = (payload.size and 0xFF).toByte()
             }
             else -> {
-                header[1] = (0x80 or 127).toByte()
+                header[1] = (maskBit or 127).toByte()
                 var size = payload.size.toLong()
                 for (i in 7 downTo 0) {
                     header[2 + (7 - i)] = ((size shr (i * 8)) and 0xFF).toByte()

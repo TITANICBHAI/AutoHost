@@ -54,6 +54,7 @@ class ReverseDevApiLink(
         check(!running) { "reverse link already running" }
         running = true
         try {
+            val token = tokenProvider() ?: throw IOException("no dev api token issued — enable the dev api first")
             val connection = Socket().apply {
                 connect(InetSocketAddress(host, port), connectTimeoutMs)
                 soTimeout = 0 // the link is long-lived; read() blocks until traffic or close
@@ -63,7 +64,7 @@ class ReverseDevApiLink(
             val input = BufferedInputStream(connection.getInputStream())
             val output = BufferedOutputStream(connection.getOutputStream())
             handshake(input, output)
-            sendFirstToken(output)
+            sendFirstToken(output, token)
             serve(input, output)
         } catch (e: IOException) {
             lastError = e.message ?: "transport error"
@@ -107,8 +108,7 @@ class ReverseDevApiLink(
     }
 
     /** ADR-075 convention: the token rides the first frame — it never appears in a URL. */
-    private fun sendFirstToken(output: OutputStream) {
-        val token = tokenProvider() ?: throw IOException("no dev api token issued — enable the dev api first")
+    private fun sendFirstToken(output: OutputStream, token: String) {
         val payload = kotlinx.serialization.json.buildJsonObject {
             put("token", kotlinx.serialization.json.JsonPrimitive(token))
         }.toString()
