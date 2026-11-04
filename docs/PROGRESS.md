@@ -842,7 +842,7 @@ Tasks 5/293 · Gate items 0/94 · Capabilities 0/46 · WIP 0 · Blocked 29
 - [ ] **G15-a** (BLOCKED: no device — D-25; permanently skipped as unverifiable) (real device) Harness numbers for both phones recorded in `docs/PERF.md` — `docs/GATES.md#g15-a`
   - evidence:
 - [ ] **G15-b** (WRITTEN-half: the flavor seam + the NO_RUNTIME/CompatReport path + the lite manifest; the build+emulator proof is deferred to git/CI hand-back — D-26) `lite` builds; a Python task gets a typed CompatReport; flow, JS and agent runs work (JVM + emulator) — `docs/GATES.md#g15-b`
-  - evidence: written-side 2026-11-04 (D-26): the flavor seam + the NO_RUNTIME typed path + the lite manifest removals are in place; the build+emulator proof resumes when the owner hands git/CI back
+  - evidence: written-side 2026-11-04 (D-26): the flavor seam + the NO_RUNTIME typed path + the lite manifest removals are in place; the build+emulator proof resumes when the owner hands git/CI back; sweep-run note 2026-11-05: jvm-capabilities run #18 (6f98576) hung for hours past its own 100-minute timeout with no step output — superseded by push; a stale-runner scenario to watch (cancel needs admin)
 - [ ] **G15-c** (WRITTEN-half: `tools/audit_16kb.py`; the audit run needs built artifacts — deferred to git/CI hand-back — D-26) 16 KB audit recorded for every shipped native library — `docs/GATES.md#g15-c`
   - evidence: written-side 2026-11-04 (D-26): the audit tool is ready in-tree; it runs on the first built release artifact
 - [ ] **G15-d** (BLOCKED: no device — D-25; permanently skipped as unverifiable) (real device) Each tuning change shows before/after numbers — `docs/GATES.md#g15-d`
