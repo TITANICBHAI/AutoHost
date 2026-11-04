@@ -130,7 +130,7 @@ jobs:
         if: success()
         shell: bash
         run: |
-          apk="app/build/outputs/apk/core/debug/app-core-debug.apk"
+          apk="app/build/outputs/apk/corePy/debug/app-core-py-debug.apk"
           test -f "$apk"
           sha256sum "$apk" | tee ci-logs/apk-sha256.txt
 
@@ -184,8 +184,8 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: autohost-core-debug-${{ github.run_number }}
-          path: app/build/outputs/apk/core/debug/app-core-debug.apk
+          name: autohost-core-py-debug-${{ github.run_number }}
+          path: app/build/outputs/apk/corePy/debug/app-core-py-debug.apk
           if-no-files-found: error
           retention-days: 14
 
