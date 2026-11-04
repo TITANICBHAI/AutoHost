@@ -76,7 +76,7 @@ android {
             // harness before/after (docs/PERF.md) — no percentage targets (ADR-093).
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-rules.pro"), "autohost-release.pro")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "autohost-release.pro")
             // Sign only when the credentials arrived; otherwise the artifact stays unsigned and
             // `docs/RELEASE.md` names the exact apksigner command for the owner's machine.
             signingConfig = if (signingConfigs.getByName("release").storeFile != null) {
