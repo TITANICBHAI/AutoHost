@@ -113,7 +113,7 @@ class AdbClientTest {
     }
 
     private fun withFakeAdbd(mode: FakeAdbd.Mode, block: (port: Int) -> Unit) {
-        ServerSocket(0).use { server ->
+        ServerSocket(0, 64, java.net.InetAddress.getByName("127.0.0.1")).use { server ->
             val started = CountDownLatch(1)
             val thread = Thread {
                 started.countDown()

@@ -76,7 +76,7 @@ class ReverseDevApiLinkTest {
 
     @Test
     fun endToEndRoundTripThroughALoopbackBridge() {
-        val serverSocket = ServerSocket(0)
+        val serverSocket = ServerSocket(0, 64, java.net.InetAddress.getByName("127.0.0.1"))
         val bridge = FakeBridge(serverSocket, expectedToken = "tok-123")
         val dispatcher = ReverseDevApiLink.JsonDispatcher { body, auth, caller ->
             assertEquals("Bearer tok-123", auth)
@@ -105,7 +105,7 @@ class ReverseDevApiLinkTest {
 
     @Test
     fun missingTokenFailsHonestlyBeforeServing() {
-        val serverSocket = ServerSocket(0)
+        val serverSocket = ServerSocket(0, 64, java.net.InetAddress.getByName("127.0.0.1"))
         val link = ReverseDevApiLink(
             dispatcher = { _, _, _ -> kotlinx.serialization.json.buildJsonObject { put("ok", JsonPrimitive(true)) } },
             tokenProvider = { null },
@@ -122,7 +122,7 @@ class ReverseDevApiLinkTest {
 
     @Test
     fun refusedUpgradeIsReportedNotSwallowed() {
-        val serverSocket = ServerSocket(0)
+        val serverSocket = ServerSocket(0, 64, java.net.InetAddress.getByName("127.0.0.1"))
         Thread({
             val client = serverSocket.accept()
             val reader = java.io.BufferedReader(java.io.InputStreamReader(client.getInputStream()))
