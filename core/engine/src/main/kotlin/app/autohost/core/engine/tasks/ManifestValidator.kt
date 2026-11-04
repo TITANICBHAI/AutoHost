@@ -62,6 +62,34 @@ object ManifestValidator {
         "stages", "triggers", "execution", "ui",
     )
 
+    /**
+     * X-21 (ADR-099): raw-JSON pre-flight — the schema version and runtime type are checked
+     * BEFORE Kotlin deserialization applies its defaults, so an unknown future version or an
+     * unknown runtime type fails with a stable typed error instead of a defaults-masked parse.
+     * Versions 1..[HOST_SCHEMA_VERSION] pass through to the explicit migrations chain
+     * (`ManifestMigrations`); anything newer fails closed here with `HOST_TOO_OLD`.
+     */
+    fun preflight(root: JsonObject): List<Issue> {
+        val errors = ArrayList<Issue>()
+        val schemaVersion = (root["schema"] as? JsonPrimitive)?.content?.toIntOrNull()
+        when {
+            schemaVersion == null -> errors += Issue("/schema", "TYPE", "\"schema\" must be an integer")
+            schemaVersion > HOST_SCHEMA_VERSION -> errors += Issue(
+                "/schema", "HOST_TOO_OLD",
+                "manifest schema $schemaVersion is newer than this host ($HOST_SCHEMA_VERSION); update AutoHost",
+            )
+            schemaVersion < 1 -> errors += Issue("/schema", "MINIMUM", "\"schema\" must be >= 1")
+        }
+        val runtimeType = ((root["runtime"] as? JsonObject)?.get("type") as? JsonPrimitive)?.content
+        if (runtimeType != null && runtimeType !in RUNTIME_TYPES) {
+            errors += Issue(
+                "/runtime/type", "ENUM",
+                "unknown runtime type \"$runtimeType\" — must be one of $RUNTIME_TYPES",
+            )
+        }
+        return errors
+    }
+
     /** Validate raw JSON text → parse + structural validation. Parse failures are errors, not exceptions. */
     fun validateJson(text: String): Pair<TaskManifest?, Result> {
         val root = try {
@@ -69,6 +97,11 @@ object ManifestValidator {
         } catch (e: Exception) {
             null
         } ?: return null to Result(listOf(Issue("", "JSON_MALFORMED", "task.json is not a valid JSON object")))
+        // X-21: fail closed on the raw JSON before deserialization can apply defaults.
+        val preflightErrors = preflight(root)
+        if (preflightErrors.isNotEmpty()) {
+            return null to Result(preflightErrors)
+        }
         val manifest = try {
             AhJson.json.decodeFromString(TaskManifest.serializer(), text)
         } catch (e: Exception) {

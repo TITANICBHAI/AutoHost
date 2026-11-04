@@ -6,6 +6,7 @@ import kotlinx.serialization.json.jsonObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -204,5 +205,53 @@ class ManifestValidatorTest {
             checked += 1
         }
         assertTrue("no samples found from $repoRoot", checked >= 3)
+    }
+
+    // --- X-21 (ADR-099): raw-JSON pre-flight gates BEFORE deserialization applies defaults ---------
+
+    @Test
+    fun `given a future schema version when validated then HOST_TOO_OLD and nothing deserializes`() {
+        val future = good.replace("\"schema\": 1", "\"schema\": ${ManifestValidator.HOST_SCHEMA_VERSION + 1}")
+        val (manifest, result) = ManifestValidator.validateJson(future)
+        assertNull("defaults must not be applied to an unknown future version", manifest)
+        assertEquals("HOST_TOO_OLD", result.errors.single().rule)
+        assertEquals("/schema", result.errors.single().path)
+    }
+
+    @Test
+    fun `given an unknown runtime type when validated then ENUM and nothing deserializes`() {
+        val alien = good.replace("\"runtime\": {\"type\": \"python\", \"entry\": \"main.py\"}",
+                                 "\"runtime\": {\"type\": \"cobol\", \"entry\": \"main.cbl\"}")
+        val (manifest, result) = ManifestValidator.validateJson(alien)
+        assertNull("an unknown runtime type must fail closed before deserialization", manifest)
+        assertEquals("ENUM", result.errors.single().rule)
+        assertEquals("/runtime/type", result.errors.single().path)
+    }
+
+    @Test
+    fun `given a non-integer schema when validated then TYPE and nothing deserializes`() {
+        val bad = good.replace("\"schema\": 1", "\"schema\": \"one\"")
+        val (manifest, result) = ManifestValidator.validateJson(bad)
+        assertNull(manifest)
+        assertEquals("TYPE", result.errors.single().rule)
+    }
+
+    @Test
+    fun `given the current schema version when preflighted then no errors and the manifest parses`() {
+        val root = kotlinx.serialization.json.Json.parseToJsonElement(good).jsonObject
+        assertTrue(ManifestValidator.preflight(root).isEmpty())
+        val (manifest, result) = ManifestValidator.validateJson(good)
+        assertTrue(result.ok)
+        assertNotNull(manifest)
+    }
+
+    @Test
+    fun `given schema one when validated then the explicit migration chain owns it`() {
+        // Versions 1..HOST_SCHEMA_VERSION are the supported old versions; their explicit migrations
+        // live in ManifestMigrations (P2-05). The pre-flight must not reject the supported band.
+        val v1 = good // schema 1 IS the current host version; migrations chain starts here
+        val (manifest, result) = ManifestValidator.validateJson(v1)
+        assertTrue(result.ok)
+        assertNotNull(manifest)
     }
 }

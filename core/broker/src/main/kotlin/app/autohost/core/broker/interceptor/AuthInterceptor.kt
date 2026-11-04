@@ -18,7 +18,16 @@ class AuthInterceptor(
 ) : BrokerInterceptor {
 
     override suspend fun intercept(call: PipelineCall, next: suspend (PipelineCall) -> Envelope): Envelope {
-        val grants = tokens.resolve(call.token)
+        // X-13 (ADR-099): malformed tokens are refused before any lookup, with a message that
+        // never echoes the rejected token (the token must not leak into logs or envelopes).
+        if (!tokens.isWellFormed(call.token)) {
+            return Envelope.err(
+                ErrorCode.PERMISSION_DENIED,
+                "This run's token is malformed; restart the run from the host.",
+                reason = "MALFORMED_RUN_TOKEN",
+            )
+        }
+        val grants = tokens.resolve(call.token, clock.nowMs())
             ?: return Envelope.err(
                 ErrorCode.PERMISSION_DENIED,
                 "This run's token is not valid any more; restart the run from the host.",

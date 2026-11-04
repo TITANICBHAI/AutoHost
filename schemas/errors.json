@@ -448,9 +448,168 @@
       "params": [],
       "userMessage": "The run was cancelled because it stopped making progress.",
       "fixAction": "NONE"
+    },
+    {
+      "code": "AI_DISABLED",
+      "kind": "run",
+      "params": [],
+      "userMessage": "AI features are turned off. Enable them in AI settings to use Ask.",
+      "fixAction": "OPEN_AI_SETTINGS"
+    },
+    {
+      "code": "AI_NOT_CONFIGURED",
+      "kind": "run",
+      "params": [],
+      "userMessage": "No AI provider is configured yet. Add a provider and its key in AI settings.",
+      "fixAction": "OPEN_AI_SETTINGS"
+    },
+    {
+      "code": "OBSERVATION_BLOCKED",
+      "kind": "run",
+      "params": [],
+      "userMessage": "That app is on the blocked list, so AutoHost will not observe or act in it.",
+      "fixAction": null
+    },
+    {
+      "code": "MODEL_AUTH",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The AI provider rejected the key. Check the provider settings.",
+      "fixAction": "OPEN_AI_SETTINGS"
+    },
+    {
+      "code": "MODEL_RATE_LIMITED",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The AI provider is rate limiting this key. Try again later.",
+      "fixAction": null
+    },
+    {
+      "code": "MODEL_UNREACHABLE",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The AI provider could not be reached.",
+      "fixAction": "OPEN_AI_SETTINGS"
+    },
+    {
+      "code": "MODEL_BAD_RESPONSE",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The AI provider sent a response AutoHost could not use.",
+      "fixAction": null
+    },
+    {
+      "code": "MODEL_CONTEXT_OVERFLOW",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The conversation outgrew the model's context window.",
+      "fixAction": null
+    },
+    {
+      "code": "MODEL_FILTERED",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The AI provider refused the request (content filter).",
+      "fixAction": null
+    },
+    {
+      "code": "BUDGET_TURNS",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The run stopped: it used up its turn budget.",
+      "fixAction": null
+    },
+    {
+      "code": "BUDGET_TIME",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The run stopped: it used up its wall-clock budget.",
+      "fixAction": null
+    },
+    {
+      "code": "BUDGET_MODEL_CALLS",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The run stopped: it used up its model-call budget.",
+      "fixAction": null
+    },
+    {
+      "code": "BUDGET_TOKENS",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The run stopped: it used up its token budget.",
+      "fixAction": null
+    },
+    {
+      "code": "BUDGET_ACTIONS",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The run stopped: it used up its action budget.",
+      "fixAction": null
+    },
+    {
+      "code": "BUDGET_CONTEXT",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The run stopped: the prompt budget was exhausted.",
+      "fixAction": null
+    },
+    {
+      "code": "AGENT_FAILURES",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The run stopped after repeated consecutive failures.",
+      "fixAction": null
+    },
+    {
+      "code": "AGENT_STUCK",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The run stopped: it kept seeing the same screen or repeating the same action.",
+      "fixAction": null
+    },
+    {
+      "code": "AGENT_INTERNAL_ERROR",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The agent hit an internal error.",
+      "fixAction": null
+    },
+    {
+      "code": "APPROVAL_DENIED",
+      "kind": "run",
+      "params": [],
+      "userMessage": "You denied one of the agent's actions.",
+      "fixAction": null
+    },
+    {
+      "code": "APPROVAL_TIMEOUT",
+      "kind": "run",
+      "params": [],
+      "userMessage": "No answer in time for an approval ask, so the run was stopped (deny by default).",
+      "fixAction": null
+    },
+    {
+      "code": "COMPLETION_REJECTED",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The agent claimed it finished, but you rejected the result.",
+      "fixAction": null
+    },
+    {
+      "code": "COMPLETION_UNVERIFIED",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The agent claimed it finished, but the result was never confirmed.",
+      "fixAction": null
     }
   ],
   "fixActions": [
+    {
+      "id": "OPEN_AI_SETTINGS",
+      "label": "Open AI settings",
+      "kind": "in_app_screen"
+    },
     {
       "id": "OPEN_ACCESSIBILITY_SETTINGS",
       "label": "Open accessibility settings",

@@ -33,11 +33,18 @@ class CallContext(
     }
 }
 
-/** Grants bound into a run token. */
+/**
+ * Grants bound into a run token (X-13 / ADR-099: the token is a bearer capability bound to one
+ * run, attempt and grant snapshot, with an expiry the broker decides from its own state).
+ */
 class RunGrants(
     val runId: String,
     val taskId: String,
     val profileId: String?,
     val grants: Map<String, JsonObject>,
     val issuedMs: Long = 0L,
+    /** The attempt this token serves; a resume mints a fresh token for the new attempt. */
+    val attempt: Int = 1,
+    /** Wall-clock deadline; `0` = no expiry (tests). The broker refuses expired tokens. */
+    val expiresAtMs: Long = 0L,
 )

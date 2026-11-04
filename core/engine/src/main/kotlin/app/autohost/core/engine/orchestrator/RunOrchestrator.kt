@@ -135,7 +135,19 @@ class RunOrchestrator(
     fun start(request: StartRequest): AhResult<RunRecord> {
         val runId = Ids.ulid(clock.nowMs())
         val grantMap = grants.build(request.manifest, request.config, request.profile)
-        val token = tokens.issue(RunGrants(runId, request.taskId, request.profileId, grantMap, clock.nowMs()))
+        // X-13 (ADR-099): the token is bound to this run+attempt and expires past the run's own
+        // wall-clock budget (the +60 min margin keeps WAITING_USER pauses alive well past timeout).
+        val token = tokens.issue(
+            RunGrants(
+                runId = runId,
+                taskId = request.taskId,
+                profileId = request.profileId,
+                grants = grantMap,
+                issuedMs = clock.nowMs(),
+                attempt = request.attempt,
+                expiresAtMs = clock.nowMs() + (request.manifest.execution.timeoutMinutes.toLong() + 60) * 60_000L,
+            ),
+        )
         tokenByRun[runId] = token
         runByToken[token] = runId
         val record = RunRecord(
@@ -392,8 +404,18 @@ class RunOrchestrator(
         }
         requests[runId] = request
         val grantMap = grants.build(request.manifest, request.config, request.profile)
+        // X-13 (ADR-099): a resumed attempt mints a FRESH token — the dead attempt's credential
+        // never serves the new attempt, and the new token re-binds to the current grant snapshot.
         val token = tokens.issue(
-            RunGrants(runId, request.taskId, request.profileId, grantMap, clock.nowMs()),
+            RunGrants(
+                runId = runId,
+                taskId = request.taskId,
+                profileId = request.profileId,
+                grants = grantMap,
+                issuedMs = clock.nowMs(),
+                attempt = request.attempt,
+                expiresAtMs = clock.nowMs() + (request.manifest.execution.timeoutMinutes.toLong() + 60) * 60_000L,
+            ),
         )
         tokenByRun[runId] = token
         runByToken[token] = runId

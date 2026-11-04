@@ -41,6 +41,23 @@ ALLOWLIST: dict[str, str] = {
 MODULE_RE = re.compile(r'module\s*=\s*"([^"]+)"')
 SECTION_RE = re.compile(r"^##\s+(.+)$", re.MULTILINE)
 
+# X-11 (ADR-088): an *adapted* file must carry the header defined by docs/REUSE_MATRIX.md §0 —
+# `Adapted from <project> <upstream path> (Apache-2.0, <copyright line>). Changes: ...` — and the
+# upstream path must have a THIRD_PARTY_NOTICES.md row. A header without a row means code entered
+# the tree without its licence notice: fail.
+ADAPTED_HEADER_RE = re.compile(
+    r"Adapted from\s+(\S+)\s+(\S+)\s+\((?:Apache|apache)-2\.0"
+)
+ADAPTED_SOURCE_SUFFIXES = {".kt", ".java", ".py", ".kts"}
+ADAPTED_SCAN_ROOTS = ("app", "core", "capabilities", "runtime", "plugin-sdk", "sdk-python", "testing", "gradle")
+ADAPTED_SKIP_DIRS = {"build", ".gradle", "archive", "reference", "drafts"}
+
+# X-11 (ADR-088): the reference/ inventory must be complete — every file in reference/ except the
+# index docs themselves must be listed in reference/INDEX.md, so nothing third-party can enter the
+# folder unrecorded. findings/ holds our own analysis notes and is also inventoried.
+REFERENCE_INDEX = ROOT / "reference" / "INDEX.md"
+REFERENCE_SELF_DOCS = {"reference/INDEX.md", "reference/README.md", "reference/SNAPSHOT.md"}
+
 
 def catalog_modules() -> list[str]:
     modules: list[str] = []
@@ -59,6 +76,45 @@ def covered(group_artifact: str, notices_text: str) -> str | None:
     return None
 
 
+def adapted_files(root: pathlib.Path = ROOT):
+    """Yield (relative path, project, upstream path) for files carrying the adaptation header."""
+    for base in ADAPTED_SCAN_ROOTS:
+        base_dir = root / base
+        if not base_dir.is_dir():
+            continue
+        for path in base_dir.rglob("*"):
+            if path.suffix not in ADAPTED_SOURCE_SUFFIXES or not path.is_file():
+                continue
+            if set(path.parts) & ADAPTED_SKIP_DIRS:
+                continue
+            rel = path.relative_to(root).as_posix()
+            text = path.read_text(encoding="utf-8", errors="replace")
+            m = ADAPTED_HEADER_RE.search(text)
+            if m:
+                yield rel, m.group(1), m.group(2)
+
+
+def reference_inventory_gaps(root: pathlib.Path = ROOT) -> list[str]:
+    """Files under reference/ that reference/INDEX.md does not list (ADR-088 inventory)."""
+    index = root / "reference" / "INDEX.md"
+    indexed = index.read_text(encoding="utf-8", errors="replace") if index.exists() else ""
+    ref_dir = root / "reference"
+    gaps: list[str] = []
+    if not ref_dir.is_dir():
+        return gaps
+    for path in sorted(ref_dir.rglob("*")):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(root).as_posix()
+        if rel in REFERENCE_SELF_DOCS:
+            continue
+        # INDEX.md lists paths relative to reference/ ("Path under `reference/`")
+        rel_under_ref = path.relative_to(ref_dir).as_posix()
+        if f"`{rel_under_ref}`" not in indexed and f"`{rel}`" not in indexed:
+            gaps.append(rel)
+    return gaps
+
+
 def main() -> int:
     verbose = "--verbose" in sys.argv
     modules = catalog_modules()
@@ -70,12 +126,33 @@ def main() -> int:
             missing.append(module)
         if verbose:
             print(f"{'OK      ' if reason else 'MISSING '} {module}" + (f"  ({reason})" if reason else ""))
+    # X-11 (ADR-088): adapted-file headers must have their THIRD_PARTY_NOTICES.md row.
+    header_gaps: list[str] = []
+    for rel, project, upstream in adapted_files():
+        if upstream.lower() not in notices_text.lower() and project.lower() not in notices_text.lower():
+            header_gaps.append(f"{rel} (adapted from {project} {upstream})")
+    # X-11 (ADR-088): the reference/ inventory must be complete.
+    inventory_gaps = reference_inventory_gaps()
+
+    failed = bool(missing or header_gaps or inventory_gaps)
     if missing:
         print("licence check FAILED — add rows to THIRD_PARTY_NOTICES.md (or a recorded allowlist entry) for:")
         for module in missing:
             print(f"  - {module}")
+    if header_gaps:
+        print("licence check FAILED — adapted files carry an upstream-path header without a THIRD_PARTY_NOTICES.md row:")
+        for gap in header_gaps:
+            print(f"  - {gap}")
+    if inventory_gaps:
+        print("licence check FAILED — reference/ files not inventoried in reference/INDEX.md:")
+        for gap in inventory_gaps:
+            print(f"  - {gap}")
+    if failed:
         return 1
-    print(f"licence check ok — {len(modules)} catalog dependencies, all covered")
+    print(
+        f"licence check ok — {len(modules)} catalog dependencies, all covered; "
+        f"reference/ inventory complete"
+    )
     return 0
 
 
