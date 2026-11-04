@@ -1,0 +1,28 @@
+{
+  "note": "P13-01/P13-06 (docs/MODEL_GATEWAY.md §9.1): codec golden vectors, shared with the PC stub model. requests[] encode through ChatCodec.encodeRequest; responses[] decode through ChatCodec.decodeResponse.",
+  "requests": [
+    {"name": "text_only", "body": {"model": "test-model", "messages": [{"role": "system", "content": "sys"}, {"role": "user", "content": "usr"}], "max_tokens": 512, "stream": false}},
+    {"name": "with_tool", "body": {"model": "test-model", "messages": [{"role": "user", "content": "usr"}], "tools": [{"type": "function", "function": {"name": "ui_click", "description": "Click", "parameters": {"type": "object"}}}], "tool_choice": "auto", "max_tokens": 512, "stream": false}},
+    {"name": "max_completion_tokens", "body": {"model": "test-model", "messages": [{"role": "user", "content": "x"}], "max_completion_tokens": 10, "stream": false}}
+  ],
+  "responses": [
+    {"name": "text_only", "status": 200, "body": {"choices": [{"message": {"role": "assistant", "content": "hello"}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15}}, "expect": {"text": "hello", "tool_calls": 0, "finish_reason": "stop", "usage_total": 15}},
+    {"name": "one_tool_call", "status": 200, "body": {"choices": [{"message": {"role": "assistant", "content": null, "tool_calls": [{"id": "c1", "type": "function", "function": {"name": "ui_click", "arguments": "{\"id\":1}"}}]}, "finish_reason": "tool_calls"}]}, "expect": {"text": null, "tool_calls": 1, "finish_reason": "tool_calls", "usage": null}},
+    {"name": "several_tool_calls", "status": 200, "body": {"choices": [{"message": {"tool_calls": [{"id": "a", "type": "function", "function": {"name": "t1", "arguments": "{}"}}, {"id": "b", "type": "function", "function": {"name": "t2", "arguments": "{}"}}]}, "finish_reason": "tool_calls"}]}, "expect": {"tool_calls": 2}},
+    {"name": "invalid_argument_json", "status": 200, "body": {"choices": [{"message": {"tool_calls": [{"id": "c", "type": "function", "function": {"name": "t", "arguments": "{not json"}}]}, "finish_reason": "tool_calls"}]}, "expect": {"arguments_null": true}},
+    {"name": "length_with_tool_calls_malformed", "status": 200, "body": {"choices": [{"message": {"tool_calls": [{"id": "c", "type": "function", "function": {"name": "t", "arguments": "{\"x\":"}}]}, "finish_reason": "length"}]}, "expect": {"malformed": true}},
+    {"name": "content_filter", "status": 200, "body": {"choices": [{"message": {"content": "x"}, "finish_reason": "content_filter"}]}, "expect": {"finish_reason": "content_filter"}},
+    {"name": "no_usage", "status": 200, "body": {"choices": [{"message": {"content": "x"}, "finish_reason": "stop"}]}, "expect": {"usage": null}},
+    {"name": "not_json", "status": 200, "body_raw": "{not json", "expect": {"malformed": true}},
+    {"name": "missing_choices", "status": 200, "body": {"no_choices": 1}, "expect": {"malformed": true}}
+  ],
+  "errors": [
+    {"name": "401_auth", "status": 401, "expect": "Auth"},
+    {"name": "403_auth", "status": 403, "expect": "Auth"},
+    {"name": "429_rate_limited", "status": 429, "expect": "RateLimited"},
+    {"name": "500_transient", "status": 500, "expect": "Transient"},
+    {"name": "400_context_overflow", "status": 400, "body_raw": "{\"error\":{\"message\":\"context length exceeded\"}}", "expect": "ContextOverflow"},
+    {"name": "400_invalid", "status": 400, "body_raw": "{\"error\":{\"message\":\"bad field\"}}", "expect": "InvalidRequest"},
+    {"name": "302_never_followed", "status": 302, "expect": "InvalidRequest"}
+  ]
+}

@@ -1,0 +1,298 @@
+{
+ "note": "P13-03 / RM-D1 shared URL-policy vectors (docs/MODEL_GATEWAY.md \u00a79.2); consumed by BaseUrlValidatorTest and the PC stub model",
+ "vectors": [
+  {
+   "url": "https://api.openai.com/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": true
+  },
+  {
+   "url": "https://api.openai.com",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": true
+  },
+  {
+   "url": "https://api.openai.com/v1",
+   "env": {
+    "cleartextLoopbackEnabled": false,
+    "debugBuild": false
+   },
+   "accepted": true
+  },
+  {
+   "url": "https://127.0.0.1:8443/v1",
+   "env": {
+    "cleartextLoopbackEnabled": false,
+    "debugBuild": false
+   },
+   "accepted": true
+  },
+  {
+   "url": "https://10.0.2.2:8080/v1",
+   "env": {
+    "cleartextLoopbackEnabled": false,
+    "debugBuild": false
+   },
+   "accepted": true
+  },
+  {
+   "url": "http://127.0.0.1:8080/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": true
+  },
+  {
+   "url": "http://localhost:8080/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": true
+  },
+  {
+   "url": "http://127.0.0.1/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": true
+  },
+  {
+   "url": "http://127.0.0.1:8080/v1",
+   "env": {
+    "cleartextLoopbackEnabled": false,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "CLEARTEXT_NOT_ALLOWED"
+  },
+  {
+   "url": "http://localhost/v1",
+   "env": {
+    "cleartextLoopbackEnabled": false,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "CLEARTEXT_NOT_ALLOWED"
+  },
+  {
+   "url": "http://10.0.2.2:8080/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": true
+   },
+   "accepted": true
+  },
+  {
+   "url": "http://10.0.2.2:8080/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "CLEARTEXT_NOT_ALLOWED"
+  },
+  {
+   "url": "http://10.0.2.2:8080/v1",
+   "env": {
+    "cleartextLoopbackEnabled": false,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "CLEARTEXT_NOT_ALLOWED"
+  },
+  {
+   "url": "http://192.168.1.10:8080/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "CLEARTEXT_NOT_ALLOWED"
+  },
+  {
+   "url": "http://example.com/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "CLEARTEXT_NOT_ALLOWED"
+  },
+  {
+   "url": "http://[::1]:8080/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "CLEARTEXT_NOT_ALLOWED"
+  },
+  {
+   "url": "http://0.0.0.0:8080/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "CLEARTEXT_NOT_ALLOWED"
+  },
+  {
+   "url": "http://127.0.0.2:8080/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "CLEARTEXT_NOT_ALLOWED"
+  },
+  {
+   "url": "https://user:pass@api.openai.com/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "MALFORMED"
+  },
+  {
+   "url": "https://api.openai.com/v1?key=abc",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "MALFORMED"
+  },
+  {
+   "url": "https://api.openai.com/v1#frag",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "MALFORMED"
+  },
+  {
+   "url": "https://api.openai.com/v1 ",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "MALFORMED"
+  },
+  {
+   "url": " https://api.openai.com/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "MALFORMED"
+  },
+  {
+   "url": "https://api openai.com/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "MALFORMED"
+  },
+  {
+   "url": "ftp://api.openai.com/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "MALFORMED"
+  },
+  {
+   "url": "api.openai.com/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "MALFORMED"
+  },
+  {
+   "url": "",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "MALFORMED"
+  },
+  {
+   "url": "https://",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "MALFORMED"
+  },
+  {
+   "url": "https://host:99999/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "MALFORMED"
+  },
+  {
+   "url": "https://host:0/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": false,
+   "reason": "MALFORMED"
+  },
+  {
+   "url": "hTtPs://api.openai.com/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": true
+  },
+  {
+   "url": "https://api.openai.com/v1/",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": true
+  },
+  {
+   "url": "https://api.openai.com/v1//",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": true
+  },
+  {
+   "url": "https://xn--model.example/v1",
+   "env": {
+    "cleartextLoopbackEnabled": true,
+    "debugBuild": false
+   },
+   "accepted": true
+  }
+ ]
+}
