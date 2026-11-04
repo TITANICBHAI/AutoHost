@@ -1,11 +1,11 @@
-# CI — the verification workflow (X-08, promoted from drafts/ci.workflow.yml on 2026-11-03, ADR-085).
-# python-suites: every stdlib-Python check (no Android SDK needed).
-# jvm-tests: the full JVM unit-test sweep (`gradle test`). No debug assemblies here —
-#   .github/workflows/android-debug-apk.yml owns the APK/fixture build (one build, no duplicates).
-# The emulator job was REMOVED by owner decision D-24 (2026-11-03): CI never runs emulators.
-# Gradle is pinned to 8.13 (docs/VERSIONS.md; X-07 chose the documented-pin route, no wrapper).
-# Failing steps tee their log and emit the failure lines as ::error:: annotations — run logs need
-# admin access to download, annotations are readable by anyone on the run page.
+# CI — Python suites and consistency checks (X-08, promoted from drafts/ci.workflow.yml 2026-11-03, ADR-085).
+# This workflow is Python-only (no Android SDK or Gradle needed) — the fastest signal on every push.
+# JVM tests are split into two independent workflows so each can iterate without blocking the others:
+#   jvm-core.yml        — :core:* and :runtime:js tests
+#   jvm-capabilities.yml — :capabilities:*, :plugin-sdk, :app and fixture tests
+# APK/fixture build lives in android-debug-apk.yml.
+# Emulator jobs are a permanent no-go (D-24, 2026-11-03).
+# Failing steps tee their log and emit the failure lines as ::error:: annotations.
 name: ci
 
 on:
@@ -72,118 +72,3 @@ jobs:
           python3 tools/gen_flow_vectors.py > /dev/null && git diff --exit-code testing/golden/flow_vectors.json
           python3 tools/gen_schedule_vectors.py > /dev/null && git diff --exit-code testing/golden/schedule_vectors.json
 
-  jvm-core:
-    name: JVM tests - core modules
-    runs-on: ubuntu-latest
-    timeout-minutes: 100
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: "17"
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"   # Chaquopy 17 needs a build-machine Python 3.13 (docs/VERSIONS.md)
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.13"
-      - name: Disk before build
-        run: df -h / | tail -1
-      - name: Core JVM tests
-        shell: bash
-        run: |
-          set +e
-          gradle :core:common:test :core:model:test :core:broker:test :core:engine:test :core:data:test :core:devapi:test :core:designsystem:test :runtime:js:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
-          rc=${PIPESTATUS[0]}
-          if [ "$rc" -ne 0 ]; then
-            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -2 | while read -r l; do echo "::error::${l:0:250}"; done
-            exit "$rc"
-          fi
-      - name: Failing test details
-        if: failure()
-        shell: bash
-        run: |
-          python3 tools/test_report_digest.py . | head -6 | while read -r l; do echo "::error::${l:0:250}"; done
-          grep -E "^[a-zA-Z].* > .*FAILED$|^ +[a-z]+\.[a-zA-Z.0-9]*(Exception|Error): |^ +Condition not satisfied|^ +Expected|^ +     but:" /tmp/jvm.log | head -6 | while read -r l; do echo "::error::${l:0:250}"; done
-      - name: Kotlin errors 1-9
-        if: failure()
-        shell: bash
-        run: |
-          grep -E "^e: " /tmp/jvm.log | head -9 | while read -r l; do echo "::error::${l:0:250}"; done
-      - name: Kotlin errors 10-18
-        if: failure()
-        shell: bash
-        run: |
-          grep -E "^e: " /tmp/jvm.log | tail -n +10 | head -9 | while read -r l; do echo "::error::${l:0:250}"; done
-      - name: Kotlin errors 19-27
-        if: failure()
-        shell: bash
-        run: |
-          grep -E "^e: " /tmp/jvm.log | tail -n +19 | head -9 | while read -r l; do echo "::error::${l:0:250}"; done
-      - name: Upload test reports
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: jvm-core-test-reports-${{ github.run_number }}
-          path: "**/build/reports/tests/"
-          if-no-files-found: warn
-          retention-days: 7
-
-  jvm-capabilities:
-    name: JVM tests - capabilities and app
-    runs-on: ubuntu-latest
-    timeout-minutes: 100
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: "17"
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"   # Chaquopy 17 needs a build-machine Python 3.13 (docs/VERSIONS.md)
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.13"
-      - name: Disk before build
-        run: df -h / | tail -1
-      - name: Capability and app JVM tests
-        shell: bash
-        run: |
-          set +e
-          gradle :runtime:python:test :runtime:flow:test :plugin-sdk:test :capabilities:a11y:test :capabilities:app:test :capabilities:ime:test :capabilities:screen:test :capabilities:projection:test :capabilities:notifications:test :capabilities:clipboard:test :capabilities:intents:test :capabilities:files:test :capabilities:audio:test :capabilities:net:test :capabilities:rawbridge:test :capabilities:shell:test :capabilities:browser:test :capabilities:vision:test :capabilities:data:test :app:test :testing:fixture-app:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
-          rc=${PIPESTATUS[0]}
-          if [ "$rc" -ne 0 ]; then
-            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -2 | while read -r l; do echo "::error::${l:0:250}"; done
-            exit "$rc"
-          fi
-      - name: Failing test details
-        if: failure()
-        shell: bash
-        run: |
-          python3 tools/test_report_digest.py . | head -6 | while read -r l; do echo "::error::${l:0:250}"; done
-          grep -E "^[a-zA-Z].* > .*FAILED$|^ +[a-z]+\.[a-zA-Z.0-9]*(Exception|Error): |^ +Condition not satisfied|^ +Expected|^ +     but:" /tmp/jvm.log | head -6 | while read -r l; do echo "::error::${l:0:250}"; done
-      - name: Kotlin errors 1-9
-        if: failure()
-        shell: bash
-        run: |
-          grep -E "^e: " /tmp/jvm.log | head -9 | while read -r l; do echo "::error::${l:0:250}"; done
-      - name: Kotlin errors 10-18
-        if: failure()
-        shell: bash
-        run: |
-          grep -E "^e: " /tmp/jvm.log | tail -n +10 | head -9 | while read -r l; do echo "::error::${l:0:250}"; done
-      - name: Kotlin errors 19-27
-        if: failure()
-        shell: bash
-        run: |
-          grep -E "^e: " /tmp/jvm.log | tail -n +19 | head -9 | while read -r l; do echo "::error::${l:0:250}"; done
-      - name: Upload test reports
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: jvm-capabilities-test-reports-${{ github.run_number }}
-          path: "**/build/reports/tests/"
-          if-no-files-found: warn
-          retention-days: 7

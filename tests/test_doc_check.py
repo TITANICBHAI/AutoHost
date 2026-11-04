@@ -19,12 +19,12 @@ INDEX = "| `GATES.md` | x |\n| `PROGRESS.md` | x |\n| `DECISIONS.md` | x |\n| `R
 
 def make(tmp: Path, extra: str = "", index: str = INDEX) -> Path:
     (tmp / "docs").mkdir()
-    (tmp / "docs" / "PROGRESS.md").write_text(PROGRESS)
-    (tmp / "docs" / "GATES.md").write_text(GATES)
-    (tmp / "docs" / "DECISIONS.md").write_text(DECISIONS)
-    (tmp / "docs" / "REUSE_MATRIX.md").write_text(MATRIX)
-    (tmp / "docs" / "README.md").write_text(index)
-    (tmp / "plan.md").write_text("See docs/GATES.md, P1-01, ADR-001, RM-A1, X-01, docs/GATES.md#g1-a.\n" + extra)
+    (tmp / "docs" / "PROGRESS.md").write_text(PROGRESS, encoding="utf-8")
+    (tmp / "docs" / "GATES.md").write_text(GATES, encoding="utf-8")
+    (tmp / "docs" / "DECISIONS.md").write_text(DECISIONS, encoding="utf-8")
+    (tmp / "docs" / "REUSE_MATRIX.md").write_text(MATRIX, encoding="utf-8")
+    (tmp / "docs" / "README.md").write_text(index, encoding="utf-8")
+    (tmp / "plan.md").write_text("See docs/GATES.md, P1-01, ADR-001, RM-A1, X-01, docs/GATES.md#g1-a.\n" + extra, encoding="utf-8")
     return tmp
 
 

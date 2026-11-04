@@ -184,7 +184,8 @@ class DevApiServer(
                         } else ""
                         val token = headers["authorization"]
                         val response = dispatch(body, token, caller = "http")
-                        writeHttp(client, if ((response["error"] as? JsonObject)?.get("code")?.toString() == "UNAUTHORIZED") 401 else 200, response.toString())
+                        val isUnauthorized = (response["error"] as? JsonObject)?.get("code")?.toString()?.trim('"') == "UNAUTHORIZED"
+                        writeHttp(client, if (isUnauthorized) 401 else 200, response.toString())
                     }
                     else -> writeHttp(client, 404, """{"error":{"code":"NOT_FOUND"}}""")
                 }

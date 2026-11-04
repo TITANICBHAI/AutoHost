@@ -3,25 +3,27 @@
 > Living continuity note for the implementing agent. This is not the task tracker. `docs/PROGRESS.md`, `HANDOFF.md` and `docs/DECISIONS.md` remain authoritative. The operating procedure (read order, batching, Git/CI rules) is `AGENT_OPERATING_PROTOCOL.md` at the repo root — read its **§10 every-time checklist** before each step.
 
 ## Updated
-- Date/time: 2026-11-03 ~21:00 IST
+- Date/time: 2026-11-04 ~07:10 IST
 - Current branch: `main` (tracks `origin/main`)
-- Latest local commit: `e552365` (pushed)
-- Latest pushed commit: `e552365` on `origin/main`
-- Latest GitHub Actions run: **run #29 for `e552365` — completed SUCCESS** (APK build; runs no tests) https://github.com/TITANICBHAI/AutoHost/actions/runs/41624267873 — the crash-fixed tree compiles and assembles. Run #28 (`577c40e`) also green.
+- Latest local commit: `3d40f16` (pushed)
+- Latest pushed commit: `3d40f16` on `origin/main`
+- Latest GitHub Actions run: **run #36 (`3d40f16`)** — APK build SUCCESS (41752421306); Python suites SUCCESS; jvm-core identified 2 failure sites (Ids monotonic padding, DevApiServer/Test 401 & JsonObject assertions); jvm-capabilities in progress.
 
 ## Current position
 - Phase / epoch: **Epoch V** (verify what exists); Phase 12+ blocked until X-09 (ADR-097)
-- Active task(s): none in progress — batch complete, awaiting next queue item
-- Current batch (pushed together): X-19 (ticked) + X-12 SDK/simulator half (row `(WIP)` unticked, evidence recorded) + HANDOFF hosted-CI queue edits
-- Batch status: locally checked (progress/doc checks, both Python suites, sync/gen drift); pushed for CI
+- Active task(s): X-17 (crash-fix build/tests) and X-07/X-08 (split workflow promotion & JVM test fixes)
+- Current batch (staged for push):
+  1. Split JVM workflows into separate files: `ci.yml` (Python only), `jvm-core.yml` (`:core:*` + `:runtime:js`), `jvm-capabilities.yml` (`:capabilities:*`, `:plugin-sdk`, `:app`, fixture)
+  2. Fixed ULID Crockford base32 bit-shift padding in `Ids.kt` (resolves `IdsTest`)
+  3. Fixed DevApiServer 401 status check quotes & updated DevApiTest JsonObject `.toString().contains(...)` assertions (resolves all 4 `DevApiServerTest` failures)
+- Batch status: locally checked (`progress.py --check` ok, `doc_check.py` ok, 81 root tests ok, all 4 workflow YAMLs validated)
 
 ## Verified baseline
 - `python tools/progress.py --check`: ok; dashboard 7/932 weighted, 5 ticks
 - `python tools/doc_check.py`: ok (54 files)
-- Root Python suite (`tests/`): **80 OK** (75 + 5 new architecture tests)
-- SDK Python suite (`sdk-python`): 415 OK (not re-run yet this session; X-12 will re-run)
-- Latest JVM/build evidence: run #29 green (APK build only — NO tests; X-17 test sequence open)
-- Environment: Windows 10 PC (3.9 GB RAM); git 2.56.0.windows.3 on PATH (ZCode harness = Git Bash); remote `TITANICBHAI/AutoHost` (public — anonymous API works); `gh` NOT installed; local Gradle/JVM/emulator need owner approval (ADR-101); hosted CI approved (D-22). NOTE: the sdk-python suite has 14 PRE-EXISTING failures on this Windows machine (12 tzdata errors in test_ref_schedule, 1 file-scheme in test_p11_part2, 1 /tmp path separator in test_mcp_server) — Linux CI is the reference
+- Root Python suite (`tests/`): **81 OK** (75 + 5 architecture + 1 doc check)
+- Workflow YAMLs: all 4 files valid YAML with correct single-job definitions
+- Environment: Windows 10 PC (3.9 GB RAM); git on PATH; remote `TITANICBHAI/AutoHost`; local Gradle/JVM/emulator need owner approval (ADR-101); hosted CI approved (D-22)
 
 ## Decisions that affect current work
 - D-22 decided 2026-11-03: GitHub Actions hosts builds/tests; never re-ask for hosted-runner approval (`docs/DECISIONS.md`)
@@ -36,9 +38,8 @@
 - **BATCH MORE, PUSH LESS** — gather multiple fixes/tasks per push; verification runs once per batch.
 - **RECHECK LOOP BEFORE EVERY COMMIT (owner, 2026-11-04):** re-verify everything touched (syntax per language, line-endings, YAML, replaced texts); if an error is found, fix it and REPEAT the whole recheck; loop until a round finds ZERO problems; only then commit.
 - **EMULATOR CI JOB = NO-GO (D-24)** — removed from ci.yml; never re-add it without an explicit owner decision.
-- Next work: X-17-style JVM test-compile fix loop via CI annotations (app/a11y first), batched.
-
-## Owner interaction protocol (2026-11-03)
+- **NO DEVICE, EVER (D-25, 2026-11-04)** — device-gated items are permanently skipped as unverifiable; annotate and move on; X-09 proceeds without X-18.
+- Next work: push split workflow & core JVM fixes, monitor runs.
 
 ## Blockers / owner actions
 - X-18 phone test, D-23 (blocks X-22), P0-01 device facts — owner-side

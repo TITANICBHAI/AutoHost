@@ -202,20 +202,20 @@ class DevApiServerTest {
             authHeader = null,
             caller = "http",
         )
-        assertTrue(response.contains("UNAUTHORIZED"))
+        assertTrue(response.toString().contains("UNAUTHORIZED"))
         val token = devServer.tokens.currentOrNull()!!
         val ok = devServer.dispatch(
             """{"jsonrpc":"2.0","id":1,"method":"system.ping"}""",
             authHeader = "Bearer $token",
             caller = "http",
         )
-        assertTrue(ok.contains("\"result\""))
+        assertTrue(ok.toString().contains("\"result\""))
     }
 
     @Test
     fun `disabled server refuses http calls but accepts in-process local calls`() {
         val devServer = server(enabled = false)
-        assertTrue(devServer.dispatch("""{"jsonrpc":"2.0","id":1,"method":"system.ping"}""", null, "http").contains("DEV_API_OFF"))
+        assertTrue(devServer.dispatch("""{"jsonrpc":"2.0","id":1,"method":"system.ping"}""", null, "http").toString().contains("DEV_API_OFF"))
         // ContentProvider/local path still evaluates (used by adb one-liners on debug builds)
         assertNotNull(devServer.handleRpc("""{"jsonrpc":"2.0","id":1,"method":"system.ping"}""", null))
     }
@@ -307,6 +307,6 @@ class DevApiServerTest {
             authHeader = "Bearer $token",
             caller = "local",
         )
-        assertTrue(response.contains("NOT_FOUND")) // fake backend returns null for tasks.get
+        assertTrue(response.toString().contains("NOT_FOUND")) // fake backend returns null for tasks.get
     }
 }

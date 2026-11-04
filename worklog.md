@@ -744,3 +744,25 @@ Stage Summary:
 **Verification (final):** `progress.py --check` ok; `doc_check.py` ok (54 files); root suite 80 OK; sdk suite 428 (13 new, 14 pre-existing env); `sync_sdk --check` + `licence_check` + `gen_artifacts --check` green. No Gradle, no heavy processes.
 
 **Open:** X-12 Kotlin half (after X-09; needs the build); X-17 test sequence via CI workflow promotion; X-18, D-23, P0-01 owner-side; Windows tzdata/`/tmp` suite failures are environmental (Linux CI green).
+
+## Session 23 — workflow splitting & core JVM test failures resolved (run #36 follow-up)
+
+**Scope delivered:**
+1. **GitHub Actions workflow split:**
+   - `.github/workflows/ci.yml` — stripped down to Python suites and consistency checks only (fast feedback loop, no Gradle/JDK).
+   - `.github/workflows/jvm-core.yml` — dedicated workflow for core JVM test suite (`:core:common:test :core:model:test :core:broker:test :core:engine:test :core:data:test :core:devapi:test :core:designsystem:test :runtime:js:test`).
+   - `.github/workflows/jvm-capabilities.yml` — dedicated workflow for capabilities and app sweep (`:runtime:python:test :runtime:flow:test :plugin-sdk:test :capabilities:*:test :app:test :testing:fixture-app:test`), with its YAML job indentation bug resolved.
+   - `.github/workflows/android-debug-apk.yml` — continues to independently assemble debug and fixture APKs.
+2. **Core test fixes (diagnosed via run #36 annotations):**
+   - `core/common/.../Ids.kt`: fixed 3-bit padding in Crockford base32 encoding where remaining bits on the last byte were discarded before zero padding, restoring strict monotonicity across ULIDs generated within the same millisecond (`IdsTest`).
+   - `core/devapi/.../DevApiServer.kt`: trimmed quotes from `response["error"].code` string check to correctly return 401 on unauthorized requests.
+   - `core/devapi/.../DevApiTest.kt`: updated `dispatch` assertions to test `.toString().contains(...)` instead of checking `JsonObject` (which implements `Map<String, JsonElement>` and checks keys, not substring content).
+3. **Operational state:**
+   - Fixed Windows cp1252 em-dash decode bug in `tests/test_doc_check.py` by specifying `encoding="utf-8"` on temporary file writes.
+   - Updated `AGENT_STATE.md` and cleaned up protocol documentation.
+
+**Verification:**
+- `python tools/progress.py --check` ok.
+- `python tools/doc_check.py` ok (54 files).
+- `python -m unittest discover -s tests -p "test_*.py"`: **81 OK** in 10.6s.
+- All 4 workflow YAML files validated with `yaml.safe_load`.

@@ -83,6 +83,11 @@ object Ids {
                 bitsSize -= 5
             }
         }
+        if (bitsSize > 0 && chars < TOTAL_CHARS) {
+            val index = ((bits shl (5 - bitsSize)) and 0x1FL).toInt()
+            sb.append(ENCODING[index])
+            chars++
+        }
         while (chars < TOTAL_CHARS) {
             sb.append(ENCODING[0])
             chars++
