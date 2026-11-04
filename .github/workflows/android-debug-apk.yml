@@ -111,12 +111,19 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          gradle :app:assembleCorePyDebug :testing:fixture-app:assembleDebug  # P15-03: two flavor dimensions (tier x runtime) — py is the default full build \
+          # P15-03: two flavor dimensions (tier x runtime) — py is the default full build
+          gradle :app:assembleCorePyDebug :testing:fixture-app:assembleDebug \
             --console=plain \
             --stacktrace \
             --warning-mode=all \
-            --info \
             2>&1 | tee ci-logs/gradle-build.log
+
+      - name: Build failure block
+        if: failure()
+        shell: bash
+        run: |
+          sed -n '/FAILURE: Build failed/,/^\* Try:/p' ci-logs/gradle-build.log | head -30 | while read -r l; do echo "::error::${l:0:250}"; done
+          grep -B2 -A8 "What went wrong" ci-logs/gradle-build.log | head -20 | while read -r l; do echo "::error::${l:0:250}"; done
 
       - name: Record APK checksum
         if: success()
