@@ -91,6 +91,7 @@ class ReverseDevApiLinkTest {
             tokenProvider = { "tok-123" },
             host = "127.0.0.1",
             port = serverSocket.localPort,
+            connectAttempts = 3,
         )
         val request = """{"jsonrpc":"2.0","id":7,"method":"system.ping"}"""
         val reply = java.util.concurrent.CompletableFuture.supplyAsync { bridge.acceptAndExpect(request) }
@@ -111,6 +112,7 @@ class ReverseDevApiLinkTest {
             tokenProvider = { null },
             host = "127.0.0.1",
             port = serverSocket.localPort,
+            connectAttempts = 3,
         )
         // The bridge side never completes a handshake; the link must die on its own.
         val thread = Thread({ link.run() }, "reverse-link-no-token").apply { isDaemon = true; start() }
@@ -137,6 +139,7 @@ class ReverseDevApiLinkTest {
             tokenProvider = { "tok" },
             host = "127.0.0.1",
             port = serverSocket.localPort,
+            connectAttempts = 3,
         )
         link.run()
         // Independent probe: is the bound listener reachable at all, or is the sandbox refusing loopback?

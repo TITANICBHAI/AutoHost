@@ -109,6 +109,7 @@ object ReturnShape {
             Kind.STRING -> if (value !is JsonPrimitive) violations.add("key \"$name\" must be a string")
             Kind.OBJECT -> if (value !is JsonObject) violations.add("key \"$name\" must be an object")
             Kind.ARRAY -> if (value !is JsonArray) violations.add("key \"$name\" must be an array")
+            Kind.ANY -> Unit // named wire types (UiSnapshot, TextInputOutcome...): any value accepted
         }
         return violations
     }

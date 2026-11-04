@@ -32,6 +32,13 @@ class ReverseDevApiLink(
     private val log: (level: String, message: String) -> Unit = { _, _ -> },
     /** One connect attempt budget — the PC side may not be up yet; the controller retries. */
     private val connectTimeoutMs: Int = 5_000,
+    /**
+     * Connect attempts inside one run() call. Production keeps 1 (the controller owns the retry
+     * loop); the loopback tests pass 3 with [connectRetryDelayMs] because a local listener can
+     * transiently refuse during early accept setup (measured on CI runners, 2026-11-05).
+     */
+    private val connectAttempts: Int = 1,
+    private val connectRetryDelayMs: Long = 200,
 ) {
 
     fun interface JsonDispatcher {
@@ -56,11 +63,7 @@ class ReverseDevApiLink(
         try {
             val token = tokenProvider() ?: throw IOException("no dev api token issued — enable the dev api first")
             val connection = try {
-                Socket().apply {
-                    connect(InetSocketAddress(host, port), connectTimeoutMs)
-                    soTimeout = 0 // the link is long-lived; read() blocks until traffic or close
-                    tcpNoDelay = true
-                }
+                connectWithRetry()
             } catch (e: IOException) {
                 throw IOException("connect to $host:$port failed: ${e.message}", e)
             }
@@ -78,6 +81,30 @@ class ReverseDevApiLink(
             runCatching { socket?.close() }
             socket = null
         }
+    }
+
+    private fun connectWithRetry(): Socket {
+        var last: IOException? = null
+        for (attempt in 1..maxOf(1, connectAttempts)) {
+            try {
+                return Socket().apply {
+                    connect(InetSocketAddress(host, port), connectTimeoutMs)
+                    soTimeout = 0 // the link is long-lived; read() blocks until traffic or close
+                    tcpNoDelay = true
+                }
+            } catch (e: IOException) {
+                last = e
+                if (attempt < connectAttempts) {
+                    try {
+                        Thread.sleep(connectRetryDelayMs)
+                    } catch (ie: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        throw IOException("connect interrupted", ie)
+                    }
+                }
+            }
+        }
+        throw last ?: IOException("connect failed")
     }
 
     fun stop() {
