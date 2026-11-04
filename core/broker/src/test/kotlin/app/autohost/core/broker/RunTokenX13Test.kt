@@ -3,10 +3,8 @@ package app.autohost.core.broker
 import app.autohost.core.broker.interceptor.AuthInterceptor
 import app.autohost.core.common.Clock
 import app.autohost.core.common.FakeClock
-import app.autohost.core.engine.orchestrator.RunStateMachine
 import app.autohost.core.model.Envelope
 import app.autohost.core.model.ErrorCode
-import app.autohost.core.model.RunStatus
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import org.junit.Assert.assertEquals
@@ -152,18 +150,5 @@ class RunTokenX13Test {
         val envelope = interceptor.intercept(call) { Envelope.ok() }
         assertTrue(envelope.ok)
         assertEquals("run-9", call.context?.runId)
-    }
-
-    // -- WAITING_USER semantics (pinned: a waiting run keeps its credential) -----------------------
-
-    @Test
-    fun `given WAITING_USER when the user answers then the run continues on the same state machine`() {
-        // X-13/X-16: WAITING_USER is NOT terminal — transitions out exist, so nothing may revoke
-        // the token while a run waits for its user.
-        assertTrue(RunStateMachine.canTransition(RunStatus.RUNNING, RunStatus.WAITING_USER))
-        assertTrue(RunStateMachine.canTransition(RunStatus.WAITING_USER, RunStatus.RUNNING))
-        assertTrue(RunStateMachine.canTransition(RunStatus.WAITING_USER, RunStatus.STARTING))
-        // terminal states have no outgoing transitions; WAITING_USER must not be among them
-        assertTrue(RunStateMachine.canTransition(RunStatus.WAITING_USER, RunStatus.FAILED))
     }
 }

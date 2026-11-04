@@ -1,6 +1,7 @@
 package app.autohost.core.broker
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
@@ -66,7 +67,7 @@ class ReturnShapeTest {
     }
 
     @Test
-    fun `given the bundled broker spec resource when parsed then every device.ui returns parses`() {
+    fun `given the bundled broker spec resource when parsed then every device ui returns parses`() {
         val text = javaClass.classLoader!!
             .getResourceAsStream("autohost/capability-specs-w1.json")!!
             .readBytes().decodeToString()
