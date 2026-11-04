@@ -26,17 +26,30 @@ class ReverseDevApiLinkTest {
         lateinit var client: Socket
 
         fun acceptAndExpect(requestJson: String): String {
-            client = serverSocket.accept()
-            val input = BufferedInputStream(client.getInputStream())
-            val output = BufferedOutputStream(client.getOutputStream())
-            // server-side handshake
-            val lines = mutableListOf<String>()
+            // Loop-accept: the pre-probe connection(s) carry no WS handshake — close and continue.
+            var lines = mutableListOf<String>()
+            var input: BufferedInputStream? = null
+            var output: BufferedOutputStream? = null
+            var key = ""
             while (true) {
-                val line = input.readLine() ?: break
-                if (line.isEmpty()) break
-                lines += line
+                client = serverSocket.accept()
+                input = BufferedInputStream(client.getInputStream())
+                output = BufferedOutputStream(client.getOutputStream())
+                lines = mutableListOf()
+                while (true) {
+                    val line = input.readLine() ?: break
+                    if (line.isEmpty()) break
+                    lines += line
+                }
+                val keyLine = lines.firstOrNull { it.startsWith("Sec-WebSocket-Key:") }
+                if (keyLine == null) {
+                    // a probe connection: close it and keep accepting
+                    runCatching { client.close() }
+                    continue
+                }
+                key = keyLine.substringAfter(':').trim()
+                break
             }
-            val key = lines.first { it.startsWith("Sec-WebSocket-Key:") }.substringAfter(':').trim()
             val response = "HTTP/1.1 101 Switching Protocols\r\n" +
                 "Upgrade: websocket\r\n" +
                 "Connection: Upgrade\r\n" +
@@ -74,6 +87,22 @@ class ReverseDevApiLinkTest {
         }
     }
 
+    /** Waits until the bound listener accepts connections (CI runners refuse early connects). */
+    private fun awaitAccepting(serverSocket: ServerSocket, timeoutMs: Long = 3_000) {
+        val deadline = System.nanoTime() + timeoutMs * 1_000_000
+        while (System.nanoTime() < deadline) {
+            try {
+                java.net.Socket().apply {
+                    connect(java.net.InetSocketAddress("127.0.0.1", serverSocket.localPort), 500)
+                }.close()
+                return // the accept thread consumes probe connections (its loops skip non-WS ones)
+            } catch (e: java.io.IOException) {
+                Thread.sleep(100)
+            }
+        }
+        throw java.io.IOException("listener on ${serverSocket.localPort} never started accepting")
+    }
+
     @Test
     fun endToEndRoundTripThroughALoopbackBridge() {
         val serverSocket = ServerSocket(0, 64, java.net.InetAddress.getByName("127.0.0.1"))
@@ -95,6 +124,7 @@ class ReverseDevApiLinkTest {
         )
         val request = """{"jsonrpc":"2.0","id":7,"method":"system.ping"}"""
         val reply = java.util.concurrent.CompletableFuture.supplyAsync { bridge.acceptAndExpect(request) }
+        awaitAccepting(serverSocket)
         Thread({ link.run() }, "reverse-link").apply { isDaemon = true; start() }
         val response = reply.get(10, TimeUnit.SECONDS)
         assertTrue("expected id:7 in response, got: $response", response.contains(""""id":7"""))
@@ -141,6 +171,7 @@ class ReverseDevApiLinkTest {
             port = serverSocket.localPort,
             connectAttempts = 3,
         )
+        awaitAccepting(serverSocket)
         link.run()
         // Independent probe: is the bound listener reachable at all, or is the sandbox refusing loopback?
         val probe = try {

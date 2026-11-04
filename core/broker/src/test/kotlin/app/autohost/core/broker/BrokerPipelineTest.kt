@@ -90,7 +90,7 @@ class BrokerPipelineTest {
 
     @Test
     fun `given unknown token when call then permission denied with unknown run token reason`() = runTest {
-        val envelope = broker.call("not-a-token", "store", "get", JsonObject(emptyMap()))
+        val envelope = broker.call("f".repeat(64), "store", "get", JsonObject(emptyMap())) // well-formed but unknown (X-13: malformed is a separate gate)
         assertEquals(false, envelope.ok)
         assertEquals(ErrorCode.PERMISSION_DENIED.name, envelope.error?.code)
         assertEquals("UNKNOWN_RUN_TOKEN", envelope.error?.reason)

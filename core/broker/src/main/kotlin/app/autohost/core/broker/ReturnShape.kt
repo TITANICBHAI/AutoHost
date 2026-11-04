@@ -50,8 +50,12 @@ object ReturnShape {
             val optional = type.endsWith("?")
             if (optional) type = type.dropLast(1)
             val field = when {
-                type.startsWith("'") && type.endsWith("'") ->
+                type.startsWith("'") && type.endsWith("'") && type.contains("|") ->
                     FieldSpec(name, Kind.ENUM, optional, type.trim('\'').split("|").map { it.trim() }.toSet())
+                type.startsWith("'") && type.endsWith("'") ->
+                    // A single quoted name is a NAMED type (the spec's `types` registry, e.g.
+                    // 'UiSnapshot') — wire-opaque here, not a one-value enum.
+                    FieldSpec(name, Kind.ANY, optional, emptySet())
                 type.startsWith("[") -> FieldSpec(name, Kind.ARRAY, optional, emptySet()) // [T]: element types unchecked
                 else -> {
                     // Named types (UiSnapshot, NodeSummary, TextInputOutcome, ...) are wire-opaque
