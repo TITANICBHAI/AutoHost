@@ -99,7 +99,7 @@ object WsFrames {
             payload.size < 65536 -> 3
             else -> 9
         }
-        val header = ByteArray(lengthBits + maskLength)
+        val header = ByteArray(1 + lengthBits + maskLength)  // opcode byte + length field + mask key
         header[0] = (0x80 or opcode).toByte() // FIN + opcode (single frame, no fragmentation)
         when (lengthBits) {
             1 -> header[1] = payload.size.toByte()
@@ -118,7 +118,7 @@ object WsFrames {
         }
         if (mask) {
             val key = ByteArray(4).also { java.security.SecureRandom().nextBytes(it) }
-            key.copyInto(header, lengthBits)
+            key.copyInto(header, 1 + lengthBits)
             val out = ByteArray(header.size + payload.size)
             header.copyInto(out)
             for (i in payload.indices) out[header.size + i] = (payload[i].toInt() xor key[i % 4].toInt()).toByte()

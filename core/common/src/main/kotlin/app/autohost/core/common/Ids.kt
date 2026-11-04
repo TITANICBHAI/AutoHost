@@ -21,34 +21,42 @@ object Ids {
     private var lastRandom = ByteArray(10)
 
     fun ulid(nowMs: Long = System.currentTimeMillis()): String {
-        val timeBytes = ByteArray(6)
-        for (i in 0 until 6) timeBytes[i] = ((nowMs ushr ((5 - i) * 8)) and 0xFF).toByte()
+        var ts = nowMs
         val randomBytes: ByteArray
         synchronized(lock) {
-            randomBytes = if (nowMs == lastTimeMs) {
-                increment(lastRandom)
-            } else {
-                ByteArray(10).also { random.nextBytes(it) }
+            randomBytes = when {
+                ts == lastTimeMs -> {
+                    // Same millisecond: strictly increase the randomness so ids still sort.
+                    // On (astronomically unlikely) full-counter overflow, borrow the next
+                    // millisecond and restart the counter at zero - ordering is preserved.
+                    val inc = increment(lastRandom)
+                    if (inc == null) {
+                        ts += 1
+                        ByteArray(10)
+                    } else {
+                        inc
+                    }
+                }
+                else -> ByteArray(10).also { random.nextBytes(it) }
             }
-            lastTimeMs = nowMs
+            lastTimeMs = ts
             lastRandom = randomBytes
         }
+        val timeBytes = ByteArray(6)
+        for (i in 0 until 6) timeBytes[i] = ((ts ushr ((5 - i) * 8)) and 0xFF).toByte()
         val bytes = timeBytes + randomBytes
         return encode(bytes)
     }
 
-    /** Strictly increasing randomness when several ids are minted in the same millisecond. */
-    private fun increment(bytes: ByteArray): ByteArray {
+    /** Strictly increasing randomness when several ids are minted in the same millisecond; null on overflow. */
+    private fun increment(bytes: ByteArray): ByteArray? {
         val copy = bytes.copyOf()
         for (i in copy.indices.reversed()) {
             val v = (copy[i].toInt() and 0xFF) + 1
             copy[i] = v.toByte()
             if (v <= 0xFF) return copy
         }
-        // overflowed (astronomically unlikely): fall back to fresh randomness
-        val fresh = ByteArray(copy.size)
-        random.nextBytes(fresh)
-        return fresh
+        return null // the 80-bit counter overflowed: the caller borrows the next millisecond
     }
 
     /** [nBytes] random bytes as lowercase hex. Default 32 bytes = 64 chars (run-token strength). */

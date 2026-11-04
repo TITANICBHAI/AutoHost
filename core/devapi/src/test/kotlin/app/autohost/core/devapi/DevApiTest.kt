@@ -161,7 +161,7 @@ class RpcRouterTest {
             "device.app.launch", "device.app.foreground", "device.screenshot",
             "tasks.list", "tasks.get", "tasks.remove", "tasks.set_config",
             "runs.start", "runs.list", "runs.status", "runs.tail", "runs.pause", "runs.resume", "runs.cancel", "runs.export",
-            "triggers.list", "triggers.status", "triggers.upsert", "triggers.delete", "triggers.test",
+            "triggers.list", "triggers.status", "triggers.upsert", "triggers.delete", "triggers.test", "triggers.catalog",
             "recorder.start", "recorder.stop",
         )
         assertEquals(expected, router.methods())

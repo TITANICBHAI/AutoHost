@@ -109,9 +109,7 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          grep -rl --include="*.xml" "<failure message" . 2>/dev/null | head -20 | while read -r f; do
-            grep -o '<failure message="[^"]*"' "$f" | head -2
-          done | head -9 | while read -r l; do echo "::error::${l:0:250}"; done
+          python3 tools/test_report_digest.py . | head -9 | while read -r l; do echo "::error::${l:0:250}"; done
       - name: Kotlin errors 1-9
         if: failure()
         shell: bash
@@ -173,9 +171,7 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          grep -rl --include="*.xml" "<failure message" . 2>/dev/null | head -20 | while read -r f; do
-            grep -o '<failure message="[^"]*"' "$f" | head -2
-          done | head -9 | while read -r l; do echo "::error::${l:0:250}"; done
+          python3 tools/test_report_digest.py . | head -9 | while read -r l; do echo "::error::${l:0:250}"; done
       - name: Kotlin errors 1-9
         if: failure()
         shell: bash

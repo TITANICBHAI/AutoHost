@@ -17,7 +17,7 @@ class ForegroundTrackerTest {
         val fg = ForegroundTracker.state.first()
         assertEquals("com.a", fg?.pkg)
         assertEquals(".MainActivity", fg?.activity)
-        assertEquals(100, fg?.tsMs)
+        assertEquals(100L, fg?.tsMs)
     }
 
     @Test
