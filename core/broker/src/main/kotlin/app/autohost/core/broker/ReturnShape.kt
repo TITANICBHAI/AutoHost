@@ -36,7 +36,11 @@ object ReturnShape {
 
     fun parse(spec: String): Map<String, FieldSpec> {
         val trimmed = spec.trim()
-        require(trimmed.startsWith("{") && trimmed.endsWith("}")) { "returns spec must be {k:type,...}: $spec" }
+        if (!trimmed.startsWith("{")) {
+            // A top-level bare named type (e.g. `UiSnapshot`) — the whole result is wire-opaque
+            // to the conformance harness; its shape lives in the spec's `types` registry.
+            return emptyMap()
+        }
         val body = trimmed.substring(1, trimmed.length - 1)
         val fields = LinkedHashMap<String, FieldSpec>()
         if (body.isBlank()) return fields
