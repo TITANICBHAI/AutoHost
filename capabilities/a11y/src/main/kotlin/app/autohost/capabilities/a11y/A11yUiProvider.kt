@@ -230,7 +230,7 @@ class A11yUiProvider(
                 nowMs = clock.nowMs(),
             )) {
                 is SettlePolicy.Decision.Settled ->
-                    return Envelope.ok(buildJsonObject { put("settled", true); put("elapsed_ms", elapsed) })
+                    return Envelope.ok(buildJsonObject { put("settled", true); put("waited_ms", elapsed) })
                 is SettlePolicy.Decision.TimedOut ->
                     return Envelope.err(ErrorCode.TIMEOUT, "the UI never settled within the timeout", reason = "UI_BUSY")
                 is SettlePolicy.Decision.KeepWaiting -> awaitChangeOrDelay(pollIntervalMs)
@@ -295,16 +295,26 @@ class A11yUiProvider(
             if (longClick) actions.longClick(info) else actions.click(info)
         }
         val verifiedByExpect = verifyExpect(args, observePackages)
-        return when {
-            verifiedByExpect != null -> verifiedByExpect
-            else -> Envelope.ok(
-                buildJsonObject {
-                    put("method", outcome.route?.name ?: "NONE")
-                    put("verified", outcome.verified)
-                    put("coordinate", outcome.route == NodeActions.Route.COORDINATE)
-                },
+        if (verifiedByExpect != null) return verifiedByExpect
+        // P12-01 (A6): the result speaks the SPEC's vocabulary, not the internal Route enum —
+        // NODE→NODE_ACTION, PARENT→ANCESTOR_ACTION, COORDINATE→COORDINATE. A null route means the
+        // action was never dispatched: a typed error, never a "method" value (frozen spec).
+        val method = when (outcome.route) {
+            NodeActions.Route.NODE -> "NODE_ACTION"
+            NodeActions.Route.PARENT -> "ANCESTOR_ACTION"
+            NodeActions.Route.COORDINATE -> "COORDINATE"
+            null -> return Envelope.err(
+                ErrorCode.CAPABILITY_UNAVAILABLE,
+                "the click could not be dispatched (the node action, the ancestor action and the gesture were all refused)",
+                reason = "NOT_DISPATCHED",
             )
         }
+        return Envelope.ok(
+            buildJsonObject {
+                put("method", method)
+                put("verified", outcome.verified)
+            },
+        )
     }
 
     /** Resolves the target and applies the popup guard; returns the resolved node handle or an error envelope. */
@@ -542,7 +552,15 @@ class A11yUiProvider(
         val y2 = floatArg(args, "y2") ?: return invalidSwipe(args)
         val durationMs = longArg(args, "duration_ms", 300)
         val dispatched = actions.swipe(x1, y1, x2, y2, durationMs)
-        return Envelope.ok(buildJsonObject { put("dispatched", dispatched) })
+        // P12-01: the frozen spec promises {method:'COORDINATE'} (refused gesture = typed error).
+        if (!dispatched) {
+            return Envelope.err(
+                ErrorCode.CAPABILITY_UNAVAILABLE,
+                "the swipe gesture was refused by the OS",
+                reason = "NOT_DISPATCHED",
+            )
+        }
+        return Envelope.ok(buildJsonObject { put("method", "COORDINATE") })
     }
 
     private fun invalidSwipe(args: JsonObject): Envelope =
@@ -552,12 +570,16 @@ class A11yUiProvider(
         val x = floatArg(args, "x") ?: return Envelope.err(ErrorCode.INVALID_ARGS, "tap needs numeric 'x'")
         val y = floatArg(args, "y") ?: return Envelope.err(ErrorCode.INVALID_ARGS, "tap needs numeric 'y'")
         val dispatched = actions.tap(x, y)
-        return Envelope.ok(
-            buildJsonObject {
-                put("dispatched", dispatched)
-                put("coordinate", true) // raw taps are always coordinate results (plan §7.6)
-            },
-        )
+        // P12-01: the frozen spec promises {method:'COORDINATE'}; a refused gesture is a typed
+        // error, never a method value (same rule as click).
+        if (!dispatched) {
+            return Envelope.err(
+                ErrorCode.CAPABILITY_UNAVAILABLE,
+                "the tap gesture was refused by the OS",
+                reason = "NOT_DISPATCHED",
+            )
+        }
+        return Envelope.ok(buildJsonObject { put("method", "COORDINATE") })
     }
 
     private fun press(args: JsonObject): Envelope {
@@ -567,14 +589,17 @@ class A11yUiProvider(
             return Envelope.err(ErrorCode.INVALID_ARGS, "unknown key '$key'; known: back, home, recents, notifications")
         }
         val performed = actions.global(key)
-        return Envelope.ok(buildJsonObject { put("performed", performed) })
+        // P12-01: the frozen spec promises {ok:bool} — the simulator already speaks this shape.
+        return Envelope.ok(buildJsonObject { put("ok", performed) })
     }
 
     private fun hideKeyboard(args: JsonObject, packages: Set<String>?): Envelope {
         val visible = keyboardState(packages).visible
-        if (!visible) return Envelope.ok(buildJsonObject { put("hidden", false); put("was_visible", false) })
+        // P12-01: the frozen spec promises {ok:bool}; `was_visible` rides as an additive key
+        // until the P12-02 regeneration declares it.
+        if (!visible) return Envelope.ok(buildJsonObject { put("ok", true); put("was_visible", false) })
         val performed = actions.global(GlobalActions.BACK)
-        return Envelope.ok(buildJsonObject { put("hidden", performed); put("was_visible", true) })
+        return Envelope.ok(buildJsonObject { put("ok", performed); put("was_visible", true) })
     }
 
     // --- shared helpers ----------------------------------------------------------------------------------------

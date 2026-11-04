@@ -285,7 +285,7 @@ class A11yUiProviderTest {
         val ref = (found.result!!.jsonObject["ref"] as JsonPrimitive).content
         val clicked = provider.invoke(ctx, "click", buildJsonObject { put("ref", ref) })
         assertTrue(clicked.ok)
-        assertEquals("NODE", (clicked.result!!.jsonObject["method"] as JsonPrimitive).content)
+        assertEquals("NODE_ACTION", (clicked.result!!.jsonObject["method"] as JsonPrimitive).content)
         assertEquals(1, actions.clicks.size)
     }
 

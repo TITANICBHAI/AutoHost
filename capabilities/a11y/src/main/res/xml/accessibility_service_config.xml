@@ -3,7 +3,11 @@
      scoping is applied dynamically by the granted packages (A11yScope). -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeWindowsChanged|typeViewTextChanged|typeNotificationStateChanged"
+    <!-- P15-08 audit (RM-A8): typeWindowsChanged had zero consumers (window tracking reads the
+     windows API directly) and was removed; typeViewTextChanged stays (the recorder maps it to
+     Kind.TEXT); typeViewClicked is NOT in the mask even though RecorderTap maps it — recorded as
+     a finding (recorder click capture) rather than a blind change. CPU effect UNMEASURED (D-25). -->
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewTextChanged|typeNotificationStateChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows|flagReportViewIds|flagIncludeNotImportantViews|flagRequestFilterKeyEvents"
     android:canRetrieveWindowContent="true"
