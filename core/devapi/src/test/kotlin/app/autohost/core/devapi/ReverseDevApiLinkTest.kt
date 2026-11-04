@@ -82,7 +82,7 @@ class ReverseDevApiLinkTest {
             assertEquals("Bearer tok-123", auth)
             assertEquals("reverse", caller)
             kotlinx.serialization.json.buildJsonObject {
-                put("echo", JsonPrimitive(body))
+                put("echo", app.autohost.core.common.AhJson.json.parseToJsonElement(body))
                 put("auth_seen", JsonPrimitive(auth ?: ""))
             }
         }
@@ -96,10 +96,10 @@ class ReverseDevApiLinkTest {
         val reply = java.util.concurrent.CompletableFuture.supplyAsync { bridge.acceptAndExpect(request) }
         Thread({ link.run() }, "reverse-link").apply { isDaemon = true; start() }
         val response = reply.get(10, TimeUnit.SECONDS)
-        assertTrue(response.contains(""""id":7"""))
+        assertTrue("expected id:7 in response, got: $response", response.contains(""""id":7"""))
         assertTrue(response.contains("system.ping"))
         assertTrue(response.contains(""""auth_seen":"Bearer tok-123""""))
-        assertTrue(link.lastError == null)
+        assertTrue("expected null lastError, got: ${link.lastError}", link.lastError == null)
         serverSocket.close()
     }
 
@@ -129,6 +129,7 @@ class ReverseDevApiLinkTest {
             while (reader.readLine()?.isNotEmpty() == true) {}
             client.getOutputStream().write("HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n".encodeToByteArray())
             client.getOutputStream().flush()
+            runCatching { client.shutdownOutput() }
             client.close()
         }).apply { isDaemon = true; start() }
         val link = ReverseDevApiLink(
@@ -138,7 +139,7 @@ class ReverseDevApiLinkTest {
             port = serverSocket.localPort,
         )
         link.run()
-        assertTrue(link.lastError?.contains("403") == true)
+        assertTrue("expected 403 in lastError, got: ${link.lastError}", link.lastError?.contains("403") == true)
         assertEquals(false, link.isRunning)
         serverSocket.close()
     }

@@ -8,15 +8,22 @@ from pathlib import Path
 
 def digest_file(path: Path):
     xml = path.read_text(encoding="utf-8", errors="replace")
-    for m in re.finditer(
-        r'<testcase name="([^"]+)" classname="([^"]+)"[^>]*>\s*'
-        r'<failure(?: message="([^"]*)")?([^>]*)>(.{0,300}?)</failure>',
-        xml,
-        re.DOTALL,
-    ):
-        name, cls, msg, _attrs, body = m.groups()
-        msg = (msg or "").replace("&quot;", '"').replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
-        frame_m = re.search(r"at ([^(\n]+\(\w+\.kt:\d+\))", body)
+    for tc in re.finditer(r'<testcase\b([^>]+)>(.*?)</testcase>', xml, re.DOTALL):
+        attrs, body = tc.groups()
+        name_m = re.search(r'name="([^"]+)"', attrs)
+        cls_m = re.search(r'classname="([^"]+)"', attrs)
+        fail_m = re.search(r'<failure\b([^>]*?)>(.*?)</failure>', body, re.DOTALL)
+        if not fail_m:
+            continue
+        name = name_m.group(1) if name_m else "unknown"
+        cls = cls_m.group(1) if cls_m else "unknown"
+        fail_attrs, fail_body = fail_m.groups()
+        msg_m = re.search(r'message="([^"]*)"', fail_attrs)
+        msg = (msg_m.group(1) if msg_m else "").replace("&quot;", '"').replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+        if not msg:
+            first_line = fail_body.strip().split("\n")[0].strip()
+            msg = first_line[:140]
+        frame_m = re.search(r"at ([^(\n]+\(\w+\.kt:\d+\))", fail_body)
         frame = frame_m.group(1) if frame_m else ""
         yield f"{cls}.{name} :: {msg[:140]} :: {frame}"
 

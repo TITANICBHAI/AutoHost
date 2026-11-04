@@ -53,7 +53,7 @@ class WsFramesTest {
         val unmasked = WsFrames.encodeText("hi", mask = false)
         assertTrue(WsFrames.decode(masked, expectMasked = false) is WsFrames.Decode.Invalid)
         assertTrue(WsFrames.decode(unmasked, expectMasked = true) is WsFrames.Decode.Invalid)
-        assertTrue(WsFrames.decode(byteArrayOf(0x81.toByte(), 0x02), expectMasked = true) is WsFrames.Decode.NeedMore)
+        assertTrue(WsFrames.decode(byteArrayOf(0x81.toByte(), 0x82.toByte()), expectMasked = true) is WsFrames.Decode.NeedMore)
     }
 
     @Test
