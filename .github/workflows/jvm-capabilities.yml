@@ -36,14 +36,37 @@ jobs:
           gradle-version: "8.13"
       - name: Disk before build
         run: df -h / | tail -1
-      - name: Capability and app JVM tests
+      # P15/X-17 note: socket-based modules (shell/net/notifications) hang for minutes when the
+      # runner's loopback is in its cold state (X-17-anomaly) — they run LAST and as separate
+      # steps so one hang cannot consume the whole job; everything else verifies first.
+      - name: JVM tests — non-socket capabilities
         shell: bash
         run: |
           set +e
-          gradle :runtime:python:test :runtime:flow:test :plugin-sdk:test :capabilities:a11y:test :capabilities:app:test :capabilities:ime:test :capabilities:screen:test :capabilities:projection:test :capabilities:notifications:test :capabilities:clipboard:test :capabilities:intents:test :capabilities:files:test :capabilities:audio:test :capabilities:net:test :capabilities:rawbridge:test :capabilities:shell:test :capabilities:browser:test :capabilities:vision:test :capabilities:data:test :app:test :testing:fixture-app:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          gradle :capabilities:a11y:test :capabilities:app:test :capabilities:ime:test :capabilities:screen:test :capabilities:projection:test :capabilities:clipboard:test :capabilities:intents:test :capabilities:files:test :capabilities:audio:test :capabilities:browser:test :capabilities:vision:test :capabilities:data:test :plugin-sdk:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
-            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -2 | while read -r l; do echo "::error::${l:0:250}"; done
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+      - name: JVM tests — runtimes and app
+        shell: bash
+        run: |
+          set +e
+          gradle :runtime:python:test :runtime:flow:test :app:test :testing:fixture-app:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm2.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm2.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+      - name: JVM tests — socket-based capabilities (X-17-anomaly watch)
+        shell: bash
+        run: |
+          set +e
+          gradle :capabilities:notifications:test :capabilities:net:test :capabilities:rawbridge:test :capabilities:shell:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm3.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm3.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
             exit "$rc"
           fi
       - name: Failing test details
