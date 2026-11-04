@@ -29,6 +29,7 @@ object InsecureFeatures {
         "mock_location", // device.location.mock (W4)
         "dev_api_remote", // Dev API on the LAN, not just localhost/adb-forward
         "net_reverse", // net.reverse: device-initiated WebSocket to a host (P10 W3 rider)
+        "ai_cleartext_loopback", // gateway (P13-03): http://127.0.0.1 / localhost for a PC-hosted or on-device model
     )
 
     const val SETTING_RELAXED = "insecure.relaxed"
