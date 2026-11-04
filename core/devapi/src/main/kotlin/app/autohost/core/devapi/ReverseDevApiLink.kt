@@ -55,10 +55,14 @@ class ReverseDevApiLink(
         running = true
         try {
             val token = tokenProvider() ?: throw IOException("no dev api token issued — enable the dev api first")
-            val connection = Socket().apply {
-                connect(InetSocketAddress(host, port), connectTimeoutMs)
-                soTimeout = 0 // the link is long-lived; read() blocks until traffic or close
-                tcpNoDelay = true
+            val connection = try {
+                Socket().apply {
+                    connect(InetSocketAddress(host, port), connectTimeoutMs)
+                    soTimeout = 0 // the link is long-lived; read() blocks until traffic or close
+                    tcpNoDelay = true
+                }
+            } catch (e: IOException) {
+                throw IOException("connect to $host:$port failed: ${e.message}", e)
             }
             socket = connection
             val input = BufferedInputStream(connection.getInputStream())

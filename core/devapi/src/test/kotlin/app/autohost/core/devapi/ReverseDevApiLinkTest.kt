@@ -139,7 +139,19 @@ class ReverseDevApiLinkTest {
             port = serverSocket.localPort,
         )
         link.run()
-        assertTrue("expected 403 in lastError, got: ${link.lastError}", link.lastError?.contains("403") == true)
+        // Independent probe: is the bound listener reachable at all, or is the sandbox refusing loopback?
+        val probe = try {
+            java.net.Socket().apply {
+                connect(java.net.InetSocketAddress("127.0.0.1", serverSocket.localPort), 2_000)
+            }.close()
+            "probe-ok"
+        } catch (e: java.io.IOException) {
+            "probe-failed: ${e.message}"
+        }
+        assertTrue(
+            "probe=$probe port=${serverSocket.localPort} lastError=${link.lastError}",
+            link.lastError?.contains("403") == true,
+        )
         assertEquals(false, link.isRunning)
         serverSocket.close()
     }
