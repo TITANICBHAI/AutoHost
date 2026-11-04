@@ -131,7 +131,8 @@ class RpcRouterTest {
 
     @Test
     fun `unknown methods are METHOD_NOT_FOUND`() {
-        val response = RpcPostProcess.finalize(router.route(request("device.screenshot"), backend))
+        // device.screenshot became a real route in P10; an unknown method must still 404
+        val response = RpcPostProcess.finalize(router.route(request("device.camera.shoot"), backend))
         assertTrue(response is JsonRpc.Response.Failure)
         assertEquals("METHOD_NOT_FOUND", (response as JsonRpc.Response.Failure).code)
     }

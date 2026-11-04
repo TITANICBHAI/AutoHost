@@ -97,19 +97,14 @@ jobs:
           gradle :core:common:test :core:model:test :core:broker:test :core:engine:test :core:data:test :core:devapi:test :core:designsystem:test :runtime:js:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
-            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -2 | while read -r l; do echo "::error::${l:0:250}"; done
             exit "$rc"
           fi
-      - name: Failing tests
+      - name: Failing test details
         if: failure()
         shell: bash
         run: |
-          grep -E "^[a-zA-Z].* > .*FAILED$" /tmp/jvm.log | head -9 | while read -r l; do echo "::error::${l:0:250}"; done
-      - name: Assertion details
-        if: failure()
-        shell: bash
-        run: |
-          python3 tools/test_report_digest.py . | head -9 | while read -r l; do echo "::error::${l:0:250}"; done
+          python3 tools/test_report_digest.py . | head -8 | while read -r l; do echo "::error::${l:0:250}"; done
       - name: Kotlin errors 1-9
         if: failure()
         shell: bash
@@ -159,19 +154,14 @@ jobs:
           gradle :runtime:python:test :runtime:flow:test :plugin-sdk:test :capabilities:a11y:test :capabilities:app:test :capabilities:ime:test :capabilities:screen:test :capabilities:projection:test :capabilities:notifications:test :capabilities:clipboard:test :capabilities:intents:test :capabilities:files:test :capabilities:audio:test :capabilities:net:test :capabilities:rawbridge:test :capabilities:shell:test :capabilities:browser:test :capabilities:vision:test :capabilities:data:test :app:test :testing:fixture-app:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
-            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -2 | while read -r l; do echo "::error::${l:0:250}"; done
             exit "$rc"
           fi
-      - name: Failing tests
+      - name: Failing test details
         if: failure()
         shell: bash
         run: |
-          grep -E "^[a-zA-Z].* > .*FAILED$" /tmp/jvm.log | head -9 | while read -r l; do echo "::error::${l:0:250}"; done
-      - name: Assertion details
-        if: failure()
-        shell: bash
-        run: |
-          python3 tools/test_report_digest.py . | head -9 | while read -r l; do echo "::error::${l:0:250}"; done
+          python3 tools/test_report_digest.py . | head -8 | while read -r l; do echo "::error::${l:0:250}"; done
       - name: Kotlin errors 1-9
         if: failure()
         shell: bash
