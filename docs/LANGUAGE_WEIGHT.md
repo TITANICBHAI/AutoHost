@@ -91,3 +91,19 @@ Tags: **[SOURCED]** primary source named; **[COUNTED]** this tree; **[GENERAL]**
 5. Whether Chaquopy 17.1.0 builds with this project's Gradle/AGP (not tried; the research found no Gradle bound in Chaquopy's docs).
 
 *Sources: Chaquopy docs and changelog (`chaquo.com/chaquopy/doc/current/…`, raw RST on GitHub master, 17.1.0 dated 2026-10-12), Maven Central index for `com/chaquo/python/target/`, PyPI simple API scan — all read 2026-10-25 in this project's research notes; build files and manifest as cited above.*
+
+
+## P15-02 — Python-optional audit (2026-11-04, static; D-26)
+
+Every code path that assumes the `python` runtime is registered, and its lite answer:
+
+| Path | Assumes Python? | Lite answer |
+|---|---|---|
+| `AppGraph` runtime registration | yes (`PythonRuntimeProvider`) | the flavor seam supplies null; nothing registers (`pythonRuntime?.let`) |
+| `RunOrchestrator` dispatch | a provider of the task's runtime type | `failImmediately(NO_RUNTIME, ...)` — a typed failure the CompatReport surface shows (G15-b) |
+| `UiHandlerController` (@ui handlers) | the `:ui` worker service | the flavor seam supplies a null Intent → `HANDLER_NOT_FOUND` typed outcome |
+| Worker death listener | `pythonRuntime.setDeathListener` | null-safe (`?.`) |
+| Worker manifest components (`:w0`–`:w3`, `:ui`) | declared in the main manifest | `app/src/lite/AndroidManifest.xml` removes all five via `tools:node="remove"` |
+| `samples/*` with `runtime.type: "python"` | run through the orchestrator | typed `NO_RUNTIME` (CompatReport), never a crash |
+| `python_deps` in a manifest | pip install at import | ignored by lite (no interpreter); the CompatReport row names the unmet runtime |
+| SDK/simulator (`sdk-python/`) | PC tooling | unaffected — Python stays first-class on the PC (ADR-092) |

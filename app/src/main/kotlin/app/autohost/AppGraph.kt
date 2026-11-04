@@ -94,7 +94,8 @@ import app.autohost.runtime.flow.FlowRuntimeProvider
 import app.autohost.runtime.flow.FlowBinderTransport
 import app.autohost.runtime.js.JsBrokerCaller
 import app.autohost.runtime.js.JsRuntimeProvider
-import app.autohost.runtime.python.PythonRuntimeProvider
+import app.autohost.runtime.AppRuntimeContributions
+import app.autohost.runtime.ActualRuntimeContributions
 import app.autohost.service.RunForegroundService
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -182,7 +183,10 @@ class AppGraph(val application: Application) {
 
     // runtimes (declared before the orchestrator that consumes them)
     val runtimes = RuntimeRegistry()
-    private val pythonRuntime = PythonRuntimeProvider(application, binder)
+    // P15-03: the Python runtime comes from the flavor seam — null in the lite flavor.
+    private val runtimeContributions: AppRuntimeContributions = ActualRuntimeContributions()
+    private val pythonRuntime: app.autohost.runtime.api.RuntimeProvider? =
+        runtimeContributions.pythonRuntime(application, binder)
 
     /** P6-06: declarative flows run in-process — no `:w*` worker (plan §7.9, Gate 6-a). */
     val flowRuntime = FlowRuntimeProvider(
@@ -1160,7 +1164,7 @@ class AppGraph(val application: Application) {
 
     /** P7-01: Tier B/C task-UI state + actions; P7-03: the handler call path surfaces dispatch through. */
     val uiHandlers by lazy {
-        UiHandlerController(application, data, grantBuilder, tokens, binder, clock, appScope)
+        UiHandlerController(application, data, grantBuilder, tokens, binder, clock, appScope, runtimeContributions.uiHandlerServiceIntent(application))
     }
 
     // ---- Phase 7 part 2: system surfaces (plan §10.3) ----
@@ -1236,7 +1240,7 @@ class AppGraph(val application: Application) {
         androidAudio.initTts()
         registerActivityFocusTracker()
         app.autohost.capabilities.screen.ScreenGuardService.clock = clock
-        pythonRuntime.setDeathListener { runId -> orchestrator.onWorkerDeath(runId) }
+        pythonRuntime?.setDeathListener { runId -> orchestrator.onWorkerDeath(runId) }
         // P6-06: an in-process flow "dies" only when the interpreter coroutine crashes; the death
         // listener maps that to INTERRUPTED exactly like a lost Python worker.
         flowRuntime.setDeathListener { runId -> orchestrator.onWorkerDeath(runId) }
@@ -1344,7 +1348,7 @@ class AppGraph(val application: Application) {
         screenProvider.canWriteSettings = {
             android.provider.Settings.System.canWrite(application)
         }
-        runtimes.register(pythonRuntime)
+        pythonRuntime?.let { runtimes.register(it) } // lite: absent — Python tasks get a CompatReport
         runtimes.register(flowRuntime)
         // P11-01: the third runtime — manifest `runtime.type: "javascript"` resolves here.
         runtimes.register(jsRuntime)

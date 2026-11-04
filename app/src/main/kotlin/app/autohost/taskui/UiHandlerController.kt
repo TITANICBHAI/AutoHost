@@ -18,7 +18,6 @@ import app.autohost.core.engine.taskui.UiHandlerOutcome
 import app.autohost.core.engine.taskui.UiHandlerSpec
 import app.autohost.core.engine.tasks.GrantBuilder
 import app.autohost.core.model.TaskManifest
-import app.autohost.runtime.python.worker.UiHandlerWorkerService
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
@@ -43,6 +42,8 @@ class UiHandlerController(
     private val brokerBinder: ICapabilityBroker,
     private val clock: Clock,
     private val scope: CoroutineScope,
+    /** P15-03: the bind Intent from the flavor seam; null in lite (no ui.handler there). */
+    private val workerServiceIntent: Intent?,
 ) {
 
     private val gate = UiHandlerGate()
@@ -93,11 +94,13 @@ class UiHandlerController(
     private suspend fun dispatch(spec: UiHandlerSpec, token: String): UiHandlerOutcome {
         val specJson = spec.copy(runToken = token).toJson().toString()
         val connection = WorkerConnection()
+        val intent = workerServiceIntent
+            ?: return UiHandlerOutcome("FAILED", "HANDLER_NOT_FOUND", "this build has no Python runtime, so @ui handlers are unavailable")
         val bound = runCatching {
-            context.bindService(Intent(context, UiHandlerWorkerService::class.java), connection, Context.BIND_AUTO_CREATE)
+            context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }.getOrDefault(false)
         if (!bound) {
-            AhLog.w(TAG, "could not bind ${UiHandlerWorkerService::class.java.simpleName}")
+            AhLog.w(TAG, "could not bind the UI-handler worker service")
             return UiHandlerOutcome("FAILED", "START_FAILED", "the UI-handler worker did not start")
         }
         try {

@@ -16,12 +16,14 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        // P15-04 (ABI policy): release ships arm64-v8a ONLY (both owner phones are arm64 — ADR-095);
+        // the x86_64 emulator slice is added by the debug build type below.
         ndk {
-            abiFilters += listOf("arm64-v8a", "x86_64")
+            abiFilters += "arm64-v8a"
         }
     }
 
-    flavorDimensions += "tier"
+    flavorDimensions += listOf("tier", "runtime")
     productFlavors {
         create("core") {
             dimension = "tier"
@@ -29,6 +31,16 @@ android {
         }
         create("full") {
             dimension = "tier"
+        }
+        // P15-03 (ADR-093, docs/LANGUAGE_WEIGHT.md): the runtime dimension. `py` is the default
+        // first-class build; `lite` omits `:runtime:python` (the Chaquopy plugin lives ONLY in
+        // that module, so it drops out of the lite graph entirely) — flows, JS and the agent
+        // runtime are unaffected, and a Python task gets a typed CompatReport (G15-b).
+        create("py") {
+            dimension = "runtime"
+        }
+        create("lite") {
+            dimension = "runtime"
         }
     }
 
@@ -53,9 +65,18 @@ android {
     buildTypes {
         // Same applicationId everywhere (ADR in HANDOFF §2): pm grant app.autohost … works on every build.
         debug {
+            // P15-04: the emulator slice rides debug builds only — release stays arm64-v8a only.
+            ndk {
+                abiFilters += "x86_64"
+            }
         }
         release {
-            isMinifyEnabled = false
+            // P15-07 (ADR-093): R8 shrink + resource shrinking on release, with conservative keep
+            // rules (config/autohost-release.pro). The size delta is measured by the Phase 15
+            // harness before/after (docs/PERF.md) — no percentage targets (ADR-093).
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-rules.pro"), "autohost-release.pro")
             // Sign only when the credentials arrived; otherwise the artifact stays unsigned and
             // `docs/RELEASE.md` names the exact apksigner command for the owner's machine.
             signingConfig = if (signingConfigs.getByName("release").storeFile != null) {
@@ -94,7 +115,7 @@ dependencies {
     implementation(project(":core:devapi"))
     implementation(project(":core:designsystem"))
     implementation(project(":runtime:api"))
-    implementation(project(":runtime:python"))
+    "pyImplementation"(project(":runtime:python")) // P15-03: absent from the lite flavor
     implementation(project(":runtime:flow")) // P6-06: flow runtime registration + P6-09/10 recorder & editor UI
     implementation(project(":runtime:js")) // P11-01: the JavaScript (QuickJS) runtime (engine touchpoint below)
     implementation(project(":plugin-sdk")) // P11-02: the capability-plugin binder contract (ADR-079)

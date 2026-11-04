@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- P15-03: the lite flavor removes the Python worker components — :runtime:python is not on
+     the lite classpath, so their manifest entries must go with it (manifest merger, tools:node).
+     Everything else (main process, broker, flows, JS, agent) is inherited unchanged. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <service
+            android:name="app.autohost.runtime.python.worker.TaskWorkerService0"
+            tools:node="remove" />
+        <service
+            android:name="app.autohost.runtime.python.worker.TaskWorkerService1"
+            tools:node="remove" />
+        <service
+            android:name="app.autohost.runtime.python.worker.TaskWorkerService2"
+            tools:node="remove" />
+        <service
+            android:name="app.autohost.runtime.python.worker.TaskWorkerService3"
+            tools:node="remove" />
+        <service
+            android:name="app.autohost.runtime.python.worker.UiHandlerWorkerService"
+            tools:node="remove" />
+    </application>
+</manifest>
