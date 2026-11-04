@@ -111,7 +111,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          gradle :app:assembleCoreDebug :testing:fixture-app:assembleDebug \
+          gradle :app:assembleCorePyDebug :testing:fixture-app:assembleDebug  # P15-03: two flavor dimensions (tier x runtime) — py is the default full build \
             --console=plain \
             --stacktrace \
             --warning-mode=all \

@@ -135,3 +135,14 @@ providers already behave correctly for the "engine missing / old WebView" outcom
 - **Evidence (paths/links):** PENDING-ON-HARDWARE (`device: <model>, Android <n> / API <n>` on every line)
 - **Follow-ups / ADRs:** task P13-20; feeds G13-e; ADR-091.
 
+
+## S6 — on-device local inference feasibility (Phase 16 gate)
+
+**Verdict: NO-GO — permanently, by owner decision (2026-11-04).** Spike S6 requires running a
+small model on the owner's phones and measuring peak memory, tokens/s, time-to-first-token,
+thermal behaviour and background-kill survival (`docs/LOCAL_INFERENCE.md`). Owner decision D-25
+("no device is available, ever") makes running S6 impossible, so the Phase 16 gate can never pass.
+Phase 16 (P16-01..08, G16-a..d) is therefore dropped: recorded, not built, and it does not affect
+Phases 12–15 (plan §Phase-16). The `LocalModel` seam concept stays in the docs as the re-entry
+point if the owner ever re-decides D-25 **and** a device appears. Related: ADR-092 (remote
+inference stays the default; agent loops are never gated on local inference).

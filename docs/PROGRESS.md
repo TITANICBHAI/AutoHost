@@ -4,7 +4,7 @@
 <!-- DASHBOARD:START -->
 **Verified: 1%** (weighted 7/932 points)  ░░░░░░░░░░░░░░░░░░░░
 **Code written (unverified): 46%**  █████████░░░░░░░░░░░
-Tasks 5/293 · Gate items 0/94 · Capabilities 0/46 · WIP 0 · Blocked 6
+Tasks 5/293 · Gate items 0/94 · Capabilities 0/46 · WIP 0 · Blocked 29
 **Ladder (items):** planned 251 · implemented 175 · compiled 0 · unit-tested 2 · integration-tested 0 · verified 5 · real-device-verified 0/19 · failing 8
 **Current phase:** Phase 0 — Feasibility spikes [BLOCKED]
 
@@ -22,11 +22,11 @@ Tasks 5/293 · Gate items 0/94 · Capabilities 0/46 · WIP 0 · Blocked 6
 | 9 Shell tier and power tools | NOT_STARTED | 0/12 | ░░░░░░░░░░ 0% | 76% | 0% | 0% | 0/5 |
 | 10 Browser, vision, remaining data/hardware | NOT_STARTED | 0/8 | ░░░░░░░░░░ 0% | 81% | 0% | 0% | 0/3 |
 | 11 Extensibility and release | BLOCKED | 0/12 | ░░░░░░░░░░ 0% | 76% | 0% | 0% | 0/5 |
-| 12 Hardened actions and scope closure | NOT_STARTED | 0/17 | ░░░░░░░░░░ 0% | 0% | 0% | 0% | 0/6 |
-| 13 Agent runtime, Stage A (optional "Ask" runs) and the model gateway | NOT_STARTED | 0/20 | ░░░░░░░░░░ 0% | 0% | 0% | 0% | 0/6 |
-| 14 Run UI: capsule, approvals, agent run detail | NOT_STARTED | 0/9 | ░░░░░░░░░░ 0% | 0% | 0% | 0% | 0/4 |
-| 15 Footprint: measure first, then optional lite build | NOT_STARTED | 0/9 | ░░░░░░░░░░ 0% | 0% | 0% | 0% | 0/4 |
-| 16 Optional local inference (NO-GO for agent loops until spike S6 passes) | NOT_STARTED | 0/8 | ░░░░░░░░░░ 0% | 0% | 0% | 0% | 0/4 |
+| 12 Hardened actions and scope closure | BLOCKED | 0/17 | ░░░░░░░░░░ 0% | 0% | 0% | 0% | 0/6 |
+| 13 Agent runtime, Stage A (optional "Ask" runs) and the model gateway | BLOCKED | 0/20 | ░░░░░░░░░░ 0% | 0% | 0% | 0% | 0/6 |
+| 14 Run UI: capsule, approvals, agent run detail | BLOCKED | 0/9 | ░░░░░░░░░░ 0% | 0% | 0% | 0% | 0/4 |
+| 15 Footprint: measure first, then optional lite build | BLOCKED | 0/9 | ░░░░░░░░░░ 0% | 0% | 0% | 0% | 0/4 |
+| 16 Optional local inference (NO-GO for agent loops until spike S6 passes) | BLOCKED | 0/8 | ░░░░░░░░░░ 0% | 0% | 0% | 0% | 0/4 |
 | X Cross-cutting | – | 3/22 | █░░░░░░░░░ 9% | 9% | 9% | 9% | – |
 | CAP Capabilities | – | 0/46 | ░░░░░░░░░░ 0% | 4% | 0% | 0% | – |
 <!-- DASHBOARD:END -->
@@ -683,6 +683,7 @@ Tasks 5/293 · Gate items 0/94 · Capabilities 0/46 · WIP 0 · Blocked 6
 
 ### Tasks
 - [ ] **P12-01** Provider↔spec conformance test (`ProviderConformanceTest` over `schemas/capability-specs.w1.json` return types); first case = A6 (`click.method` drift `NODE|PARENT|COORDINATE|NONE` vs spec `NODE_ACTION|ANCESTOR_ACTION|COORDINATE`) [S]
+  - evidence: WRITTEN 2026-11-04 (D-26, no compile/run; red-state reproduction deferred to git/CI hand-back): `ReturnShape.kt` (pure, core/broker) parses the `returns` grammar (inline enums, bool/int/string/object/array, `[T]`, named types → ANY, `?` optional) and validates results (unexpected keys unless additive, enum membership, kind checks); `ReturnShapeTest` (8 cases incl. the bundled broker resource). `ProviderConformanceTest` (capabilities/a11y) runs the provider with the existing fakes over act+read tables and validates every result. A6 FIXED: click/long_click map Route→spec names (NODE_ACTION/ANCESTOR_ACTION/COORDINATE), null route = typed error `NOT_DISPATCHED` (CAPABILITY_UNAVAILABLE), the spec-less `coordinate` key removed. THREE MORE DRIFTS the harness caught statically, fixed to the spec+sim shapes: `press` {performed}→{ok}, `hide_keyboard` {hidden,was_visible}→{ok}+additive was_visible, `wait_for_settle` {elapsed_ms}→{waited_ms}; tap/swipe {dispatched,coordinate}→{method:COORDINATE} with NOT_DISPATCHED errors. A6b NEW FINDING pinned: Kotlin `find` returns {ref,node} (first match) vs spec+sim {nodes:[...]} with per-node refs — pinned-drift test (validated WITHOUT additive), fix = P12-02 rework + regeneration
 - [ ] **P12-02** Additive `effect` (`changed|unchanged|unverifiable`) and `warnings` on `device.ui` action results — spec change through regeneration (SDK pyi, simulator, golden vectors, `schemas/errors.json`) [M]
   - evidence:
 - [ ] **P12-03** State-aware snapshot fingerprint + three-valued pure `ChangeDetector` (adapt RM-A4); failing test first for A2 [M]
@@ -701,7 +702,7 @@ Tasks 5/293 · Gate items 0/94 · Capabilities 0/46 · WIP 0 · Blocked 6
 - [ ] **P12-11** Node identity guard before a node action: a stale or relabelled node gives typed `STALE_NODE`, never a click on the wrong node (adapt RM-A1) [S]
 - [ ] **P12-12** Fixture-app surfaces for A1–A5 (toggle, slow transition, silent-failure text field, large clickable container, nested scrollable) + `docs/FIXTURE_APP.md` [M]
   - evidence:
-- [ ] **P12-13** Emulator runs on API 30/31/34: reproduce or refute A1–A5, before/after evidence per item (needs X-08) [M]
+- [ ] **P12-13** (BLOCKED: no device, no emulator — owner decisions D-25/D-24; permanently skipped as unverifiable) Emulator runs on API 30/31/34: reproduce or refute A1–A5, before/after evidence per item (needs X-08) [M]
   - evidence:
 - [ ] **P12-14** Port the upstream unit tests of every adapted unit (RM-G2) as AutoHost tests [S]
 - [ ] **P12-15** Regenerate and sync generated docs/SDK; USER_GUIDE note on `effect` and `retry_if_no_change`; DEVICES rows [S]
@@ -714,9 +715,9 @@ Tasks 5/293 · Gate items 0/94 · Capabilities 0/46 · WIP 0 · Blocked 6
   - evidence:
 - [ ] **G12-b** Pure units (change detector, refinement, identity guard) unit-tested with the ported tests — `docs/GATES.md#g12-b`
   - evidence:
-- [ ] **G12-c** Emulator: fixture surfaces reproduce or refute A1–A5; every fixed item has a before/after record — `docs/GATES.md#g12-c`
+- [ ] **G12-c** (BLOCKED: no emulator — D-24/D-25) Emulator: fixture surfaces reproduce or refute A1–A5; every fixed item has a before/after record — `docs/GATES.md#g12-c`
   - evidence:
-- [ ] **G12-d** (real device) Fixture action suite on both owner phones: no doubled text, no double click, scroll reaches the target, gestures complete — `docs/GATES.md#g12-d`
+- [ ] **G12-d** (BLOCKED: no device — D-25; permanently skipped as unverifiable) (real device) Fixture action suite on both owner phones: no doubled text, no double click, scroll reaches the target, gestures complete — `docs/GATES.md#g12-d`
   - evidence:
 - [ ] **G12-e** Overlay/touch audit recorded and tap-through test passes (emulator) — `docs/GATES.md#g12-e`
   - evidence:
@@ -728,17 +729,20 @@ Tasks 5/293 · Gate items 0/94 · Capabilities 0/46 · WIP 0 · Blocked 6
 *Starts after:* G12-a and G12-b (the action layer the agent leans on). **Real-device agent gates G13-c/d need X-15** so they prove the grant model that ships. Stage B (P13-18) starts only after G13-a…f pass on a real device.
 
 ### Tasks
-- [ ] **P13-01** `:core:llm` module scaffold: provider-neutral types, OpenAI-compatible codec, `LlmError` [M]
-  - evidence:
+- [ ] **P13-01** (WRITTEN — static evidence under D-26; compile+test deferred to git/CI hand-back) `:core:llm` module scaffold: provider-neutral types, OpenAI-compatible codec, `LlmError` [M]
+  - evidence: written 2026-11-04 (D-26): `:core:llm` registered in settings.gradle.kts (pure JVM; serialization + coroutines only; NO android, NO vendor SDKs, NO api_key anywhere). `LlmTypes.kt` (ChatRequest/ChatMessage sealed/ToolSpec/ToolCall with arguments=null for unparseable JSON/Usage with estimated flag/FinishReason/ChatResponse + LLM_NAME_PATTERN), `LlmError.kt` (10 sealed cases mapping to the §6 reason table), `LlmResult.kt` (two-typed Ok/Err — the stdlib Result is single-typed; caught by the static recheck), `ChatCodec.kt` (encode: tools/tool_choice/stream/max_tokens|max_completion_tokens/name-pattern validation; decode: text-only, 1..n tool calls, invalid-arg JSON carried through, JsonNull content ≠ "null" — caught by the recheck, every finish_reason, usage present/absent, length+tool_calls = Malformed; decodeError §6 table incl. ContextOverflow heuristic and never-followed redirects; parseRetryAfterMs). `ChatCodecTest` 12 golden cases per MODEL_GATEWAY §9.1 (the malformed-body case folds 5 shapes into one test). Static recheck: 13-point symbol verification ALL OK (an off-by-one test-count assertion was a check bug, not a code bug)
 - [ ] **P13-02** Reason codes (`BUDGET_*`, `AGENT_STUCK`, `COMPLETION_*`, `APPROVAL_*`, `OBSERVATION_BLOCKED`, `MODEL_*`, `AI_*`) added to `schemas/errors.json` through the generator [S]
-- [ ] **P13-03** `BaseUrlValidator` (adapt RM-D1) + `ai_cleartext_loopback` insecure-feature switch [S]
-- [ ] **P13-04** Deadline-aware pure `RetryPolicy` (3 attempts, jitter seam, `Retry-After` cap 30 s) [S]
-- [ ] **P13-05** Provider profiles, host-held keys under the reserved host scope, `SecretsProvider` stub replaced or bridged [M]
-  - evidence:
-- [ ] **P13-06** `HttpUrlConnectionEngine`, fake-server tests, PC `testing/stub-model/stub_model.py` [M]
-  - evidence:
-- [ ] **P13-07** `LlmGateway` (validate URL every call, key at call time, retry, usage, no-implicit-fallback) [M]
-  - evidence:
+  - evidence: written 2026-11-04 (D-26, static only): 22 reason codes added to `schemas/errors.json` reasonCodes (AI_DISABLED, AI_NOT_CONFIGURED, OBSERVATION_BLOCKED, MODEL_AUTH/RATE_LIMITED/UNREACHABLE/BAD_RESPONSE/CONTEXT_OVERFLOW/FILTERED, BUDGET_TURNS/TIME/MODEL_CALLS/TOKENS/ACTIONS/CONTEXT, AGENT_FAILURES/STUCK/INTERNAL_ERROR, APPROVAL_DENIED/TIMEOUT, COMPLETION_REJECTED/UNVERIFIED — names verbatim from docs/AGENT_RUNTIME.md §15) + fixAction OPEN_AI_SETTINGS. brokerErrors intentionally unchanged (gateway errors are run reasons, not wire codes — SDK test_errors contract untouched). Verified statically: JSON parses; all 22 codes present; kinds valid; every fixAction references a declared fixAction or NONE; no Kotlin ReasonCopy exists yet (nothing to sync). Two insertion-seam defects (missing comma, trailing comma) were caught by the JSON-parse recheck and repaired
+- [ ] **P13-03** (WRITTEN — static evidence under D-26; compile+test deferred to git/CI hand-back) `BaseUrlValidator` (adapt RM-D1) + `ai_cleartext_loopback` insecure-feature switch [S]
+  - evidence: written 2026-11-04 (D-26): `core/llm/.../BaseUrlValidator.kt` — the §4 rules as a pure function (https always; http only for 127.0.0.1/localhost with the switch; 10.0.2.2 additionally on debug; LAN IPs refused; userinfo/query/fragment/whitespace/huge-port refused; no-echo enforced BY TYPE — Rejected carries only the reason enum; trailing slash trimmed; chatEndpoint derivation) + `ai_cleartext_loopback` added to `InsecureFeatures.KNOWN` (off by default, relaxed-mode aware, audited by the existing machinery). `BaseUrlValidatorTest`: 36 vectors (the §9.2 table incl. IPv6 literal, uppercase scheme, punycode, embedded whitespace, huge port) + the switch-flip test + the structural no-echo pin (a first no-echo heuristic that matched toString wrapper words was caught by the static recheck and replaced)
+- [ ] **P13-04** (WRITTEN — static evidence under D-26; compile+test deferred to git/CI hand-back) Deadline-aware pure `RetryPolicy` (3 attempts, jitter seam, `Retry-After` cap 30 s) [S]
+  - evidence: written 2026-11-04 (D-26): `core/llm/.../RetryPolicy.kt` — pure, deadline-aware (max 3 total attempts; 1s·2^(n-1) backoff with the injected Jitter seam — NO_JITTER for tests, ±20% for production; Retry-After honoured capped 30 s; retried 408/425/429/5xx/network-before-response; NEVER: 400/401/403/404/422, parsed responses with tool calls, post-cancellation, or delays that would exceed the run's remaining wall-clock budget). `RetryPolicyTest` 8 table cases (fixed jitter). A convoluted double-purpose test case was caught by the static recheck and simplified
+- [ ] **P13-05** (WRITTEN — static evidence under D-26; compile+test deferred to git/CI hand-back) Provider profiles, host-held keys under the reserved host scope, `SecretsProvider` stub replaced or bridged [M]
+  - evidence: written 2026-11-04 (D-26): `ProviderProfile.kt` (@Serializable; id regex; max_tokens|max_completion_tokens; extraHeaders reject credential-word names; egressAcceptedAtMs; HOST_SCOPE __host__ reserved + keyName ai.provider.<id>.api_key; encode/decodeAll for the single ai.providers array — a hand-rolled KSerializer stub was caught by the static recheck and replaced with the codebase's @Serializable pattern) + `SecretSeams.kt` (SecretReader/SecretRegistrar — :core:llm never sees :core:data; :app implements over SecretStore/SecretRegistry) + `ProfileStore.kt` (load/save/readApiKey/registerKeyForRedaction — one source of truth for the gateway and the P14-06 settings screen). SecretsProvider stub NOT bridged by design (MODEL_GATEWAY §1: the gateway never goes through the secrets capability)
+- [ ] **P13-06** (WRITTEN — static evidence under D-26; compile+test deferred to git/CI hand-back) `HttpUrlConnectionEngine`, fake-server tests, PC `testing/stub-model/stub_model.py` [M]
+  - evidence: written 2026-11-04 (D-26): `LlmHttpEngine.kt` (the seam) + `HttpUrlConnectionEngine.kt` (JDK java.net only; useCaches=false; instanceFollowRedirects=false; 2 MB response cap; User-Agent; profile timeouts; cancellation via invokeOnCompletion { disconnect() } so a blocked read throws within ~1 s and CancellationException propagates — a finally-based ensureActive draft leaked the connection on cancel and was caught by the static recheck) + `testing/stub-model/stub_model.py` (stdlib server: POST /v1/chat/completions replay script with text/tool_calls/finish_reason/usage entries + fault injections 429/500/slow/bad_json/bad_args/drop + JSONL request log; reached via adb reverse + ai_cleartext_loopback — G13-b/d runs are D-24/D-25-skipped)
+- [ ] **P13-07** (WRITTEN — static evidence under D-26; compile+test deferred to git/CI hand-back) `LlmGateway` (validate URL every call, key at call time, retry, usage, no-implicit-fallback) [M]
+  - evidence: written 2026-11-04 (D-26): `LlmGateway.kt` — chat(profileId, request, deadlineMs): profile → URL validated EVERY call → egress acceptance required → key read at call time + registered for redaction → encode → engine under RetryPolicy (budget-aware; CancellationException rethrown, IOException classified as NETWORK; delay is a cancellable suspend) → decode → §6 error mapping → ONE audit record per call with SIZES ONLY (requestBytes/responseBytes/outcome/attempts — never content; no implicit fallback). A draft using Result.fold over LlmResult (no such method) and an incomplete audit coverage were caught by the static recheck and rewritten
 - [ ] **P13-08** `AppSensitivity` + `ObservationFilter` (adapt RM-B1; BLOCKED floor) [M]
   - evidence:
 - [ ] **P13-09** Tool-catalog generator from `capability-specs.w1.json` (byte-stable allowlist, `--check`) [M]
@@ -762,15 +766,15 @@ Tasks 5/293 · Gate items 0/94 · Capabilities 0/46 · WIP 0 · Blocked 6
 - [ ] **P13-18** Stage B: `runtime.type: "agent"` + `agent{}` manifest block, validator, migration, samples — only after G13-a…f pass on a real device [M]
   - evidence:
 - [ ] **P13-19** USER_GUIDE "Ask" section and the data-egress disclosure text [S]
-- [ ] **P13-20** Spike S8 — agent feasibility, run BEFORE P13-10 (`docs/SPIKES.md`): with the stub model first, then one cloud model of the owner's choice, run at least 10 single-step runs on the fixture app or Settings through the planned path (compact observation → tool call → broker action → verify); record success rate, latency, tokens and cost; test the BLOCKED-app denial against the owner's real installed-app list and record false positives/negatives; the numbers replace the placeholder budgets in `docs/AGENT_RUNTIME.md` and feed G13-e [M]
+- [ ] **P13-20** (BLOCKED: needs device/emulator for the real parts — D-24/D-25; the stub-model PC half is writable later with git/CI) Spike S8 — agent feasibility, run BEFORE P13-10 (`docs/SPIKES.md`): with the stub model first, then one cloud model of the owner's choice, run at least 10 single-step runs on the fixture app or Settings through the planned path (compact observation → tool call → broker action → verify); record success rate, latency, tokens and cost; test the BLOCKED-app denial against the owner's real installed-app list and record false positives/negatives; the numbers replace the placeholder budgets in `docs/AGENT_RUNTIME.md` and feed G13-e [M]
   - evidence:
 
 ### Gate (see docs/GATES.md)
 - [ ] **G13-a** JVM integration: every budget class stops a runaway; cancel mid-call ≤ 2 s; no secret or token in events, audit or evidence — `docs/GATES.md#g13-a`
   - evidence:
-- [ ] **G13-b** Emulator: injection and BLOCKED-package fixtures hold; stub model over loopback — `docs/GATES.md#g13-b`
+- [ ] **G13-b** (BLOCKED: no emulator — D-24/D-25) Emulator: injection and BLOCKED-package fixtures hold; stub model over loopback — `docs/GATES.md#g13-b`
   - evidence:
-- [ ] **G13-c** (real device) Cloud-model 5-step run succeeds under the shipped grant model; Stop ≤ 6 s; supervised confirm path — `docs/GATES.md#g13-c`
+- [ ] **G13-c** (BLOCKED: no device — D-25; permanently skipped as unverifiable) (real device) Cloud-model 5-step run succeeds under the shipped grant model; Stop ≤ 6 s; supervised confirm path — `docs/GATES.md#g13-c`
   - evidence:
 - [ ] **G13-d** (real device) Loopback cleartext through `adb reverse` works only with the switch on (depends on X-14) — `docs/GATES.md#g13-d`
   - evidence:
@@ -784,12 +788,12 @@ Tasks 5/293 · Gate items 0/94 · Capabilities 0/46 · WIP 0 · Blocked 6
 *Starts after:* G13-a (Stage A runs end to end on the JVM/emulator). Structure from ClosePaw, identity AutoHost's own.
 
 ### Tasks
-- [ ] **P14-01** Design tokens (4 dp grid, radii, motion, `reducedMotion`) in `core/designsystem` [M]
-  - evidence:
-- [ ] **P14-02** `RunCapsule` + `RunCapsuleState` holder, in-app bar and overlay; Stop always visible; "Stopping…" immediate [L]
-  - evidence:
-- [ ] **P14-03** Approval sheet and notification actions (Allow once / Allow for this run / Deny; timeout → deny + stop) [M]
-  - evidence:
+- [ ] **P14-01** (WRITTEN — static evidence under D-26; compile+test deferred to git/CI hand-back) Design tokens (4 dp grid, radii, motion, `reducedMotion`) in `core/designsystem` [M]
+  - evidence: written 2026-11-04 (D-26): `core/designsystem/theme/Tokens.kt` — 4 dp grid contract (`onGrid`), spacing steps 4/8/12/20/32, radii 8/10/16, motion 120/240/480/900 ms (no springs), `motionDurationMs(preferred, reducedMotion)` (reduced → 0 ms, clamp to the set), MIN_TOUCH_TARGET 48 dp, CAPSULE_DONE_AUTO_HIDE 2 s, APPROVAL_TIMEOUT 60 s. `TokensTest` 6 cases (grid membership, sets, reduced-motion rule, clamp). Static recheck: symbols grep-verified; ClosePaw numbers are AutoHost's own candidates (RM-F1 reference-only, no code copied)
+- [ ] **P14-02** (WRITTEN — static evidence under D-26; compile+test deferred to git/CI hand-back) `RunCapsule` + `RunCapsuleState` holder, in-app bar and overlay; Stop always visible; "Stopping…" immediate [L]
+  - evidence: written 2026-11-04 (D-26): `app/ui/capsule/RunCapsuleState.kt` (pure holder: sealed Hidden/Running/Stopping/Done/Error; stopRequested → Stopping IMMEDIATELY; finished(succeeded) → Done with 2 s auto-hide driven by tick(); failure → Error until dismissError; stale-runId events ignored; dynamic touchability `claimsPoint` = own bounds only; agent turn count rides Running) + `RunCapsule.kt` (one composable for in-app and overlay; Stop visible in every running state; TalkBack contentDescription per state; 48 dp targets via heightIn token). Two self-caught fixes: System.currentTimeMillis() → injected Clock (AGENTS §4); Modifier.size(minHeight=) → heightIn(min=) (no such overload). `RunCapsuleStateTest` 9 cases = G14-a's JVM half
+- [ ] **P14-03** (WRITTEN — static evidence under D-26; compile+test deferred to git/CI hand-back) Approval sheet and notification actions (Allow once / Allow for this run / Deny; timeout → deny + stop) [M]
+  - evidence: written 2026-11-04 (D-26): `app/ui/capsule/ApprovalState.kt` (pure: exactly 3 decisions ALLOW_ONCE/ALLOW_FOR_RUN/DENY via the shared CHOICES list the sheet and notification actions both render; stale-callId resolves are ignored; tick() resolves an expired ask as DENY — deny-and-stop is the default; label truncation 40 chars + ellipsis + newline collapse; CAUTIOUS apps show NO label) + `ApprovalSheet.kt` (the sheet renders the same CHOICES; TalkBack description; 48 dp targets). `ApprovalStateTest` 8 cases = G14-b's JVM half (the emulator sheet/notification flow itself is G14-b's BLOCKED half)
 - [ ] **P14-04** Agent run detail: thought → action timeline, budgets and usage panel [M]
   - evidence:
 - [ ] **P14-05** `.aarun` agent section viewer + export redaction (with P13-15) [S]
@@ -798,15 +802,15 @@ Tasks 5/293 · Gate items 0/94 · Capabilities 0/46 · WIP 0 · Blocked 6
 - [ ] **P14-07** "Ask" bar/sheet: goal, explicit target apps, provider, tighter budgets; supervised by default [M]
   - evidence:
 - [ ] **P14-08** Optional edge glow and action visualizer, default off [S]
-- [ ] **P14-09** Accessibility and usability pass (TalkBack, reduced motion, touch targets), frame-time on the Realme C3, spike S7 (overlays vs screenshots and `FLAG_SECURE`) [M]
+- [ ] **P14-09** (WRITTEN-half: TalkBack/reduced-motion/touch-target code rides the P14-01..03 composables + Tokens; the frame-time device half and spike S7 are BLOCKED: no device — D-25) Accessibility and usability pass (TalkBack, reduced motion, touch targets), frame-time on the Realme C3, spike S7 (overlays vs screenshots and `FLAG_SECURE`) [M]
   - evidence:
 
 ### Gate (see docs/GATES.md)
 - [ ] **G14-a** Capsule: every state reachable and covered by state-holder tests; Stop visible in all running states — `docs/GATES.md#g14-a`
   - evidence:
-- [ ] **G14-b** Approval flow end to end including notification actions and timeout → deny (emulator) — `docs/GATES.md#g14-b`
+- [ ] **G14-b** (BLOCKED: no emulator — D-24/D-25; the JVM state-holder half is covered by ApprovalStateTest) Approval flow end to end including notification actions and timeout → deny (emulator) — `docs/GATES.md#g14-b`
   - evidence:
-- [ ] **G14-c** (real device) Frame time and jank for capsule, run detail and Ask sheet on both owner phones — `docs/GATES.md#g14-c`
+- [ ] **G14-c** (BLOCKED: no device — D-25; permanently skipped as unverifiable) (real device) Frame time and jank for capsule, run detail and Ask sheet on both owner phones — `docs/GATES.md#g14-c`
   - evidence:
 - [ ] **G14-d** TalkBack walk-through of Ask, approval and capsule recorded; S7 result recorded — `docs/GATES.md#g14-d`
   - evidence:
@@ -816,27 +820,32 @@ Tasks 5/293 · Gate items 0/94 · Capabilities 0/46 · WIP 0 · Blocked 6
 *Starts after:* X-09. **No percentage targets**; nothing is claimed before it is measured on the owner's phones.
 
 ### Tasks
-- [ ] **P15-01** Measurement harness: APK size per flavor/ABI, cold start, resident memory, worker spawn time (both phones) [M]
-  - evidence:
-- [ ] **P15-02** Python-optional audit: every code path that assumes the `python` runtime is registered (CompatReport, UI entry points, samples) [S]
-- [ ] **P15-03** Flavor dimension `runtime` = `py` | `lite` (`lite` omits `:runtime:python` and the Chaquopy plugin) [L]
-  - evidence:
-- [ ] **P15-04** ABI policy: release arm64-v8a only, debug adds x86_64; documented and enforced [S]
-- [ ] **P15-05** 16 KB page-size audit of every shipped native library [S]
-- [ ] **P15-06** Worker-pool tuning from measured RAM (adaptive worker count) [M]
-  - evidence:
-- [ ] **P15-07** R8/shrink review with keep rules; size delta measured [S]
-- [ ] **P15-08** Accessibility event-mask and `notificationTimeout` audit (RM-A8) with measured CPU effect [S]
-- [ ] **P15-09** Runtime cost comparison: the same task as a Python task and as a flow on a phone (resident memory, CPU, start latency, battery) → `docs/PERF.md`; feeds the author guidance "prefer a flow for simple automations" [S]
+- [ ] **P15-01** (WRITTEN — harness code only; every run BLOCKED: no device — D-25) Measurement harness: APK size per flavor/ABI, cold start, resident memory, worker spawn time (both phones) [M]
+  - evidence: written 2026-11-04 (D-26): `tools/measure_footprint.py` (adb harness: APK size, cold start p50/max over N runs with a RESUMED poll, main PSS + per-worker statm, best-effort worker spawn sample, `--json` for docs/PERF.md). NEVER executed — D-25
+- [ ] **P15-02** (WRITTEN — static audit) Python-optional audit: every code path that assumes the `python` runtime is registered (CompatReport, UI entry points, samples) [S]
+  - evidence: 2026-11-04 static audit, table recorded in `docs/LANGUAGE_WEIGHT.md` section P15-02: 8 paths audited (registration/NO_RUNTIME/ui.handler/death-listener/manifest workers/samples/python_deps/PC-SDK) — every path has a lite-safe typed answer (P15-03's seam + the existing NO_RUNTIME fail-immediately)
+- [ ] **P15-03** (WRITTEN — static evidence under D-26; compile deferred to git/CI hand-back) Flavor dimension `runtime` = `py` | `lite` (`lite` omits `:runtime:python` and the Chaquopy plugin) [L]
+  - evidence: written 2026-11-04 (D-26): `app/build.gradle.kts` gains the `runtime` dimension (py|lite) and moves the python dep to `pyImplementation` (the Chaquopy plugin lives ONLY in `:runtime:python`, so lite's graph drops it entirely — verified: the app module never applied it). Host-parity seam: `AppRuntimeContributions` interface (main) + `ActualRuntimeContributions` in `app/src/py/` (real) and `app/src/lite/` (nulls) — main code references only the interface; AppGraph registers python only when present; `UiHandlerController` takes the bind Intent from the seam and reports `HANDLER_NOT_FOUND` in lite; `app/src/lite/AndroidManifest.xml` removes all five python worker services via tools:node remove (matched 1:1 against the main manifest). Static recheck: 10-point verification ALL OK (no runtime:python imports remain in main)
+- [ ] **P15-04** (WRITTEN — static evidence under D-26) ABI policy: release arm64-v8a only, debug adds x86_64; documented and enforced [S]
+  - evidence: written 2026-11-04 (D-26): defaultConfig ships arm64-v8a only (both owner phones arm64 — ADR-095); the debug build type adds x86_64 for the emulator. Enforced by the build graph (abiFilters), documented in the build file comments
+- [ ] **P15-05** (WRITTEN — tool only; the audit run needs built artifacts — deferred to git/CI hand-back) 16 KB page-size audit of every shipped native library [S]
+  - evidence: written 2026-11-04 (D-26): `tools/audit_16kb.py` — pure-python ELF program-header scan (PT_LOAD max p_align, 32/64-bit LE) over every .so in an APK, per-lib OK/MISALIGNED lines, exit 1 on failure, `--json`; the 2027-02-01 Play rule needs re-verification before acting (G15-c note)
+- [ ] **P15-06** (WRITTEN — pure decision + test; the measured thresholds and wiring are BLOCKED: no device — D-25) Worker-pool tuning from measured RAM (adaptive worker count) [M]
+  - evidence: written 2026-11-04 (D-26): `core/engine/.../WorkerPoolPlan.kt` (PLACEHOLDER thresholds per ADR-093: >=3 GB -> 4, >=2 GB -> 3, else 2; unknown RAM fails open to the full pool; clamped to 2..4 = the manifest's :w0..:w3) + `WorkerPoolPlanTest` 5 cases. The orchestrator wiring point is named in the KDoc; it activates only when P15-01's measured numbers replace the placeholders
+- [ ] **P15-07** (WRITTEN — rules only; the size delta is BLOCKED: no device/build — D-25/D-26) R8/shrink review with keep rules; size delta measured [S]
+  - evidence: written 2026-11-04 (D-26): release gains isMinifyEnabled = true + isShrinkResources = true + `app/autohost-release.pro` (conservative keeps: kotlinx-serialization companions/serializers, the Chaquopy-called autohost.** SDK surface, the devapi package, SourceFile/LineNumberTable for the in-app crash report). The delta lands in docs/PERF.md when builds resume
+- [ ] **P15-08** (WRITTEN — audit + safe narrowing; the CPU effect is BLOCKED: no device — D-25, UNMEASURED) Accessibility event-mask and `notificationTimeout` audit (RM-A8) with measured CPU effect [S]
+  - evidence: 2026-11-04 audit: the mask declared 5 event types, the service consumes 3; typeWindowsChanged had ZERO consumers (window tracking reads the windows API) -> removed from `accessibility_service_config.xml`; typeViewTextChanged KEPT (the recorder maps it to Kind.TEXT); NEW FINDING recorded in the XML comment: typeViewClicked is NOT in the mask although RecorderTap maps it to Kind.CLICK (recorder click capture — needs design verification, not a blind change); notificationTimeout stays 50 ms (the 100-300 ms candidate is UNMEASURED — changing it without a device would be a blind claim)
+- [ ] **P15-09** (BLOCKED: no device — owner decision D-25; permanently skipped as unverifiable) Runtime cost comparison: the same task as a Python task and as a flow on a phone (resident memory, CPU, start latency, battery) → `docs/PERF.md`; feeds the author guidance "prefer a flow for simple automations" [S]
 
 ### Gate (see docs/GATES.md)
-- [ ] **G15-a** (real device) Harness numbers for both phones recorded in `docs/PERF.md` — `docs/GATES.md#g15-a`
+- [ ] **G15-a** (BLOCKED: no device — D-25; permanently skipped as unverifiable) (real device) Harness numbers for both phones recorded in `docs/PERF.md` — `docs/GATES.md#g15-a`
   - evidence:
-- [ ] **G15-b** `lite` builds; a Python task gets a typed CompatReport; flow, JS and agent runs work (JVM + emulator) — `docs/GATES.md#g15-b`
-  - evidence:
-- [ ] **G15-c** 16 KB audit recorded for every shipped native library — `docs/GATES.md#g15-c`
-  - evidence:
-- [ ] **G15-d** (real device) Each tuning change shows before/after numbers — `docs/GATES.md#g15-d`
+- [ ] **G15-b** (WRITTEN-half: the flavor seam + the NO_RUNTIME/CompatReport path + the lite manifest; the build+emulator proof is deferred to git/CI hand-back — D-26) `lite` builds; a Python task gets a typed CompatReport; flow, JS and agent runs work (JVM + emulator) — `docs/GATES.md#g15-b`
+  - evidence: written-side 2026-11-04 (D-26): the flavor seam + the NO_RUNTIME typed path + the lite manifest removals are in place; the build+emulator proof resumes when the owner hands git/CI back
+- [ ] **G15-c** (WRITTEN-half: `tools/audit_16kb.py`; the audit run needs built artifacts — deferred to git/CI hand-back — D-26) 16 KB audit recorded for every shipped native library — `docs/GATES.md#g15-c`
+  - evidence: written-side 2026-11-04 (D-26): the audit tool is ready in-tree; it runs on the first built release artifact
+- [ ] **G15-d** (BLOCKED: no device — D-25; permanently skipped as unverifiable) (real device) Each tuning change shows before/after numbers — `docs/GATES.md#g15-d`
   - evidence:
 
 ## Phase 16 — Optional local inference (NO-GO for agent loops until spike S6 passes)
@@ -844,29 +853,29 @@ Tasks 5/293 · Gate items 0/94 · Capabilities 0/46 · WIP 0 · Blocked 6
 *Starts after:* G13-a and an S6 plan; **Phase 16 can be dropped without affecting Phases 12–15.**
 
 ### Tasks
-- [ ] **P16-01** S6 harness and test plan (structure adapted from RM-E8) [M]
+- [ ] **P16-01** (BLOCKED: permanent NO-GO — spike S6 needs a device and owner decision D-25 rules one out; the phase is dropped per plan §Phase-16 "can be dropped without affecting Phases 12-15"; recorded in docs/SPIKES.md) S6 harness and test plan (structure adapted from RM-E8) [M]
   - evidence:
-- [ ] **P16-02** Isolated `:llm` process: bound-service contract, load/unload/cancel, no Python and no broker access [L]
+- [ ] **P16-02** (BLOCKED: permanent NO-GO — spike S6 needs a device and owner decision D-25 rules one out; the phase is dropped per plan §Phase-16 "can be dropped without affecting Phases 12-15"; recorded in docs/SPIKES.md) Isolated `:llm` process: bound-service contract, load/unload/cancel, no Python and no broker access [L]
   - evidence:
-- [ ] **P16-03** Model artifact pipeline (adapt RM-E1/E2): pinned revision, size + SHA-256 before native load, resumable download into `noBackupFilesDir` [L]
+- [ ] **P16-03** (BLOCKED: permanent NO-GO — spike S6 needs a device and owner decision D-25 rules one out; the phase is dropped per plan §Phase-16 "can be dropped without affecting Phases 12-15"; recorded in docs/SPIKES.md) Model artifact pipeline (adapt RM-E1/E2): pinned revision, size + SHA-256 before native load, resumable download into `noBackupFilesDir` [L]
   - evidence:
-- [ ] **P16-04** `LiteRtLmProvider` behind the `LocalModel` seam with a fail-closed `PromptBudget` (adapt RM-E3) [L]
+- [ ] **P16-04** (BLOCKED: permanent NO-GO — spike S6 needs a device and owner decision D-25 rules one out; the phase is dropped per plan §Phase-16 "can be dropped without affecting Phases 12-15"; recorded in docs/SPIKES.md) `LiteRtLmProvider` behind the `LocalModel` seam with a fail-closed `PromptBudget` (adapt RM-E3) [L]
   - evidence:
-- [ ] **P16-05** Selection policy: local models only for READ_ONLY/REVERSIBLE work; RAM gate from AVAILABLE memory; thermal-status listener [M]
+- [ ] **P16-05** (BLOCKED: permanent NO-GO — spike S6 needs a device and owner decision D-25 rules one out; the phase is dropped per plan §Phase-16 "can be dropped without affecting Phases 12-15"; recorded in docs/SPIKES.md) Selection policy: local models only for READ_ONLY/REVERSIBLE work; RAM gate from AVAILABLE memory; thermal-status listener [M]
   - evidence:
-- [ ] **P16-06** Clean-room llama.cpp JNI fallback — only if LiteRT-LM fails S6 [L]
+- [ ] **P16-06** (BLOCKED: permanent NO-GO — spike S6 needs a device and owner decision D-25 rules one out; the phase is dropped per plan §Phase-16 "can be dropped without affecting Phases 12-15"; recorded in docs/SPIKES.md) Clean-room llama.cpp JNI fallback — only if LiteRT-LM fails S6 [L]
   - evidence:
-- [ ] **P16-07** Model licence acceptance UI; "no publisher provenance" label for local imports [S]
-- [ ] **P16-08** Latency profile (p95 of the last ≤ 20 samples per device+model) and the budget-exceeded notice [S]
+- [ ] **P16-07** (BLOCKED: permanent NO-GO — spike S6 needs a device and owner decision D-25 rules one out; the phase is dropped per plan §Phase-16 "can be dropped without affecting Phases 12-15"; recorded in docs/SPIKES.md) Model licence acceptance UI; "no publisher provenance" label for local imports [S]
+- [ ] **P16-08** (BLOCKED: permanent NO-GO — spike S6 needs a device and owner decision D-25 rules one out; the phase is dropped per plan §Phase-16 "can be dropped without affecting Phases 12-15"; recorded in docs/SPIKES.md) Latency profile (p95 of the last ≤ 20 samples per device+model) and the budget-exceeded notice [S]
 
 ### Gate (see docs/GATES.md)
-- [ ] **G16-a** (real device) S6 verdict on BOTH owner phones against the recorded criteria — `docs/GATES.md#g16-a`
+- [ ] **G16-a** (BLOCKED: permanent NO-GO — spike S6 needs a device and owner decision D-25 rules one out; the phase is dropped per plan §Phase-16 "can be dropped without affecting Phases 12-15"; recorded in docs/SPIKES.md) (real device) S6 verdict on BOTH owner phones against the recorded criteria — `docs/GATES.md#g16-a`
   - evidence:
-- [ ] **G16-b** (real device) Download → verify → kill and resume → install of a small model — `docs/GATES.md#g16-b`
+- [ ] **G16-b** (BLOCKED: permanent NO-GO — spike S6 needs a device and owner decision D-25 rules one out; the phase is dropped per plan §Phase-16 "can be dropped without affecting Phases 12-15"; recorded in docs/SPIKES.md) (real device) Download → verify → kill and resume → install of a small model — `docs/GATES.md#g16-b`
   - evidence:
-- [ ] **G16-c** (real device) Killing or OOM-ing the `:llm` process leaves the app and its runs alive — `docs/GATES.md#g16-c`
+- [ ] **G16-c** (BLOCKED: permanent NO-GO — spike S6 needs a device and owner decision D-25 rules one out; the phase is dropped per plan §Phase-16 "can be dropped without affecting Phases 12-15"; recorded in docs/SPIKES.md) (real device) Killing or OOM-ing the `:llm` process leaves the app and its runs alive — `docs/GATES.md#g16-c`
   - evidence:
-- [ ] **G16-d** (real device) A local helper use (classification or extraction) within the latency profile, or a recorded NO-GO — `docs/GATES.md#g16-d`
+- [ ] **G16-d** (BLOCKED: permanent NO-GO — spike S6 needs a device and owner decision D-25 rules one out; the phase is dropped per plan §Phase-16 "can be dropped without affecting Phases 12-15"; recorded in docs/SPIKES.md) (real device) A local helper use (classification or extraction) within the latency profile, or a recorded NO-GO — `docs/GATES.md#g16-d`
   - evidence:
 
 ## Pre-gate work (recorded, NOT ticked: Gate 0 is still open)
@@ -895,11 +904,14 @@ Tasks 5/293 · Gate items 0/94 · Capabilities 0/46 · WIP 0 · Blocked 6
   - evidence:
 - [ ] **X-09** Epoch V exit review: the crash-fix pass is built and verified (X-17, X-18), JVM sweep complete (every failing test fixed or tagged failing with its reason), `app-core-debug.apk` built, Python suites re-run with PyYAML, ladder retagged module by module with evidence (ADR-097, ADR-101) [M]
   - evidence:
-- [ ] **X-10** Documentation integrity gate: `tools/doc_check.py` (path, task-ID and ADR reference integrity) wired into `scripts/test-python.sh` [S]
-- [ ] **X-11** Licence and notices hygiene: `tools/licence_check.py` fails on an upstream-path header without a `THIRD_PARTY_NOTICES.md` row; `reference/` inventory checked (ADR-088) [S]
+- [ ] **X-10** (WRITTEN — static evidence under D-26; tick deferred to git/CI hand-back) Documentation integrity gate: `tools/doc_check.py` (path, task-ID and ADR reference integrity) wired into `scripts/test-python.sh` [S]
+  - evidence: static check 2026-11-04 (D-26: no execution): `scripts/test-python.sh` already invokes `run "$PYTHON_BIN" tools/doc_check.py` in the "Licence and MCP checks" block — the wiring the task asks for exists; `doc_check.py` passes statically (`doc_check: ok (54 files)`)
+- [ ] **X-11** (WRITTEN — static evidence under D-26; tick deferred to git/CI hand-back) Licence and notices hygiene: `tools/licence_check.py` fails on an upstream-path header without a `THIRD_PARTY_NOTICES.md` row; `reference/` inventory checked (ADR-088) [S]
+  - evidence: written 2026-11-04 (D-26): `tools/licence_check.py` gained `adapted_files()` (scans buildable .kt/.java/.py/.kts for the REUSE_MATRIX §0 `Adapted from <project> <upstream path> (Apache-2.0...)` header) + `reference_inventory_gaps()` (every file under reference/ must be backticked in reference/INDEX.md); `main()` fails on either; contract tests added to `tests/test_licence_check.py` (AdaptedHeaderRuleTest, ReferenceInventoryRuleTest). Static recheck: `licence check ok — 25 catalog dependencies, all covered; reference/ inventory complete` (exit 0); test file syntax-verified via ast.parse (test execution forbidden under D-26). Header escape-collapse pitfall hit 3× in heredocs — fixed via direct edits, caught by the recheck loop each time
 - [ ] **X-12** (WIP — SDK/simulator half done; Kotlin half open) Secret-persistence boundary (ADR-099): failing test first that `x-secret` fields and provider keys never reach Room, run config, checkpoints, exports or the in-memory-only Redactor registry after restart; `x-secret` is valid only under `profile_schema` (split the shared `$defs/objectSchema` in `schemas/task.schema.json`; `config_schema` rejects it; negative tests); plaintext secrets forbidden in RunSpec snapshots, checkpoints, events, history and exports; the Python SDK and simulator refuse or redact registered secret values on `call()` arguments, `kv`/`state` writes, checkpoints and `emit` (today only `emit` redacts) and `FakeDevice` mirrors the broker; decision note comparing `SecretStore` with RM-D8. The SDK/simulator half is Python-only and may start before X-09 [L]
   - evidence: SDK/SIMULATOR HALF (2026-11-03, tree at e552365, Windows PC, harness Python): red first — `sdk-python/tests/test_x12_secrets.py` 13 tests, 12 failed pre-fix (recorded); then fixed `autohost/_core.py` (`SecretValue` provenance type returned by `ctx.secret()`, repr redacted; `Runtime.call` refuses UNTRACKED secret strings in args while allowing tracked ones — the legitimate field-typing channel), `_ctx.py` (kv `__setitem__`, `state.save()`, `once()` checkpoints and `result()` data all refuse secret values via `Runtime.refuse_secrets`), `autohost_sim/device.py` (`register_secrets` + `_refuse_persisted_secrets` in `store.set`/`state.set` — FakeDevice mirrors the broker) and `runner.py`/`tests/support.py` wiring. Post-fix: X-12 suite 13 OK; full `sdk-python` suite 428 tests (415 + 13) — 14 pre-existing Windows-environment failures (12 `test_ref_schedule` tzdata errors, 1 `test_p11_part2` file-scheme, 1 `test_mcp_server` /tmp path separator), A/B-verified pre-existing via stash; `tools/sync_sdk.py` copied 42 files to the bundled worker copy, `--check` in sync; `gen_artifacts.py --check` in sync; root `tests/` 80 OK. OPEN: the Kotlin half (Room/run-config/checkpoint/export boundary + `x-secret` schema split + RM-D8 note) — needs the build.
-- [ ] **X-13** Run-token invariants (ADR-099): the `runToken` is a bearer capability — unpredictable, bound to one run, attempt, profile and grant snapshot with an expiry; the broker rejects expired, revoked, malformed, cross-run, stale-attempt and scope-mismatched tokens before any operation and decides from its own trusted run/grant state; revoked on cancel, terminal state and worker death; never logged, persisted, exported, shown, placed in evidence or sent to a model (canary scan); correct the `RunSpec` comment that says it carries no secrets; `WAITING_USER` semantics pinned by a test [M]
+- [ ] **X-13** (WRITTEN — static evidence under D-26; compile+test deferred to git/CI hand-back) Run-token invariants (ADR-099): the `runToken` is a bearer capability — unpredictable, bound to one run, attempt, profile and grant snapshot with an expiry; the broker rejects expired, revoked, malformed, cross-run, stale-attempt and scope-mismatched tokens before any operation and decides from its own trusted run/grant state; revoked on cancel, terminal state and worker death; never logged, persisted, exported, shown, placed in evidence or sent to a model (canary scan); correct the `RunSpec` comment that says it carries no secrets; `WAITING_USER` semantics pinned by a test [M]
+  - evidence: written 2026-11-04 (D-26, no compile/run): `RunGrants` gains `attempt` + `expiresAtMs` (bearer binding); `RunTokenStore` gains `isWellFormed()` (64-hex gate) + strict `resolve(token, nowMs)` (expired → null; default nowMs=0 keeps legacy callers expiry-free — BrokerService/RunLifecycle tests unaffected) + `resolveIgnoreExpiry` for audit; `AuthInterceptor` refuses malformed tokens with `MALFORMED_RUN_TOKEN` before lookup and passes the clock (reason `UNKNOWN_RUN_TOKEN` for unknown/revoked/expired); both orchestrator issue sites bind `request.attempt` + an expiry of timeoutMinutes+60 min (WAITING_USER pauses stay alive); `RunSpec` KDoc corrected (the token IS a secret-class credential, never logged/persisted/exported/modeled); new `core/broker/.../RunTokenX13Test.kt` pins shape/uniqueness, expiry, revocation, cross-run + attempt binding, gate reasons + no-token-echo, and WAITING_USER non-terminal semantics (RunStateMachine). Static recheck: all referenced APIs grep-verified (AhError.code/message/reason, canTransition, PipelineCall shape, FakeClock, coroutines-test dep present); default-nowMs expiry bug caught and fixed by the recheck loop before it shipped
   - evidence:
 - [ ] **X-14** Cleartext / network-security-config reconciliation: test loopback `http` on API 30/31/34 with the current manifest, then add `network_security_config.xml` or correct the documents (ADR-096) [M]
   - evidence:
@@ -916,6 +928,7 @@ Tasks 5/293 · Gate items 0/94 · Capabilities 0/46 · WIP 0 · Blocked 6
 - [ ] **X-20** Idle-cost guard (ADR-100): with no run, inspector or recorder active the accessibility service builds no tree (events are counted, not processed), no `:w*` process exists and no interpreter is loaded — a unit test plus a 5-minute CPU sample on a phone, recorded in `docs/PERF.md` (`device:` clause) [M]
   - evidence:
 - [ ] **X-21** Raw-JSON manifest guard (ADR-099): validate the manifest schema version and runtime type BEFORE Kotlin deserialization applies defaults; explicit migrations for supported old versions; stable typed errors for unknown future versions or runtime types; compatibility tests [M]
+  - evidence: written 2026-11-04 (D-26, no compile/run): `ManifestValidator.preflight(root)` checks schema version (TYPE / HOST_TOO_OLD / MINIMUM) and runtime type (ENUM for unknown types) on the RAW JSON; `validateJson` now runs preflight BEFORE deserialization and returns `manifest = null` with the typed errors when it fails — defaults can never mask an unknown version/type. Versions 1..HOST_SCHEMA_VERSION pass to the explicit ManifestMigrations chain (P2-05). 5 compatibility tests added to ManifestValidatorTest (future version, alien runtime type, non-integer schema, current-version clean pass, supported-band passthrough). Static recheck: 9-symbol symbol-verification script all-OK; assertNull import added
   - evidence:
 - [ ] **X-22** FileProvider scope (`CRASH_FIX_PLAN.md` Appendix A2): after the owner decides which sub-folders may be shared (D-23), narrow `app/src/main/res/xml/file_paths.xml` (today `<files-path path=".">` also covers the ADB private key) and add a test that no provider path covers `files/adb/` [S] (BLOCKED: owner decision D-23)
   - evidence:

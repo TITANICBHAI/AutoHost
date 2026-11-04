@@ -206,6 +206,12 @@ Do not treat the initial documentation update as permission to change product sc
 - **BATCH MORE, PUSH LESS (owner, 2026-11-03):** pushes were too frequent. Do substantially more
   work before each push — gather multiple fixes/tasks into one commit+push, then verify once.
   Do not push after every single fix or diagnosis round.
+- **WRITING-FIRST MODE (owner, 2026-11-04, D-26):** NO git commits/pushes, NO GitHub Actions,
+  NO test runs of any kind until the owner explicitly re-enables git/CI. The only verification
+  is static file checking (reading code/tests; text-level consistency tools). The goal is to
+  write ALL remaining plan code to 100% first; verification evidence (ladder tags, CI runs,
+  ticks) resumes only on the owner's explicit instruction. `recheck` = static completeness
+  review of the named phase (code written, tests written, docs consistent).
 - **NO DEVICE EXISTS (owner, 2026-11-04, D-25):** the owner can never provide a physical device.
   Device-gated items are skipped as unverifiable — annotate `(BLOCKED: no device — D-25)` on the
   row, keep unticked, and do not let them block dependent tasks (X-09 waives X-18). Never claim

@@ -31,6 +31,16 @@
 - Active workflow `android-debug-apk.yml` builds the APK only — it proves no tests; X-17's test sequence needs X-08's promotion of `drafts/ci.workflow.yml` (documented on HANDOFF §0.2 item 4 and the X-17 row)
 - X-19 ratchet: `tests/test_architecture.py` records 2 known violations (a11y containment: A11yBrowserLink.kt + AppGraph.kt; run_starts: AppGraph P5-05). `AUTOHOST_ARCH_STRICT=1` = red-team view. New violations fail; stale ratchet entries fail. Do NOT fix the Kotlin from X-19.
 
+## CURRENT MODE: WRITING + CI VERIFICATION (D-26 relaxed, owner 2026-11-04)
+- **Git and GitHub Actions are re-enabled** (owner explicit permission) — commits/pushes/CI runs live again.
+- The writing-first discipline stays: batch more work, recheck-loop before every commit.
+- All frozen verification resumes through CI: the whole JVM suite compiled for the first time with all written changes is now the active X-17/X-08 loop.
+- **No git commit/push, no GitHub Actions, no test runs** until the owner explicitly re-enables git/CI.
+- Only static file checking is allowed (read code/tests; progress.py --check / doc_check.py / architecture scanner).
+- Goal changed: write ALL remaining plan code to 100% first (Phases 12-16 + X-items); verification deferred.
+- X-17 frozen as-written: :core:devapi 2 socket tests have an unverified instrumentation fix; jvm-capabilities never completed.
+- `recheck` = static completeness review of the named phase.
+
 ## Owner interaction protocol (2026-11-03, updated same day)
 - Owner says **"continue"** → I proceed to the next queue task without re-asking.
 - Owner says **"recheck"** → I re-verify the stage just completed (re-run checks, re-read touched files, confirm nothing was lost), then ask "shall I continue?" and wait.

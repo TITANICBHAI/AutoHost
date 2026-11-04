@@ -3,6 +3,7 @@ Record every third-party code **actually reused** (copied or adapted). Libraries
 
 | Component | Source / commit | Licence | Where used | Notice text preserved? |
 |---|---|---|---|---|
+| closepaw `llm/OtherBaseUrlValidator.kt` | `reference/closepaw/app/src/main/kotlin/ai/closepaw/llm/OtherBaseUrlValidator.kt` (0.1.0) | Apache-2.0 (LICENSE+NOTICE preserved) | `core/llm/src/main/kotlin/app/autohost/core/llm/BaseUrlValidator.kt` | notice preserved; adapted per RM-D1 |
 | _(none yet)_ | | | | |
 
 Rules: Apache-2.0 and MIT code only. **Never** add code from AGPL/GPL projects (Mobilerun Portal, OpenAutoJs). See `docs/REFERENCES.md` §0.
