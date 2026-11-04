@@ -2,7 +2,7 @@ package app.autohost.runtime
 
 import android.content.Context
 import android.content.Intent
-import app.autohost.core.broker.ICapabilityBroker
+import app.autohost.broker.ICapabilityBroker
 import app.autohost.runtime.api.RuntimeProvider
 import app.autohost.runtime.python.PythonRuntimeProvider
 import app.autohost.runtime.python.worker.UiHandlerWorkerService
