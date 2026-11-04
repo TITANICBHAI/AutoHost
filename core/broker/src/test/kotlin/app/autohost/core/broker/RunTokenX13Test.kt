@@ -18,7 +18,7 @@ import org.junit.Test
 /**
  * X-13 (ADR-099): the run token is a bearer capability — unpredictable, bound to one run/attempt/
  * grant snapshot, expiring, revoked on terminal/cancel, never echoed. These tests pin the broker
- * side; `WAITING_USER` semantics are pinned here too (a waiting run keeps its credential).
+ * side; the WAITING_USER semantics are pinned in core:engine (RunStateMachineX13Test).
  */
 class RunTokenX13Test {
 
