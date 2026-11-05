@@ -99,7 +99,7 @@ class ProviderConformanceTest {
             return
         }
         val shape = shapes[method]
-            ?: return failures.add("$method: no returns declared in the frozen spec")
+            ?: run { failures.add("$method: no returns declared in the frozen spec"); return }
         val violations = ReturnShape.validate(result, shape, additive)
         if (violations.isNotEmpty()) failures.add("$method: ${violations.joinToString("; ")}")
     }
