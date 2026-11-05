@@ -66,7 +66,9 @@ class ScreenProvider(private val state: SystemState = AndroidSystemState) : Capa
         }
         "brightness" -> when (val verdict = ScreenControlPolicy.brightnessVerdict(args, canWriteSettings())) {
             is ScreenControlPolicy.BrightnessVerdict.Invalid ->
-                if (ScreenControlPolicy.needsWriteSettings(args)) {
+                // X-16-era fix: NEEDS_SETUP only when the write access is actually missing — a bad
+                // level WITH write access is an argument error (the old order flipped the two).
+                if (!canWriteSettings() && ScreenControlPolicy.needsWriteSettings(args)) {
                     Envelope.err(
                         ErrorCode.NEEDS_SETUP,
                         "setting brightness needs the write-settings special access",
