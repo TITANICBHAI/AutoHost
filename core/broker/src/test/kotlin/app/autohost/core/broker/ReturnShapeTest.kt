@@ -30,6 +30,18 @@ class ReturnShapeTest {
     }
 
     @Test
+    fun `given key-trailing optionality when parsed then the key is optional and clean`() {
+        // the spec writes effect?:'...' (ACTION_HARDENING §2) — the ? rides the KEY
+        val shape = ReturnShape.parse("{effect?:'changed|unchanged|unverifiable', warnings?:[string]}")
+        assertTrue(shape["effect"]!!.optional)
+        assertEquals(setOf("changed", "unchanged", "unverifiable"), shape["effect"]!!.enumValues)
+        assertTrue(shape["warnings"]!!.optional)
+        assertEquals(ReturnShape.Kind.ARRAY, shape["warnings"]!!.kind)
+        assertFalse(shape.keys.contains("effect?"))
+        assertFalse(shape.keys.contains("warnings?"))
+    }
+
+    @Test
     fun `given an array element type when parsed then the field is an array`() {
         val shape = ReturnShape.parse("{nodes:[NodeSummary]}")
         assertEquals(ReturnShape.Kind.ARRAY, shape["nodes"]!!.kind)

@@ -148,8 +148,8 @@ class RunOrchestratorWatchdogTest {
         runCurrent()
         // §4.1: the synthesized manifest declares idle 5 s — the request manifest must win over
         // the 300 s DB fallback, otherwise a non-persisted manifest silently gets 300 s.
-        assertEquals(5_000L, h.orchestrator.idleLimitMsForTest(record.runId))
+        assertEquals(5_000L, h.orchestrator.idleLimitMsFor(record.runId))
         fallback = null
-        assertEquals(5_000L, h.orchestrator.idleLimitMsForTest(record.runId))
+        assertEquals(5_000L, h.orchestrator.idleLimitMsFor(record.runId))
     }
 }

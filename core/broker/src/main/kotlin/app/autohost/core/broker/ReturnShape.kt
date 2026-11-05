@@ -49,10 +49,14 @@ object ReturnShape {
             if (part.isEmpty()) continue
             val sep = part.indexOf(':')
             require(sep > 0) { "returns key needs a ':' separator: $part" }
-            val name = part.substring(0, sep).trim()
+            var name = part.substring(0, sep).trim()
             var type = part.substring(sep + 1).trim()
-            val optional = type.endsWith("?")
-            if (optional) type = type.dropLast(1)
+            // The spec writes key-optionality on EITHER side: `name?:Type` (ACTION_HARDENING §2,
+            // e.g. effect?:'...') or `name:Type?` (e.g. node:NodeSummary?). Both mean the key is
+            // absent-or-typed for conformance purposes.
+            val optional = name.endsWith("?") || type.endsWith("?")
+            if (name.endsWith("?")) name = name.dropLast(1)
+            if (type.endsWith("?")) type = type.dropLast(1)
             val field = when {
                 type.startsWith("'") && type.endsWith("'") && type.contains("|") ->
                     FieldSpec(name, Kind.ENUM, optional, type.trim('\'').split("|").map { it.trim() }.toSet())
