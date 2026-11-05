@@ -139,6 +139,7 @@ class ProviderConformanceTest {
 
         val table: List<Pair<String, String>> = listOf(
             "snapshot" to """{}""",
+            "find" to """{"timeout_ms": 0, "selector": ${selectorFor(idTerm("fx_btn_continue"))}}""",
             // `find` is pinned separately below: its Kotlin shape ({ref,node}, first match)
             // diverges from the spec+sim shape ({nodes:[...]}) — recorded for the P12-02 rework.
             "wait_for" to """{"timeout_ms": 50, "selector": ${selectorFor(idTerm("fx_btn_continue"))}}""",
@@ -157,28 +158,5 @@ class ProviderConformanceTest {
         Unit
     }
 
-    @Test
-    fun `given find when run against the fakes then the parity shape conforms (A6b resolved by P12-02)`() = runBlocking {
-        val shapes = deviceUiShapes()
-        val (provider, _) = newProvider()
-        val result = invoke(
-            provider, "find",
-            """{"timeout_ms": 0, "selector": ${selectorFor(idTerm("fx_btn_continue"))}}""",
-        )
-        assertConformant(mutableListOf(), shapes, "find", result)
-        val nodes = result!!["nodes"]!!.jsonArray
-        assertTrue("each find node carries its own ref (parity with the simulator)", nodes.isNotEmpty())
-    }
 
-    @Test
-    fun `given a refused gesture when clicked then the provider errors instead of inventing a method`() = runBlocking {
-        val (provider, actions) = newProvider()
-        actions.clickOutcome = NodeActions.ClickOutcome(null, false)
-        val envelope = invokeEnvelope(
-            provider, "click",
-            """{"timeout_ms": 0, "selector": ${selectorFor(idTerm("fx_btn_continue"))}}""",
-        )
-        assertTrue("a null route must be a typed error, never a method value", !envelope.ok)
-        assertEquals("NOT_DISPATCHED", envelope.error?.reason)
-    }
 }

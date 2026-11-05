@@ -78,6 +78,7 @@ class RunOrchestratorWatchdogTest {
         val orchestrator: RunOrchestrator,
         val provider: FakeRuntimeProvider,
         val store: InMemoryRunStore,
+        val tokens: RunTokenStore,
         val clock: FakeClock,
     )
 
@@ -100,7 +101,7 @@ class RunOrchestratorWatchdogTest {
             dispatchers = AppDispatchers(dispatcher, dispatcher, dispatcher),
             scope = backgroundScope,
         )
-        return Harness(orchestrator, provider, store, clock)
+        return Harness(orchestrator, provider, store, tokens, clock)
     }
 
     @Test

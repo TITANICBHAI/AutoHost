@@ -192,7 +192,7 @@
           "params": {
             "target": "NodeRef|Selector"
           },
-          "returns": "{method:string, effect?:'changed|unchanged|unverifiable', warnings?:[string]}",
+          "returns": "{method:string, verified?:bool, effect?:'changed|unchanged|unverifiable', warnings?:[string]}",
           "errors": [
             "PERMISSION_DENIED",
             "SCOPE_VIOLATION",
