@@ -36,39 +36,239 @@ jobs:
           gradle-version: "8.13"
       - name: Disk before build
         run: df -h / | tail -1
-      # P15/X-17 note: socket-based modules (shell/net/notifications) hang for minutes when the
-      # runner's loopback is in its cold state (X-17-anomaly) — they run LAST and as separate
-      # steps so one hang cannot consume the whole job; everything else verifies first.
-      - name: JVM tests — non-socket capabilities
+      # X-17-anomaly: one STEP PER MODULE — a wedged module is pinpointed by name and cannot
+      # consume the other modules' verification. Socket-based modules run last.
+      - name: JVM tests :capabilities:a11y
         shell: bash
         run: |
           set +e
-          gradle :capabilities:a11y:test :capabilities:app:test :capabilities:ime:test :capabilities:screen:test :capabilities:projection:test :capabilities:clipboard:test :capabilities:intents:test :capabilities:files:test :capabilities:audio:test :capabilities:browser:test :capabilities:vision:test :capabilities:data:test :plugin-sdk:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          gradle :capabilities:a11y:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
             grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
             exit "$rc"
           fi
-      - name: JVM tests — runtimes and app
+
+      - name: JVM tests :capabilities:app
         shell: bash
         run: |
           set +e
-          gradle :runtime:python:test :runtime:flow:test :app:test :testing:fixture-app:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm2.log
+          gradle :capabilities:app:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
-            grep -E "^> Task .*FAILED" /tmp/jvm2.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
             exit "$rc"
           fi
-      - name: JVM tests — socket-based capabilities (X-17-anomaly watch)
+
+      - name: JVM tests :capabilities:ime
         shell: bash
         run: |
           set +e
-          gradle :capabilities:notifications:test :capabilities:net:test :capabilities:rawbridge:test :capabilities:shell:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm3.log
+          gradle :capabilities:ime:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
           rc=${PIPESTATUS[0]}
           if [ "$rc" -ne 0 ]; then
-            grep -E "^> Task .*FAILED" /tmp/jvm3.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
             exit "$rc"
           fi
+
+      - name: JVM tests :capabilities:screen
+        shell: bash
+        run: |
+          set +e
+          gradle :capabilities:screen:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+
+      - name: JVM tests :capabilities:projection
+        shell: bash
+        run: |
+          set +e
+          gradle :capabilities:projection:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+
+      - name: JVM tests :capabilities:clipboard
+        shell: bash
+        run: |
+          set +e
+          gradle :capabilities:clipboard:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+
+      - name: JVM tests :capabilities:intents
+        shell: bash
+        run: |
+          set +e
+          gradle :capabilities:intents:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+
+      - name: JVM tests :capabilities:files
+        shell: bash
+        run: |
+          set +e
+          gradle :capabilities:files:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+
+      - name: JVM tests :capabilities:audio
+        shell: bash
+        run: |
+          set +e
+          gradle :capabilities:audio:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+
+      - name: JVM tests :capabilities:browser
+        shell: bash
+        run: |
+          set +e
+          gradle :capabilities:browser:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+
+      - name: JVM tests :capabilities:vision
+        shell: bash
+        run: |
+          set +e
+          gradle :capabilities:vision:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+
+      - name: JVM tests :capabilities:data
+        shell: bash
+        run: |
+          set +e
+          gradle :capabilities:data:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+
+      - name: JVM tests :plugin-sdk
+        shell: bash
+        run: |
+          set +e
+          gradle :plugin-sdk:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+
+      - name: JVM tests :runtime:python
+        shell: bash
+        run: |
+          set +e
+          gradle :runtime:python:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+
+      - name: JVM tests :runtime:flow
+        shell: bash
+        run: |
+          set +e
+          gradle :runtime:flow:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+
+      - name: JVM tests :app
+        shell: bash
+        run: |
+          set +e
+          gradle :app:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+
+      - name: JVM tests :testing:fixture-app
+        shell: bash
+        run: |
+          set +e
+          gradle :testing:fixture-app:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+
+      - name: JVM tests :capabilities:notifications (socket modules — X-17-anomaly watch)
+        shell: bash
+        run: |
+          set +e
+          gradle :capabilities:notifications:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+
+      - name: JVM tests :capabilities:net (socket modules — X-17-anomaly watch)
+        shell: bash
+        run: |
+          set +e
+          gradle :capabilities:net:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+
+      - name: JVM tests :capabilities:rawbridge (socket modules — X-17-anomaly watch)
+        shell: bash
+        run: |
+          set +e
+          gradle :capabilities:rawbridge:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+
+      - name: JVM tests :capabilities:shell (socket modules — X-17-anomaly watch)
+        shell: bash
+        run: |
+          set +e
+          gradle :capabilities:shell:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+
       - name: Failing test details
         if: failure()
         shell: bash
