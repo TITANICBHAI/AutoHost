@@ -92,9 +92,6 @@ class ProviderConformanceTest {
             provider.invoke(ctx(), method, Json.parseToJsonElement(args).jsonObject)
         }
 
-    private suspend fun invokeEnvelope(provider: A11yUiProvider, method: String, args: String) =
-        provider.invoke(ctx(), method, Json.parseToJsonElement(args).jsonObject)
-
     private fun assertConformant(
         failures: MutableList<String>,
         shapes: Map<String, Map<String, ReturnShape.FieldSpec>>,
@@ -171,5 +168,17 @@ class ProviderConformanceTest {
         assertConformant(mutableListOf(), shapes, "find", result)
         val nodes = result!!["nodes"]!!.jsonArray
         assertTrue("each find node carries its own ref (parity with the simulator)", nodes.isNotEmpty())
+    }
+
+    @Test
+    fun `given a refused gesture when clicked then the provider errors instead of inventing a method`() = runBlocking {
+        val (provider, actions) = newProvider()
+        actions.clickOutcome = NodeActions.ClickOutcome(null, false)
+        val envelope = invokeEnvelope(
+            provider, "click",
+            """{"timeout_ms": 0, "selector": ${selectorFor(idTerm("fx_btn_continue"))}}""",
+        )
+        assertTrue("a null route must be a typed error, never a method value", !envelope.ok)
+        assertEquals("NOT_DISPATCHED", envelope.error?.reason)
     }
 }
