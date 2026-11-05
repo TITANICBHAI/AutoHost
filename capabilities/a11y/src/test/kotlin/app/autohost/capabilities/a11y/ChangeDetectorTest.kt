@@ -26,10 +26,14 @@ class ChangeDetectorTest {
     fun `given a toggle that only flips checked when detected then Changed (the old fingerprint was blind)`() {
         val pre = listOf(node(0, "dnd_switch", flags = setOf("clickable", "checked")))
         val post = listOf(node(0, "dnd_switch", flags = setOf("clickable"))) // checked flipped OFF
-        // RED (A2 demonstration): the old SettlePolicy fingerprint saw no change
+        // RED (A2 demonstration): the OLD index:id:text:desc:bounds formula is blind to checked —
+        // inlined here so the defect stays visible after SettlePolicy delegates to the detector.
+        fun oldFingerprint(nodes: List<UiNode>): String = nodes.joinToString("|") { n ->
+            "\${n.index}:\${n.id}:\${n.text}:\${n.desc}:\${n.bounds.l},\${n.bounds.t},\${n.bounds.r},\${n.bounds.b}"
+        }
         assertEquals(
             "the OLD fingerprint is blind to checked — this equality IS the defect",
-            SettlePolicy.fingerprint(pre), SettlePolicy.fingerprint(post),
+            oldFingerprint(pre), oldFingerprint(post),
         )
         // the fix: the state-aware detector reads it as Changed
         assertEquals(ChangeDetector.Change.Changed, ChangeDetector.detect(pre, post))
@@ -81,6 +85,7 @@ class ChangeDetectorTest {
     fun `given the fingerprint when compared across runs then deterministic (stable hash)`() {
         val nodes = listOf(node(0, "a"), node(1, "b", text = "x"))
         assertEquals(ChangeDetector.fingerprint(nodes), ChangeDetector.fingerprint(nodes))
-        assertNotEquals(ChangeDetector.fingerprint(nodes), ChangeDetector.fingerprint(nodes.reversed()))
+        // order-independent BY DESIGN (sorted by index) — a different CONTENT is what must differ
+        assertNotEquals(ChangeDetector.fingerprint(nodes), ChangeDetector.fingerprint(listOf(node(0, "a"))))
     }
 }
