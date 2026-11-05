@@ -3,6 +3,7 @@ package app.autohost.capabilities.a11y
 import app.autohost.core.broker.ReturnShape
 import app.autohost.core.common.FakeClock
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
@@ -80,10 +81,16 @@ class ProviderConformanceTest {
         node(2, 0, 1, "fx_text", text = "", cls = "android.widget.EditText", editable = true),
     )
 
-    private suspend fun invoke(provider: A11yUiProvider, method: String, args: String): JsonObject? {
-        val envelope = provider.invoke(ctx(), method, Json.parseToJsonElement(args).jsonObject)
-        return envelope.result as? JsonObject
-    }
+    private suspend fun invoke(provider: A11yUiProvider, method: String, args: String): JsonObject? =
+        withTimeout(15_000) {
+            val envelope = provider.invoke(ctx(), method, Json.parseToJsonElement(args).jsonObject)
+            envelope.result as? JsonObject
+        }
+
+    private suspend fun invokeEnvelope(provider: A11yUiProvider, method: String, args: String) =
+        withTimeout(15_000) {
+            provider.invoke(ctx(), method, Json.parseToJsonElement(args).jsonObject)
+        }
 
     private suspend fun invokeEnvelope(provider: A11yUiProvider, method: String, args: String) =
         provider.invoke(ctx(), method, Json.parseToJsonElement(args).jsonObject)
