@@ -66,7 +66,7 @@ class ProviderConformanceTest {
             reader = reader,
             registry = NodeRegistry(FakeClock()),
             actions = actions,
-            windowChanges = { 0L },
+            windowChanges = { 999_999L }, // last change 1 ms before the clock start: quiet grows
             // autoAdvance: wait_for_settle genuinely waits — every clock READING advances 1 ms
             // so the settle loop's elapsed grows past quiet_ms despite the fake clock.
             clock = FakeClock(startMs = 1_000_000L, autoAdvancePerReadMs = 1),
