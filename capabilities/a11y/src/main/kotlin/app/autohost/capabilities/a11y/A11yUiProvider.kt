@@ -300,15 +300,16 @@ class A11yUiProvider(
         // by the state-aware ChangeDetector (checked/selected/encluded included, focused excluded).
         val nodesBefore = nodesOfCurrent(observePackages)
         val outcome = if (longClick) actions.longClick(info) else actions.click(info)
-        // retry_if_no_change: one honest repetition when the screen did not change at all (plan §5.7).
+        // P12-04 (A2): the effect verification happens FIRST (settle happens in the caller's next
+        // observation); `retry_if_no_change` then repeats the accepted action ONCE when the screen
+        // did not change — and re-observes, never falling through to another channel after
+        // `unchanged` (ACTION_HARDENING §2).
         val retryFlag = (args["retry_if_no_change"] as? JsonPrimitive)?.content?.toBooleanStrict() ?: false
-        val retryChanged = when (ChangeDetector.detect(nodesBefore, nodesAfter)) {
-            ChangeDetector.Change.Unchanged -> false
-            else -> true // changed, or unreadable: fail open for the single retry (§5.7)
-        }
-        if (retryFlag && outcome.verified && SettlePolicy.retryIfNoChange(retryChanged, alreadyRetried = false)) {
-            // The handle was just re-resolved inside the chain; one repeat with the same handle is the
-            // documented single retry. A second miss is reported, never looped.
+        if (retryFlag && outcome.verified &&
+            ChangeDetector.detect(nodesBefore, nodesOfCurrent(observePackages)) == ChangeDetector.Change.Unchanged
+        ) {
+            // One repeat with the same handle is the documented single retry; a second miss is
+            // reported, never looped.
             if (longClick) actions.longClick(info) else actions.click(info)
         }
         val verifiedByExpect = verifyExpect(args, observePackages)
