@@ -58,7 +58,8 @@ object SettlePolicy {
     fun retryIfNoChange(changed: Boolean, alreadyRetried: Boolean): Boolean = !changed && !alreadyRetried
 
     /** Stable fingerprint of a snapshot used for settle-streak and no-change checks. */
-    fun fingerprint(nodes: List<app.autohost.core.model.UiNode>): String = nodes.joinToString("|") { n ->
-        "${n.index}:${n.id}:${n.text}:${n.desc}:${n.bounds.l},${n.bounds.t},${n.bounds.r},${n.bounds.b}"
-    }
+    fun fingerprint(nodes: List<app.autohost.core.model.UiNode>): String =
+        // P12-03 (A2/RM-A4): the settle streak is STATE-AWARE — a toggle that only flips
+        // `checked` must count as a change. The hex form keeps the old String contract.
+        ChangeDetector.fingerprint(nodes).toUInt().toString(16)
 }

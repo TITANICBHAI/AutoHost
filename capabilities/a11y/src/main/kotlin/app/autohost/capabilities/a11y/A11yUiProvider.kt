@@ -296,11 +296,17 @@ class A11yUiProvider(
             is AhResult.Ok -> guardResult.value
             is AhResult.Err -> return mapResolveError(guardResult.error, "click target not found")
         }
-        val fingerprintBefore = fingerprintOfCurrent(observePackages)
+        // P12-03 (A2/RM-A4): the nodes are captured BEFORE the click so the effect is computed
+        // by the state-aware ChangeDetector (checked/selected/encluded included, focused excluded).
+        val nodesBefore = nodesOfCurrent(observePackages)
         val outcome = if (longClick) actions.longClick(info) else actions.click(info)
         // retry_if_no_change: one honest repetition when the screen did not change at all (plan §5.7).
         val retryFlag = (args["retry_if_no_change"] as? JsonPrimitive)?.content?.toBooleanStrict() ?: false
-        if (retryFlag && outcome.verified && SettlePolicy.retryIfNoChange(changed(fingerprintBefore, observePackages), alreadyRetried = false)) {
+        val retryChanged = when (ChangeDetector.detect(nodesBefore, nodesAfter)) {
+            ChangeDetector.Change.Unchanged -> false
+            else -> true // changed, or unreadable: fail open for the single retry (§5.7)
+        }
+        if (retryFlag && outcome.verified && SettlePolicy.retryIfNoChange(retryChanged, alreadyRetried = false)) {
             // The handle was just re-resolved inside the chain; one repeat with the same handle is the
             // documented single retry. A second miss is reported, never looped.
             if (longClick) actions.longClick(info) else actions.click(info)
@@ -320,14 +326,14 @@ class A11yUiProvider(
                 reason = "NOT_DISPATCHED",
             )
         }
-        // P12-02 (ACTION_HARDENING §2): the additive effect — an honest three-valued signal from
-        // the fingerprint compare (W2.2's ChangeDetector refines the fingerprint itself).
-        // `verified` keeps its "accepted" meaning until P12-04.
-        val after = fingerprintOfCurrent(observePackages)
-        val effect = when {
-            fingerprintBefore == null || after == null -> "unverifiable"
-            changed(fingerprintBefore, observePackages) -> "changed"
-            else -> "unchanged"
+        // P12-03/04 (ACTION_HARDENING §2, RM-A4): the additive effect — a THREE-VALUED signal
+        // from the state-aware ChangeDetector (null on either side = Unverifiable, never silently
+        // Changed). `verified` keeps its "accepted" meaning (P12-04's settle-then-verify refines).
+        val nodesAfter = nodesOfCurrent(observePackages)
+        val effect = when (ChangeDetector.detect(nodesBefore, nodesAfter)) {
+            ChangeDetector.Change.Changed -> "changed"
+            ChangeDetector.Change.Unchanged -> "unchanged"
+            ChangeDetector.Change.Unverifiable -> "unverifiable"
         }
         val warnings = ArrayList<String>()
         if (effect == "unchanged") warnings.add("no observable change after the click")
@@ -411,15 +417,15 @@ class A11yUiProvider(
         null
     }
 
-    private fun fingerprintOfCurrent(packages: Set<String>?): String? = try {
-        SettlePolicy.fingerprint(reader.read(packages).nodes)
+    private fun nodesOfCurrent(packages: Set<String>?): List<app.autohost.core.model.UiNode>? = try {
+        reader.read(packages).nodes
     } catch (e: RuntimeException) {
         null
     }
 
-    private fun changed(before: String?, packages: Set<String>?): Boolean {
-        val now = fingerprintOfCurrent(packages) ?: return true // unreadable state counts as changed (fail open for retry only)
-        return now != before
+    private fun changed(before: List<app.autohost.core.model.UiNode>?, packages: Set<String>?): Boolean {
+        val now = nodesOfCurrent(packages) ?: return true // unreadable state counts as changed (fail open for retry only)
+        return ChangeDetector.detect(before, now) != ChangeDetector.Change.Unchanged
     }
 
     /**
