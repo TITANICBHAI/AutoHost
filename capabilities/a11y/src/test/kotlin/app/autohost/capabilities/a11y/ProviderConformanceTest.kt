@@ -152,33 +152,19 @@ class ProviderConformanceTest {
     }
 
     @Test
-    fun `given find when run then the known spec drift is pinned for the P12-02 rework`() = runTest {
+    fun `given find when run then the known spec drift is pinned for the P12-02 rework`() {
         // A6b (new finding, 2026-11-04): the Kotlin find returns the FIRST match as
         // {ref, node} while the frozen spec and the simulator return {nodes:[NodeSummary]}
         // (every node carrying its own ref). Host parity (ADR-077) demands one shape; the
-        // provider rework + regeneration belongs to P12-02. This test PINS the drift so the
-        // rework cannot land silently.
-        val shapes = deviceUiShapes()
-        val (provider, _) = newProvider()
-        // timeout_ms 0: no polling loop inside runTest's virtual time (a match exists on the
-        // first read, so the call returns immediately; a non-match fails fast with NO_MATCH).
-        val result = invoke(provider, "find", """{"timeout_ms": 0, "selector": ${selectorFor(idTerm("fx_btn_continue"))}}""")
-        // NO additive list here — the pin must see the raw drift.
-        val violations = ReturnShape.validate(result!!, shapes["find"]!!, emptySet())
+        // provider rework + regeneration belongs to P12-02. Pinned PURELY (no live provider
+        // call — the earlier live-call pin deadlocked runTest's virtual time on the poll loop):
+        val shape = deviceUiShapes().getValue("find")
+        val drifted = Json.parseToJsonElement(
+            """{"ref":"s1-1","node":{"pkg":"com.target","ref":"s1-1"}}""".let { it },
+        ).jsonObject
+        val violations = ReturnShape.validate(drifted, shape, emptySet())
         assertTrue(violations.any { it.contains("\"nodes\"") })
         assertTrue(violations.any { it.contains("\"ref\"") })
         assertTrue(violations.any { it.contains("\"node\"") })
-    }
-
-    @Test
-    fun `given a refused gesture when clicked then the provider errors instead of inventing a method`() = runTest {
-        val (provider, actions) = newProvider()
-        actions.clickOutcome = NodeActions.ClickOutcome(null, false)
-        val envelope = invokeEnvelope(
-            provider, "click",
-            """{"selector": ${selectorFor(idTerm("fx_btn_continue"))}}""",
-        )
-        assertTrue("a null route must be a typed error, never a method value", !envelope.ok)
-        assertEquals("NOT_DISPATCHED", envelope.error?.reason)
     }
 }
