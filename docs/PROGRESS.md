@@ -699,9 +699,15 @@ Tasks 5/293 · Gate items 0/94 · Capabilities 0/46 · WIP 0 · Blocked 29
 - [ ] **P12-07** Overlay vs injected gestures: audit `BubbleOverlay`, `TaskOverlaySink`, `RecorderOverlay`, `UiTextOverlay` window flags; add a touch gate only if a test shows an overlay swallowing an injected tap [S]
 - [ ] **P12-08** Scroll: accessibility scroll first, gesture inside the scrollable's bounds, real display metrics instead of the 1080×2400 defaults (A4) [M]
   - evidence:
-- [ ] **P12-09** Hotspot promotion for the coordinate fallback (A5; adapt RM-A3) [S]
-- [ ] **P12-10** IME-Enter through `ApiGate` (API 30) with a click fallback (adapt RM-A1) [S]
-- [ ] **P12-11** Node identity guard before a node action: a stale or relabelled node gives typed `STALE_NODE`, never a click on the wrong node (adapt RM-A1) [S]
+- [ ] **P12-09** (WRITTEN — static evidence under D-26; compile+test deferred to git/CI hand-back) Hotspot promotion for the coordinate fallback (A5; adapt RM-A3) [S]
+
+  - evidence: written 2026-11-05 (W2.5, D-26): `HotspotRefiner.kt` (RM-A3 adaptation header; pure table: actionable children strictly inside the target whose bounds contain the tap point (or the target centre), smallest-area promotion, ≥2 minimal-area ties -> Ambiguous fail-closed, strictly-inside rule) + `HotspotRefinerTest` 7 cases. The large-container fixture surface is P12-12
+- [ ] **P12-10** (WRITTEN — static evidence under D-26; compile+test deferred to git/CI hand-back) IME-Enter through `ApiGate` (API 30) with a click fallback (adapt RM-A1) [S]
+
+  - evidence: written 2026-11-05 (W2.5, D-26): `ImeEnterPlan.kt` (API >= 30 -> ACTION_IME_ENTER via the caller's ApiGate value; below -> the click fallback) + `ImeEnterPlanTest` 2 cases. The Android perform-side wiring lands with the provider integration
+- [ ] **P12-11** (WRITTEN — static evidence under D-26; compile+test deferred to git/CI hand-back) Node identity guard before a node action: a stale or relabelled node gives typed `STALE_NODE`, never a click on the wrong node (adapt RM-A1) [S]
+
+  - evidence: written 2026-11-05 (W2.5, D-26): `NodeIdentityGuard.kt` (identity = id+class+bounds+text; gone/id-changed/class-changed/moved -> Stale; relabelled -> Relabelled — BOTH refuse, never a wrong-node click) + `NodeIdentityGuardTest` 6 cases. The provider wiring (verify before every node action, replacing the 8-hop walk's guess) lands with the P12-04 provider pass
 - [ ] **P12-12** Fixture-app surfaces for A1–A5 (toggle, slow transition, silent-failure text field, large clickable container, nested scrollable) + `docs/FIXTURE_APP.md` [M]
   - evidence:
 - [ ] **P12-13** (BLOCKED: no device, no emulator — owner decisions D-25/D-24; permanently skipped as unverifiable) Emulator runs on API 30/31/34: reproduce or refute A1–A5, before/after evidence per item (needs X-08) [M]
