@@ -2,7 +2,7 @@ package app.autohost.capabilities.a11y
 
 import app.autohost.core.broker.ReturnShape
 import app.autohost.core.common.FakeClock
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
@@ -105,7 +105,7 @@ class ProviderConformanceTest {
     }
 
     @Test
-    fun `given the act methods when run against the fakes then results match the frozen spec shapes`() = runTest {
+    fun `given the act methods when run against the fakes then results match the frozen spec shapes`() = runBlocking {
         val shapes = deviceUiShapes()
         val (provider, _) = newProvider()
 
@@ -125,10 +125,11 @@ class ProviderConformanceTest {
             assertConformant(failures, shapes, method, result)
         }
         assertTrue("provider↔spec drift: " + failures.joinToString(" | "), failures.isEmpty())
+        Unit
     }
 
     @Test
-    fun `given the read methods when run against the fakes then results match the frozen spec shapes`() = runTest {
+    fun `given the read methods when run against the fakes then results match the frozen spec shapes`() = runBlocking {
         val shapes = deviceUiShapes()
         val (provider, _) = newProvider()
 
@@ -149,6 +150,7 @@ class ProviderConformanceTest {
             assertConformant(failures, shapes, method, result)
         }
         assertTrue("provider↔spec drift: " + failures.joinToString(" | "), failures.isEmpty())
+        Unit
     }
 
     @Test
