@@ -104,6 +104,7 @@ class ProviderConformanceTest {
         }
         val shape = shapes[method]
             ?: run { failures.add("$method: no returns declared in the frozen spec"); return }
+        if (shape.isEmpty()) return // a top-level named type (e.g. 'UiSnapshot') is wire-opaque here
         val violations = ReturnShape.validate(result, shape, additive)
         if (violations.isNotEmpty()) failures.add("$method: ${violations.joinToString("; ")}")
     }
