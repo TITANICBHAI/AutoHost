@@ -4,6 +4,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /** ImeSelector mapping + TextInputResult outcome values stay inside schemas/errors.json (P3-11). */
 class ImeP3Test {
@@ -16,11 +19,25 @@ class ImeP3Test {
     }
 
     @Test fun `text input outcomes come from the schema vocabulary only`() {
+        // X-16-era fix: the reflection must take STATIC String fields only — instance property
+        // backing fields are null on a static get (NPE, first CI compile of this test).
+        val staticStrings = TextInputResult::class.java.declaredFields
+            .filter { java.lang.reflect.Modifier.isStatic(it.modifiers) && it.type == String::class.java }
+            .map { it.isAccessible = true; it.get(null) as String }
         val known = setOf(
             TextInputResult.VERIFIED, TextInputResult.REJECTED, TextInputResult.ACCEPTED_UNVERIFIED,
             TextInputResult.COMMIT_OUTCOME_UNKNOWN, TextInputResult.INPUT_SESSION_CHANGED,
         )
-        assertTrue(known.containsAll(TextInputResult::class.java.declaredFields.filter { it.type == String::class.java }.map { it.isAccessible = true; it.get(null) as String }))
+        assertEquals(known, staticStrings.toSet())
+        // the vocabulary is the schema's textInputOutcomes (schemas/errors.json)
+        val schema = java.io.File(System.getProperty("user.dir")).parentFile
+            .resolve("schemas/errors.json")
+        if (schema.isFile) {
+            val outcomes = kotlinx.serialization.json.Json.parseToJsonElement(schema.readText())
+                .jsonObject["textInputOutcomes"]!!.jsonArray
+                .map { it.jsonPrimitive.content }
+            assertTrue(outcomes.containsAll(known))
+        }
     }
 
     @Test fun `default result reports unknown outcome with detail`() {
