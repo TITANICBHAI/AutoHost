@@ -160,7 +160,9 @@ class ProviderConformanceTest {
         // rework cannot land silently.
         val shapes = deviceUiShapes()
         val (provider, _) = newProvider()
-        val result = invoke(provider, "find", """{"selector": ${selectorFor(idTerm("fx_btn_continue"))}}""")
+        // timeout_ms 0: no polling loop inside runTest's virtual time (a match exists on the
+        // first read, so the call returns immediately; a non-match fails fast with NO_MATCH).
+        val result = invoke(provider, "find", """{"timeout_ms": 0, "selector": ${selectorFor(idTerm("fx_btn_continue"))}}""")
         // NO additive list here — the pin must see the raw drift.
         val violations = ReturnShape.validate(result!!, shapes["find"]!!, emptySet())
         assertTrue(violations.any { it.contains("\"nodes\"") })
