@@ -25,7 +25,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Reader over hand-built trees; honours the packages filter exactly like the real one (no Android types). */
-class FakeReader(var snapshot: A11ySnapshot) : A11yReader {
+internal class FakeReader(var snapshot: A11ySnapshot) : A11yReader {
     var reads = 0
 
     override fun read(packages: Set<String>?): A11ySnapshot {
@@ -40,7 +40,7 @@ class FakeReader(var snapshot: A11ySnapshot) : A11yReader {
     override fun windows(): List<RootResolver.WindowMeta> = snapshot.windows
 }
 
-class FakeUiActions : UiActions {
+internal class FakeUiActions : UiActions {
     val clicks = mutableListOf<String>()
     var clickOutcome = NodeActions.ClickOutcome(NodeActions.Route.NODE, true)
     var setTextOutcome = true
@@ -85,7 +85,7 @@ class FakeUiActions : UiActions {
     }
 }
 
-private fun node(
+internal fun node(
     index: Int,
     parent: Int,
     depth: Int,
@@ -111,7 +111,7 @@ private fun node(
     },
 )
 
-private fun snapshotOf(vararg nodes: UiNode, keyboard: Boolean = false, pkg: String = "app.autohost.fixture") =
+internal fun snapshotOf(vararg nodes: UiNode, keyboard: Boolean = false, pkg: String = "app.autohost.fixture") =
     A11ySnapshot(
         tsMs = 1L,
         pkg = pkg,
@@ -121,11 +121,11 @@ private fun snapshotOf(vararg nodes: UiNode, keyboard: Boolean = false, pkg: Str
         truncated = false,
     )
 
-private fun selectorFor(term: JsonObject): JsonObject = buildJsonObject {
+internal fun selectorFor(term: JsonObject): JsonObject = buildJsonObject {
     put("terms", JsonArray(listOf(term)))
 }
 
-private fun idTerm(id: String): JsonObject = buildJsonObject {
+internal fun idTerm(id: String): JsonObject = buildJsonObject {
     put("id", buildJsonObject { put("labels", JsonArray(listOf(JsonPrimitive(id)))) })
 }
 
