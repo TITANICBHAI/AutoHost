@@ -150,7 +150,7 @@ class ProviderConformanceTest {
             // `find` is pinned separately below: its Kotlin shape ({ref,node}, first match)
             // diverges from the spec+sim shape ({nodes:[...]}) — recorded for the P12-02 rework.
             "wait_for" to """{"timeout_ms": 50, "selector": ${selectorFor(idTerm("fx_btn_continue"))}}""",
-            "wait_for_settle" to """{"quiet_ms": 10}""",
+            "wait_for_settle" to """{"quiet_ms": 10, "timeout_ms": 500}""",
             "is_window_updating" to """{}""",
             "dump" to """{"compact": true}""",
             "keyboard_visible" to """{}""",
