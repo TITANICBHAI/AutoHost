@@ -41,24 +41,42 @@ object Screenshotter {
 
     class Failed(val failure: Failure) : Exception(failure.message)
 
-    /** [region] is [l, t, r, b] in screen pixels; clipped to the image (fail closed to an empty crop never happens). */
-    internal fun crop(bitmap: Bitmap, region: List<Int>?): Bitmap {
-        val l = (region?.getOrNull(0) ?: 0).coerceIn(0, bitmap.width)
-        val t = (region?.getOrNull(1) ?: 0).coerceIn(0, bitmap.height)
-        val r = (region?.getOrNull(2) ?: bitmap.width).coerceIn(l, bitmap.width)
-        val b = (region?.getOrNull(3) ?: bitmap.height).coerceIn(t, bitmap.height)
+    /**
+     * P15/X-16-era test fix: the crop GEOMETRY is pure and unit-testable — the Bitmap call is the
+     * only Android touch. Returns the clipped rect (l, t, w, h) or null for identity (no crop).
+     */
+    internal fun cropRegion(imageW: Int, imageH: Int, region: List<Int>?): CropRect? {
+        val l = (region?.getOrNull(0) ?: 0).coerceIn(0, imageW)
+        val t = (region?.getOrNull(1) ?: 0).coerceIn(0, imageH)
+        val r = (region?.getOrNull(2) ?: imageW).coerceIn(l, imageW)
+        val b = (region?.getOrNull(3) ?: imageH).coerceIn(t, imageH)
         val w = r - l
         val h = b - t
-        if (w <= 0 || h <= 0) return bitmap
-        if (w == bitmap.width && h == bitmap.height) return bitmap
-        return Bitmap.createBitmap(bitmap, l, t, w, h)
+        if (w <= 0 || h <= 0) return null
+        if (w == imageW && h == imageH) return null
+        return CropRect(l, t, w, h)
+    }
+
+    data class CropRect(val l: Int, val t: Int, val w: Int, val h: Int)
+
+    /** The scaled dimensions: at least one pixel; null for identity (~1.0) and non-positive factors. */
+    internal fun scaledSize(imageW: Int, imageH: Int, factor: Double): Pair<Int, Int>? {
+        if (factor >= 0.999 && factor <= 1.001) return null
+        if (factor <= 0.0) return null
+        val w = (imageW * factor).toInt().coerceAtLeast(1)
+        val h = (imageH * factor).toInt().coerceAtLeast(1)
+        return Pair(w, h)
+    }
+
+    internal fun crop(bitmap: Bitmap, region: List<Int>?): Bitmap {
+        val rect = cropRegion(bitmap.width, bitmap.height, region)
+            ?: return bitmap // identity: no crop, or degenerate region (fail closed to the full image)
+        return Bitmap.createBitmap(bitmap, rect.l, rect.t, rect.w, rect.h)
     }
 
     internal fun scale(bitmap: Bitmap, factor: Double): Bitmap {
-        if (factor >= 0.999 && factor <= 1.001) return bitmap
-        if (factor <= 0.0) return bitmap
-        val w = (bitmap.width * factor).toInt().coerceAtLeast(1)
-        val h = (bitmap.height * factor).toInt().coerceAtLeast(1)
+        val (w, h) = scaledSize(bitmap.width, bitmap.height, factor)
+            ?: return bitmap // identity: ~1.0 or non-positive factor
         return Bitmap.createScaledBitmap(bitmap, w, h, true)
     }
 
