@@ -173,7 +173,7 @@ CATALOG = [
           "target": "NodeRef|Selector"
         },
         "requires": "device.ui.act",
-        "returns": "{method:string, effect?:'changed|unchanged|unverifiable', warnings?:[string]}",
+        "returns": "{method:string, verified?:bool, effect?:'changed|unchanged|unverifiable', warnings?:[string]}",
         "risk": "low",
         "timeoutMs": 10000
       },
