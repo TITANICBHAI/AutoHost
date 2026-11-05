@@ -41,15 +41,40 @@ object NodeActions {
     /**
      * ACTION_SET_TEXT then verify by re-reading the field (plan §7.4). Returns verified=true only when the
      * field now holds exactly [text]; TEXT_INPUT_UNVERIFIED is reported by the provider otherwise.
+     *
+     * P12-05 (A1/RM-A1): the verify path is [setTextVia] — perform → **refresh()** → read. The old
+     * order read the SAME un-refreshed node (a stale snapshot could report a successful set as
+     * rejected, and the chain then fell through to IME/paste → doubled text).
      */
-    fun setText(info: AccessibilityNodeInfo, text: String): Boolean {
-        val args = Bundle().apply {
-            putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
-        }
-        val applied = perform(info, AccessibilityNodeInfo.ACTION_SET_TEXT, args)
-        if (!applied) return false
-        val now = UiTreeBuilder.safeText(info)
-        return now == text
+    fun setText(info: AccessibilityNodeInfo, text: String): Boolean = setTextVia(
+        object : SetTextHandle {
+            override fun performSetText(newText: String): Boolean {
+                val args = Bundle().apply {
+                    putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, newText)
+                }
+                return perform(info, AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+            }
+            override fun refresh(): Boolean = runCatching { info.refresh() }.getOrDefault(false)
+            override fun readText(): String = UiTreeBuilder.safeText(info)
+        },
+        text,
+    )
+
+    /**
+     * The A1 ORDER, pure and JVM-testable: perform → refresh() → read. [handle] implementations
+     * that read before refreshing report stale text and fail verification (the test pins the order).
+     */
+    fun setTextVia(handle: SetTextHandle, text: String): Boolean {
+        if (!handle.performSetText(text)) return false
+        handle.refresh()
+        return handle.readText() == text
+    }
+
+    /** The node seam for the set_text verify order (RM-A1's NodeHandle, shaped for ACTION_SET_TEXT). */
+    interface SetTextHandle {
+        fun performSetText(newText: String): Boolean
+        fun refresh(): Boolean
+        fun readText(): String
     }
 
     /** ACTION_PASTE on the node (clipboard strategy of the set_text chain; the clipboard itself is set by the caller). */
