@@ -125,8 +125,12 @@ class ProviderConformanceTest {
 
         val failures = ArrayList<String>()
         for ((method, args) in table) {
-            val result = invoke(provider, method, args)
-            assertConformant(failures, shapes, method, result)
+            try {
+                val result = invoke(provider, method, args)
+                assertConformant(failures, shapes, method, result)
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                failures.add("$method: TIMED OUT after 15 s (hang)")
+            }
         }
         assertTrue("provider↔spec drift: " + failures.joinToString(" | "), failures.isEmpty())
         Unit
@@ -151,8 +155,12 @@ class ProviderConformanceTest {
 
         val failures = ArrayList<String>()
         for ((method, args) in table) {
-            val result = invoke(provider, method, args)
-            assertConformant(failures, shapes, method, result)
+            try {
+                val result = invoke(provider, method, args)
+                assertConformant(failures, shapes, method, result)
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                failures.add("$method: TIMED OUT after 15 s (hang)")
+            }
         }
         assertTrue("provider↔spec drift: " + failures.joinToString(" | "), failures.isEmpty())
         Unit
