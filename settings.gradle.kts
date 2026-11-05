@@ -43,7 +43,8 @@ include(":capabilities:shell") // P9-01..06: the shell tier (adb client, transpo
 include(":capabilities:browser") // P10-02..04: the browser tier (webview host, a11y link, CDP over the shell tier)
 include(":capabilities:vision") // P10-05: OCR / template match / QR (engines behind seams, ADR-072)
 include(":capabilities:data") // P10-06..08: personal data + hardware + sms/telephony (seam-backed, ADR-073/074)
-include(":core:llm") // P13-01 (ADR-090): provider-neutral model client (pure JVM)
+include(":core:llm")
+include(":runtime:agent") // P13-08..15 (ADR-086): the optional agent runtime — pure JVM
 include(":core:designsystem")
 include(":plugin-sdk") // P11-02 (ADR-079): the AIDL contract + base service external plugin APKs extend
 include(":app")

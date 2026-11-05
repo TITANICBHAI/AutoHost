@@ -1,0 +1,165 @@
+{
+ "note": "P13-08 (RM-B1, adapted from closepaw app_tiers.json, Apache-2.0): the bundled BLOCKED set is a FLOOR \u2014 the user can add apps, never remove. India-specific payment/UPI/banking additions only after their package ids are verified (docs/AGENT_RUNTIME.md \u00a78).",
+ "apps": [
+  {
+   "package": "com.chase.sig.android",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.bankofamerica.cashpromobile",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.wf.wellsfargomobile",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.citi.citimobile",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.usaa.mobile.android.usaa",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.schwab.mobile",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.ally.MobileBanking",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.capitalone.mobile",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.discover.mobile",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.tdameritrade.android",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.robinhood.android",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.etrade.mobilepro.activity",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.fidelity.android",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.coinbase.android",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.binance.dev",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "piuk.blockchain.android",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.kraken.trade",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "io.metamask",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.phantom",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.paypal.android.p2pmobile",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.venmo",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.squareup.cash",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.zellepay.zelle",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.google.android.apps.walletnfcrel",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.samsung.android.spay",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.apple.android.applepay",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.tencent.mm",
+   "tier": "CAUTIOUS"
+  },
+  {
+   "package": "com.onepassword.android",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.lastpass.lpandroid",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.bitwarden.android",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.dashlane",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.keepass2android.keepass2android",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.google.android.apps.authenticator2",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.authy.authy",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.duosecurity.duomobile",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "com.microsoft.msa.authenticator",
+   "tier": "BLOCKED"
+  },
+  {
+   "package": "moe.shizuku.privileged.api",
+   "tier": "CAUTIOUS"
+  },
+  {
+   "package": "com.tailscale.ipn",
+   "tier": "CAUTIOUS"
+  },
+  {
+   "package": "com.aurora.store",
+   "tier": "CAUTIOUS"
+  },
+  {
+   "package": "com.apkmirror.helper.prod",
+   "tier": "CAUTIOUS"
+  }
+ ]
+}
