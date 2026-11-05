@@ -231,7 +231,9 @@ class A11yUiProviderTest {
         setUpProvider(snapshotOf(*tree().toTypedArray()))
         val envelope = provider.invoke(ctx, "find", buildJsonObject { put("selector", selectorFor(idTerm("fx_btn_continue"))) })
         assertTrue(envelope.ok)
-        val ref = (envelope.result!!.jsonObject["ref"] as JsonPrimitive).content
+        val nodes = envelope.result!!.jsonObject["nodes"]!!.jsonArray
+        assertEquals(1, nodes.size)
+        val ref = (nodes[0].jsonObject["ref"] as JsonPrimitive).content
         assertTrue(ref.startsWith("s"))
     }
 
@@ -282,7 +284,7 @@ class A11yUiProviderTest {
     fun `given click by ref then action dispatched with route`() = runTest {
         setUpProvider(snapshotOf(*tree().toTypedArray()))
         val found = provider.invoke(ctx, "find", buildJsonObject { put("selector", selectorFor(idTerm("fx_btn_continue"))) })
-        val ref = (found.result!!.jsonObject["ref"] as JsonPrimitive).content
+        val ref = (found.result!!.jsonObject["nodes"]!!.jsonArray[0].jsonObject["ref"] as JsonPrimitive).content
         val clicked = provider.invoke(ctx, "click", buildJsonObject { put("ref", ref) })
         assertTrue(clicked.ok)
         assertEquals("NODE_ACTION", (clicked.result!!.jsonObject["method"] as JsonPrimitive).content)
@@ -293,7 +295,7 @@ class A11yUiProviderTest {
     fun `given cleared registry when clicked then stale node error`() = runTest {
         setUpProvider(snapshotOf(*tree().toTypedArray()))
         val found = provider.invoke(ctx, "find", buildJsonObject { put("selector", selectorFor(idTerm("fx_btn_continue"))) })
-        val ref = (found.result!!.jsonObject["ref"] as JsonPrimitive).content
+        val ref = (found.result!!.jsonObject["nodes"]!!.jsonArray[0].jsonObject["ref"] as JsonPrimitive).content
         registry.clear()
         val clicked = provider.invoke(ctx, "click", buildJsonObject { put("ref", ref) })
         assertEquals(ErrorCode.STALE_NODE.name, clicked.error?.code)
@@ -303,7 +305,7 @@ class A11yUiProviderTest {
     fun `given set_text then field written and verified`() = runTest {
         setUpProvider(snapshotOf(*tree().toTypedArray()))
         val found = provider.invoke(ctx, "find", buildJsonObject { put("selector", selectorFor(idTerm("fx_text"))) })
-        val ref = (found.result!!.jsonObject["ref"] as JsonPrimitive).content
+        val ref = (found.result!!.jsonObject["nodes"]!!.jsonArray[0].jsonObject["ref"] as JsonPrimitive).content
         val result = provider.invoke(ctx, "set_text", buildJsonObject { put("ref", ref); put("text", "hello") })
         assertTrue(result.ok)
         assertEquals("hello", actions.texts.single())
@@ -314,7 +316,7 @@ class A11yUiProviderTest {
         setUpProvider(snapshotOf(*tree().toTypedArray()))
         actions.setTextOutcome = false
         val found = provider.invoke(ctx, "find", buildJsonObject { put("selector", selectorFor(idTerm("fx_text"))) })
-        val ref = (found.result!!.jsonObject["ref"] as JsonPrimitive).content
+        val ref = (found.result!!.jsonObject["nodes"]!!.jsonArray[0].jsonObject["ref"] as JsonPrimitive).content
         val result = provider.invoke(ctx, "set_text", buildJsonObject { put("ref", ref); put("text", "x") })
         assertEquals(ErrorCode.TEXT_INPUT_REJECTED.name, result.error?.code)
     }

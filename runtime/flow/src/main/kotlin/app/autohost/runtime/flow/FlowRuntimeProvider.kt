@@ -90,6 +90,11 @@ class FlowRuntimeProvider(
                     run = buildJsonObject { put("attempt", spec.attempt) },
                 )
                 emitFinished(spec.runToken, outcome)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // X-16 (ADR-091 (9), AGENT_RUNTIME §11): cancellation is NEVER worker death —
+                // a cancelled run is the orchestrator's own CANCELLED path; rethrow so the
+                // coroutine ends cancelled instead of racing the orchestrator as INTERRUPTED.
+                throw e
             } catch (e: Throwable) {
                 // A crashing interpreter is worker death, not a flow failure: report INTERRUPTED.
                 AhLog.e(TAG, "flow interpreter crashed", buildJsonObject {

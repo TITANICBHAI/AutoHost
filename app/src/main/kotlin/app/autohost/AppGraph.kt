@@ -168,7 +168,7 @@ class AppGraph(val application: Application) {
     @Volatile private var permissionIndexOverride: PermissionIndex? = null
     private val permissionIndex: PermissionIndex get() = permissionIndexOverride ?: basePermissionIndex
 
-    @Volatile private var grantBuilder = GrantBuilder(permissionIndex, devMode = true)
+    @Volatile private var grantBuilder = GrantBuilder(permissionIndex, devMode = false) // X-15: closed by default
     val broker = BrokerService(
         registry = registry,
         tokens = tokens,
@@ -348,7 +348,7 @@ class AppGraph(val application: Application) {
     fun attachPluginPermissions(fragment: Map<String, List<String>>) {
         if (fragment.isEmpty()) return
         permissionIndexOverride = permissionIndex.mergedWith(fragment)
-        grantBuilder = GrantBuilder(permissionIndex, devMode = true)
+        grantBuilder = GrantBuilder(permissionIndex, devMode = false) // X-15: closed by default
         grantService = GrantService(permissionIndex)
     }
 
@@ -450,21 +450,25 @@ class AppGraph(val application: Application) {
     fun a11yConnected(): Boolean = A11yBridge.service.value != null
 
     /**
-     * The Dev API acts under a synthetic run token named `developer` (docs/DEVAPI.md §1). Grants are
-     * dev-mode grant-all in v0 (the switches screen tightens this in a later phase); high-risk
-     * capabilities stay behind the broker's own checks.
+     * The Dev API acts under a synthetic run token named `developer` (docs/DEVAPI.md §1). X-15:
+     * the token carries the DOCUMENTED restricted grants explicitly — observe + act (the
+     * developer's working surface) plus the implicit host grants; shell/raw and every other
+     * permission are absent. Package scoping arrives with the Dev-API-grants settings screen.
      */
     private val devApiBrokerToken: String by lazy {
+        val grants = buildMap {
+            put("device.ui.observe", JsonObject(emptyMap()))
+            put("device.ui.act", JsonObject(emptyMap()))
+            for (permission in app.autohost.core.engine.tasks.GrantBuilder.IMPLICIT) {
+                put(permission, JsonObject(emptyMap()))
+            }
+        }
         tokens.issue(
             app.autohost.core.broker.RunGrants(
                 runId = "devapi",
                 taskId = "devapi",
                 profileId = null,
-                grants = grantBuilder.build(
-                    TaskManifest(id = "devapi", name = "Dev API", runtime = app.autohost.core.model.RuntimeSpec("python", "main.py")),
-                    JsonObject(emptyMap()),
-                    JsonObject(emptyMap()),
-                ),
+                grants = grants,
                 issuedMs = clock.nowMs(),
             ),
         )

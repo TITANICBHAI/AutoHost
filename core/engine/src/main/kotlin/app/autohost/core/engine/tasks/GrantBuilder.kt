@@ -10,12 +10,18 @@ import kotlinx.serialization.json.put
 
 /**
  * Builds the grant map a run receives (permission id → scope object) from the task manifest's needs
- * (HANDOFF §3). Implicit host grants are always present; dev-mode grant-all stands in for the Phase 2
- * permission review until that exists.
+ * (HANDOFF §3). Implicit host grants are always present.
+ *
+ * X-15 (ADR-098): `devMode` is **false by default** — the run holds ONLY its declared/approved
+ * permissions. The `approvedGrants` overlay carries the persisted user-approved grants from
+ * `GrantService` (permission → approved scope) and applies them when dev mode is off
+ * (putIfAbsent — never narrower than what the task declared). Dev-mode grant-all survives only
+ * as an explicit opt-in for developer builds.
  */
 class GrantBuilder(
     private val index: PermissionIndex,
-    private val devMode: Boolean = true,
+    private val devMode: Boolean = false,
+    private val approvedGrants: Map<String, JsonObject> = emptyMap(),
 ) {
 
     fun build(manifest: TaskManifest, config: JsonObject, profile: JsonObject): Map<String, JsonObject> {
@@ -41,9 +47,12 @@ class GrantBuilder(
         // Implicit grants for every run (HANDOFF §3) — never narrower than what the task asked for.
         for (permission in IMPLICIT) grants.putIfAbsent(permission, buildJsonObject {})
 
-        // Dev-mode grant-all until the Phase 2 permission review exists. Explicit task scopes stay intact.
+        // X-15: dev-mode grant-all is an explicit opt-in (developer builds only). The default is
+        // the closed model: declared needs + implicit + the persisted user-approved overlay.
         if (devMode) {
             for (permission in index.allPermissions()) grants.putIfAbsent(permission, buildJsonObject {})
+        } else {
+            for ((permission, scope) in approvedGrants) grants.putIfAbsent(permission, scope)
         }
         return grants
     }

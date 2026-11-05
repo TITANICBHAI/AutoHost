@@ -91,7 +91,17 @@ class A11yUiProvider(
         return when (method) {
             "snapshot" -> snapshot(args, observePackages)
             "find" -> find(args, observePackages, timeoutMs = 0)
-            "wait_for" -> find(args, observePackages, timeoutMs = longArg(args, "timeout_ms", 10_000))
+            "wait_for" -> find(args, observePackages, timeoutMs = longArg(args, "timeout_ms", 10_000)).let { env ->
+                // Parity with the simulator: wait_for resolves to {node: firstOrNull?} — a timeout
+                // yields node:null (200), never an error envelope.
+                if (!env.ok && env.error?.reason == "NO_MATCH") {
+                    Envelope.ok(buildJsonObject { put("node", kotlinx.serialization.json.JsonNull) })
+                } else if (!env.ok) env
+                else Envelope.ok(buildJsonObject {
+                    val nodes = env.result!!.jsonObject["nodes"] as? JsonArray
+                    put("node", nodes?.firstOrNull() ?: kotlinx.serialization.json.JsonNull)
+                })
+            }
             "wait_for_settle" -> waitForSettle(args)
             "is_window_updating" -> Envelope.ok(
                 buildJsonObject { put("updating", isWindowUpdating()) },
@@ -191,13 +201,14 @@ class A11yUiProvider(
             } catch (e: ReadBudgetExhausted) {
                 return Envelope.err(ErrorCode.TIMEOUT, "UI read did not finish in the read budget: ${e.detail}")
             }
-            val match = SelectorEngine.findFirst(snap.nodes, selector)
-            if (match != null) {
-                val ref = registry.put(match, snap.infoAt(match.index))
+            // P12-02 (A6b resolved): the parity shape — {nodes:[NodeSummary]}, each node carrying
+            // its own ref (the simulator has spoken this shape since P6; ADR-077 host parity).
+            val matches = SelectorEngine.findAll(snap.nodes, selector)
+            if (matches.isNotEmpty()) {
+                val refs = matches.map { registry.put(it, snap.infoAt(it.index)) }
                 return Envelope.ok(
                     buildJsonObject {
-                        put("ref", ref)
-                        put("node", match.summary(ref))
+                        put("nodes", JsonArray(matches.zip(refs).map { (node, ref) -> node.summary(ref) }))
                     },
                 )
             }
@@ -309,10 +320,23 @@ class A11yUiProvider(
                 reason = "NOT_DISPATCHED",
             )
         }
+        // P12-02 (ACTION_HARDENING §2): the additive effect — an honest three-valued signal from
+        // the fingerprint compare (W2.2's ChangeDetector refines the fingerprint itself).
+        // `verified` keeps its "accepted" meaning until P12-04.
+        val after = fingerprintOfCurrent(observePackages)
+        val effect = when {
+            fingerprintBefore == null || after == null -> "unverifiable"
+            changed(fingerprintBefore, observePackages) -> "changed"
+            else -> "unchanged"
+        }
+        val warnings = ArrayList<String>()
+        if (effect == "unchanged") warnings.add("no observable change after the click")
         return Envelope.ok(
             buildJsonObject {
                 put("method", method)
                 put("verified", outcome.verified)
+                put("effect", effect)
+                if (warnings.isNotEmpty()) put("warnings", JsonArray(warnings.map { JsonPrimitive(it) }))
             },
         )
     }
@@ -526,8 +550,7 @@ class A11yUiProvider(
                 return Envelope.ok(
                     buildJsonObject {
                         put("found", true)
-                        put("ref", ref)
-                        put("node", match.summary(ref))
+                        put("node", match.summary(ref)) // the ref rides inside the node summary (parity)
                     },
                 )
             }
@@ -618,8 +641,9 @@ class A11yUiProvider(
         }
         args["selector"]?.let {
             val found = find(buildJsonObject { put("selector", it) }, observePackages, timeoutMs = 0)
-            val ref = (found.result as? JsonObject)?.get("ref")?.let { r -> (r as JsonPrimitive).content }
-            if (ref != null) return resolveHandle(ref)
+            val nodes = (found.result as? JsonObject)?.get("nodes") as? JsonArray
+            val firstRef = nodes?.firstOrNull()?.jsonObject?.get("ref")?.let { r -> (r as JsonPrimitive).content }
+            if (firstRef != null) return resolveHandle(firstRef)
         }
         return AhResult.err(app.autohost.core.model.AhError.of(ErrorCode.INVALID_ARGS, "click needs 'ref' or 'selector'"))
     }

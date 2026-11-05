@@ -65,6 +65,10 @@ class RunOrchestrator(
     private val tokenByRun = ConcurrentHashMap<String, String>()
     private val runByToken = ConcurrentHashMap<String, String>()
     private val lastHeartbeat = ConcurrentHashMap<String, Long>()
+
+    // X-16 (ADR-098 (5)): wall-clock deadlines — `timeout_minutes` is enforced by the orchestrator
+    // for EVERY runtime (the agent enforces nothing itself; nothing else did until this).
+    private val wallDeadlines = ConcurrentHashMap<String, Long>()
     private val cancelJobs = ConcurrentHashMap<String, Job>()
     private val requests = ConcurrentHashMap<String, StartRequest>()
     private val lastActivity = ConcurrentHashMap<String, Long>()
@@ -95,6 +99,7 @@ class RunOrchestrator(
             while (true) {
                 delay(IDLE_POLL_MS)
                 val now = clock.monotonicMs()
+                checkWallClock(now)
                 for ((runId, last) in lastActivity) {
                     val record = store.get(runId) ?: continue
                     if (!record.status.active) continue
@@ -150,6 +155,9 @@ class RunOrchestrator(
         )
         tokenByRun[runId] = token
         runByToken[token] = runId
+        // X-16: the wall-clock deadline rides the manifest's timeout_minutes (monotonic-based,
+        // consistent with the heartbeat/idle watchdogs).
+        wallDeadlines[runId] = clock.monotonicMs() + request.manifest.execution.timeoutMinutes * 60_000L
         val record = RunRecord(
             runId = runId,
             taskId = request.taskId,
@@ -267,10 +275,31 @@ class RunOrchestrator(
         lastActivity[runId] = clock.monotonicMs()
     }
 
-    private fun idleLimitMsFor(runId: String): Long? = try {
-        idleLimitMs?.invoke(runId)
-    } catch (e: Exception) {
-        null
+    internal fun idleLimitMsFor(runId: String): Long? {
+        // X-16 / AGENT_RUNTIME §4.1: the IN-MEMORY request manifest wins — a synthesized
+        // (non-persisted) manifest must not silently fall back to the 300 s default.
+        requests[runId]?.manifest?.execution?.idleTimeoutSeconds?.let { return it * 1000L }
+        return try {
+            idleLimitMs?.invoke(runId)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * X-16: wall-clock enforcement — every active run past its `timeout_minutes` deadline is
+     * killed and finished `FAILED:TIMEOUT`. Called by the monitor loop; internal so the fake-clock
+     * tests can drive it deterministically.
+     */
+    internal fun checkWallClock(nowMs: Long) {
+        for ((runId, deadline) in wallDeadlines) {
+            val record = store.get(runId) ?: continue
+            if (!record.status.active) continue
+            if (nowMs < deadline) continue
+            AhLog.w(TAG, "wall-clock budget exhausted", buildJsonObject { put("run_id", runId) })
+            runCatching { handles[runId]?.kill() }
+            finishRun(runId, RunStatus.FAILED, "TIMEOUT", "the run exceeded its wall-clock timeout_minutes", null)
+        }
     }
 
     private fun onFinished(runId: String, event: BrokerEvent) {
@@ -419,6 +448,7 @@ class RunOrchestrator(
         )
         tokenByRun[runId] = token
         runByToken[token] = runId
+        wallDeadlines[runId] = clock.monotonicMs() + request.manifest.execution.timeoutMinutes * 60_000L
         lastActivity[runId] = clock.monotonicMs()
         idleWarned.remove(runId)
         monitorScope.launch(dispatchers.default) {
@@ -490,6 +520,7 @@ class RunOrchestrator(
         lastHeartbeat.remove(runId)
         lastActivity.remove(runId)
         idleWarned.remove(runId)
+        wallDeadlines.remove(runId)
         val handle = handles.remove(runId)
         if (handle != null) runCatching { handle.release() }
     }

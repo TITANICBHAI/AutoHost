@@ -170,7 +170,7 @@
             "retry_if_no_change": "bool?",
             "timeout_ms": "int?"
           },
-          "returns": "{method:'NODE_ACTION|ANCESTOR_ACTION|COORDINATE', verified:bool}",
+          "returns": "{method:'NODE_ACTION|ANCESTOR_ACTION|COORDINATE', verified:bool, effect?:'changed|unchanged|unverifiable', warnings?:[string]}",
           "errors": [
             "PERMISSION_DENIED",
             "SCOPE_VIOLATION",
@@ -192,7 +192,7 @@
           "params": {
             "target": "NodeRef|Selector"
           },
-          "returns": "{method:string}",
+          "returns": "{method:string, effect?:'changed|unchanged|unverifiable', warnings?:[string]}",
           "errors": [
             "PERMISSION_DENIED",
             "SCOPE_VIOLATION",
@@ -216,7 +216,7 @@
             "secret": "bool?",
             "verify": "bool?"
           },
-          "returns": "{outcome:TextInputOutcome, strategy:string}",
+          "returns": "{outcome:TextInputOutcome, strategy:string, verified?:bool}",
           "errors": [
             "PERMISSION_DENIED",
             "SCOPE_VIOLATION",
@@ -320,7 +320,7 @@
           "name": "hide_keyboard",
           "description": "",
           "params": {},
-          "returns": "{ok:bool}",
+          "returns": "{ok:bool, was_visible?:bool}",
           "errors": [
             "PERMISSION_DENIED",
             "SCOPE_VIOLATION",

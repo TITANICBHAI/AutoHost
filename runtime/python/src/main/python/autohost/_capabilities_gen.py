@@ -152,7 +152,7 @@ CATALOG = [
           "timeout_ms": "int?"
         },
         "requires": "device.ui.act",
-        "returns": "{method:'NODE_ACTION|ANCESTOR_ACTION|COORDINATE', verified:bool}",
+        "returns": "{method:'NODE_ACTION|ANCESTOR_ACTION|COORDINATE', verified:bool, effect?:'changed|unchanged|unverifiable', warnings?:[string]}",
         "risk": "low",
         "timeoutMs": 10000
       },
@@ -173,7 +173,7 @@ CATALOG = [
           "target": "NodeRef|Selector"
         },
         "requires": "device.ui.act",
-        "returns": "{method:string}",
+        "returns": "{method:string, effect?:'changed|unchanged|unverifiable', warnings?:[string]}",
         "risk": "low",
         "timeoutMs": 10000
       },
@@ -199,7 +199,7 @@ CATALOG = [
           "verify": "bool?"
         },
         "requires": "device.ui.act",
-        "returns": "{outcome:TextInputOutcome, strategy:string}",
+        "returns": "{outcome:TextInputOutcome, strategy:string, verified?:bool}",
         "risk": "low",
         "timeoutMs": 10000
       },
@@ -299,7 +299,7 @@ CATALOG = [
         "name": "hide_keyboard",
         "params": {},
         "requires": "device.ui.act",
-        "returns": "{ok:bool}",
+        "returns": "{ok:bool, was_visible?:bool}",
         "risk": "low",
         "timeoutMs": 10000
       },

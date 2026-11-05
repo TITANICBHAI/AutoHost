@@ -31,7 +31,14 @@
 - Active workflow `android-debug-apk.yml` builds the APK only — it proves no tests; X-17's test sequence needs X-08's promotion of `drafts/ci.workflow.yml` (documented on HANDOFF §0.2 item 4 and the X-17 row)
 - X-19 ratchet: `tests/test_architecture.py` records 2 known violations (a11y containment: A11yBrowserLink.kt + AppGraph.kt; run_starts: AppGraph P5-05). `AUTOHOST_ARCH_STRICT=1` = red-team view. New violations fail; stale ratchet entries fail. Do NOT fix the Kotlin from X-19.
 
-## CURRENT MODE: WRITING + CI VERIFICATION (D-26 relaxed, owner 2026-11-04)
+## CURRENT MODE: WRITING-FIRST AGAIN for the remaining sequence (owner, 2026-11-05)
+- The owner instructed: the remaining work is arranged in `WORK_SEQUENCE_PROMPT.md` (repo root) —
+  execute it in **writing-first mode: NO git, NO GitHub Actions, NO test execution** until the
+  owner says otherwise. Static recheck loop only.
+- Sequence: W1 DONE (X-16 + X-15), W5.5 done; next W2 (P12-02 action-effect + regeneration, then P12-03..12/14) -> W2 (P12-02..07/12/14) -> W3 (P13-10..15) -> W4 (P13-16/17/19) ->
+  W5 (P14-04..08) -> W6 (P12-15/16/17, X-20, X-12-Kotlin, X-14). Frozen items listed in the file.
+- Note: the last pushed commit is 3d2e38f; the P13-08/09 commit ac2f783 and WORK_SEQUENCE_PROMPT.md
+  are LOCAL-ONLY until the owner re-allows git.
 - **Git and GitHub Actions are re-enabled** (owner explicit permission) — commits/pushes/CI runs live again.
 - The writing-first discipline stays: batch more work, recheck-loop before every commit.
 - All frozen verification resumes through CI: the whole JVM suite compiled for the first time with all written changes is now the active X-17/X-08 loop.

@@ -45,8 +45,8 @@ class ProviderConformanceTest {
             .toMap()
     }
 
-    /** The later-phase additive keys (P12-02) that the frozen spec does not declare yet. */
-    private val additive = setOf("effect", "warnings", "was_visible", "verified", "ref", "node")
+    /** P12-02 landed: effect/warnings/was_visible/verified are declared — the additive list is EMPTY. */
+    private val additive = emptySet<String>()
 
     private fun ctx() = app.autohost.core.broker.CallContext(
         runId = "run-conf",
@@ -161,19 +161,15 @@ class ProviderConformanceTest {
     }
 
     @Test
-    fun `given find when run then the known spec drift is pinned for the P12-02 rework`() {
-        // A6b (new finding, 2026-11-04): the Kotlin find returns the FIRST match as
-        // {ref, node} while the frozen spec and the simulator return {nodes:[NodeSummary]}
-        // (every node carrying its own ref). Host parity (ADR-077) demands one shape; the
-        // provider rework + regeneration belongs to P12-02. Pinned PURELY (no live provider
-        // call — the earlier live-call pin deadlocked runTest's virtual time on the poll loop):
-        val shape = deviceUiShapes().getValue("find")
-        val drifted = Json.parseToJsonElement(
-            """{"ref":"s1-1","node":{"pkg":"com.target","ref":"s1-1"}}""".let { it },
-        ).jsonObject
-        val violations = ReturnShape.validate(drifted, shape, emptySet())
-        assertTrue(violations.any { it.contains("\"nodes\"") })
-        assertTrue(violations.any { it.contains("\"ref\"") })
-        assertTrue(violations.any { it.contains("\"node\"") })
+    fun `given find when run against the fakes then the parity shape conforms (A6b resolved by P12-02)`() = runBlocking {
+        val shapes = deviceUiShapes()
+        val (provider, _) = newProvider()
+        val result = invoke(
+            provider, "find",
+            """{"timeout_ms": 0, "selector": ${selectorFor(idTerm("fx_btn_continue"))}}""",
+        )
+        assertConformant(mutableListOf(), shapes, "find", result)
+        val nodes = result!!["nodes"]!!.jsonArray
+        assertTrue("each find node carries its own ref (parity with the simulator)", nodes.isNotEmpty())
     }
 }

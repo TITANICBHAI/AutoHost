@@ -1177,7 +1177,13 @@ class FakeDevice:
                 verified = bool(select(a["expect"], self._visible_nodes())) and method_name == "NODE_ACTION"
             else:
                 verified = changed and method_name == "NODE_ACTION"
-            return {"method": method_name, "verified": verified}
+            # P12-02 parity: the additive effect (the fingerprint changed or not) + the unchanged warning.
+            effect = "changed" if changed else "unchanged"
+            warnings = ["no observable change after the click"] if not changed else []
+            result = {"method": method_name, "verified": verified, "effect": effect}
+            if warnings:
+                result["warnings"] = warnings
+            return result
         if method == "set_text":
             node = self._resolve(a["target"])
             if not node.get("editable"):
