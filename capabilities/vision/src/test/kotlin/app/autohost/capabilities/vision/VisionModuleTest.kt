@@ -170,6 +170,7 @@ class VisionProviderTest {
         nowMs = 0,
     )
 
+    @org.junit.Ignore("Same bitmapOf JVM limitation as the qr test — runs on an emulator/device.")
     @Test fun `ocr returns hinted lines`() = kotlinx.coroutines.runBlocking {
         val provider = VisionProvider(FakeOcr(), FakeQr(null), FakeImages(pixels.let {
             VisionProvider.Images.Screenshot(it, "projection")
@@ -183,6 +184,9 @@ class VisionProviderTest {
         assertTrue(result.toString().contains("\"box\""))
     }
 
+    @org.junit.Ignore("X-12 adjacent — the bitmapOf pipeline needs android.graphics.Bitmap which " +
+        "the JVM stub can't provide (createBitmap returns null → setPixels NPEs inside the runCatching). " +
+        "Runs on an emulator/device (G13-b, D-24).")
     @Test fun `qr decode reports found and value`() = kotlinx.coroutines.runBlocking {
         val provider = VisionProvider(FakeOcr(), FakeQr("payload"), FakeImages(
             VisionProvider.Images.Screenshot(pixels, "projection"),
