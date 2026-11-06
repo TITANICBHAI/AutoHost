@@ -262,6 +262,21 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 18 — commit 39af7ea (the vision ProviderTests — the bitmap stub problem)
+
+- **VisionProviderTest ocr/qr tests** — the `bitmapOf(cropped)` call invokes
+  `android.graphics.Bitmap.createBitmap` which on the JVM stub throws `RuntimeException("Stub!")`
+  — the `runCatching` only wraps `decoder.decode`, not `bitmapOf`. The test's `assertTrue(envelope.ok)`
+  fails with a bare AssertionError.
+- **Fix:** `capabilities/vision/build.gradle.kts` gained
+  `testOptions.unitTests.isReturnDefaultValues = true` — the standard Android testing approach:
+  the JVM stub returns null instead of throwing, and the fakes (FakeOcr/FakeQr) ignore the
+  bitmap parameter and return their canned values.
+- The "missing engines" test's assertion (`Unsupported.reason = "VISION_ENGINES_ABSENT"`)
+  matches the provider; the annotation's test name/line mismatch is a JUnit 4 reporting artifact.
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via

@@ -17,6 +17,15 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    testOptions {
+        unitTests {
+            // The fakes (FakeOcr/FakeQr) never touch android.graphics methods, but
+            // `bitmapOf(cropped)` calls Bitmap.createBitmap — returnDefaultValues lets the JVM
+            // stub return null instead of throwing "Stub!", and the fakes ignore the bitmap.
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 kotlin {
