@@ -162,6 +162,18 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 9 — commit 1b777ea (the APK build got past runtime/agent; jvm-capabilities ArgValidator)
+
+- **The APK build got PAST runtime/agent** — the fix cycle works: the compile now fails on the
+  BROWSER TEST only (the challenge AssertionError persists — see below).
+- **jvm-capabilities: ArgValidator.kt was EMPTY** — a python edit pass zeroed the file (the
+  R5 spec-cast heredoc). Rewrote the whole file with the Write tool (the heredoc pitfall again
+  — this is the SECOND file the heredocs have destroyed).
+- **The challenge test** — the AssertionError persists despite the FakeHost.challenge being set
+  and the kind being "anti_bot". Investigated exhaustively; the next run's annotations needed.
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via
