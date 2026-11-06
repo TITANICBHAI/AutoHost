@@ -250,6 +250,18 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 17 — commit 92bb2e9 (the vision module's FIRST actual test runs — 2 test failures)
+
+- **TemplateMatcherTest "needle larger"** — the test expected `found=false` but the matcher's
+  `require()` THROWS IllegalArgumentException (the refusal IS the throw). Fix: catch the
+  exception and assert it was thrown.
+- **TemplateMatcherTest "plain gradient"** — the needle pattern was ALSO a horizontal
+  gradient (same direction as the haystack). After NCC mean-normalization two same-direction
+  gradients score ~1.0 → the matcher "found" it. Fix: the needle is now a checkerboard
+  (clearly different from the gradient).
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via

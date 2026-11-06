@@ -102,15 +102,29 @@ class TemplateMatcherTest {
             val v = ((i % width) * 255 / width)
             argb(v, v, v)
         }
-        val needle = IntArray(40 * 20) { i -> argb(50 + (i % 40) * 3, 50 + (i % 40) * 3, 200) }
+        // R5 fix: the original needle was ALSO a horizontal gradient — after NCC mean
+        // normalization two same-direction gradients score ~1.0. A checkerboard is
+        // clearly different.
+        val needle = IntArray(40 * 20) { i ->
+            val x = i % 40
+            val y = i / 40
+            val v = if ((x / 4 + y / 4) % 2 == 0) 255 else 0
+            argb(v, v, v)
+        }
         val match = TemplateMatcher.match(hay, width, height, needle, 40, 20, stride = 4, threshold = 0.92)
         assertFalse(match.found)
     }
 
     @Test fun `needle larger than haystack and tiny needles are refused`() {
         val (hay, needle, _) = haystackWithNeedle()
-        val tooBig = TemplateMatcher.match(hay, 200, 120, needle, 300, 20, stride = 4, threshold = 0.9)
-        assertFalse(tooBig.found)
+        // R5 fix: the require IS the refusal mechanism (fail closed) — catch it
+        var threw = false
+        try {
+            TemplateMatcher.match(hay, 200, 120, needle, 300, 20, stride = 4, threshold = 0.9)
+        } catch (e: IllegalArgumentException) {
+            threw = true
+        }
+        assertTrue("a needle larger than the haystack must be refused", threw)
         val tiny = IntArray(3) { argb(0, 0, 0) }
         val tinyMatch = TemplateMatcher.match(hay, 200, 120, tiny, 3, 1, stride = 4, threshold = 0.9)
         assertFalse(tinyMatch.found)
