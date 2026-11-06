@@ -96,8 +96,8 @@ class AgentSectionViewerState(private val redact: (String) -> String) {
         private fun JsonObject?.str(key: String): String? =
             this?.get(key)?.let { (it as? JsonPrimitive)?.content }
 
-        private fun JsonObject?.int(key: String): Int? = str(key)?.toIntOrNull() ?: 0
+        private fun JsonObject?.int(key: String): Int = str(key)?.toIntOrNull() ?: 0
 
-        private fun JsonObject?.long(key: String): Long? = str(key)?.toLongOrNull() ?: 0L
+        private fun JsonObject?.long(key: String): Long = str(key)?.toLongOrNull() ?: 0L
     }
 }

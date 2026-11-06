@@ -65,7 +65,7 @@ class AgentRunDetailState(private val clock: Clock) {
     fun onEvent(event: BrokerEvent) {
         if (startedAtMs < 0) startedAtMs = event.ts
         when (event.type) {
-            "progress" -> turns = event.data.int("turn") ?: turns
+            "progress" -> turns = event.data?.int("turn") ?: turns
             "finished" -> onFinished(event)
             "log" -> onLog(event)
         }

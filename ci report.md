@@ -239,6 +239,17 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 16 — commit 06383e0 (the app module: 3 remaining compile errors)
+
+- **AgentRunDetailState:68** — the `onEvent` progress branch used `.int("turn")` on the nullable
+  `event.data` (my earlier fix targeted the `.str` in `onLog`, not the `.int` in `onEvent`).
+  Fixed with `?.`.
+- **AgentSectionViewerState:67–68** — the `int()`/`long()` helpers declared `Int?`/`Long?` but
+  the `?: 0` fallback makes them non-null AND the constructor expects non-null. Fixed the
+  return types.
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via
