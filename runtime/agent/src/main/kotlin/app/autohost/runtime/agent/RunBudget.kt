@@ -67,11 +67,11 @@ class RunBudget(
         val reserve = estimateTokens(promptChars) + limits.maxOutputTokens
         return when {
             turns + 1 > limits.maxTurns ->
-                Exhausted("BUDGET_TURNS", "the turn budget of ${limits.maxTurns} is used up")
+                Verdict.Exhausted("BUDGET_TURNS", "the turn budget of ${limits.maxTurns} is used up")
             clockMs() - startedAtMs > limits.wallClockMs ->
-                Exhausted("BUDGET_TIME", "the wall-clock budget of ${limits.wallClockMs} ms is used up")
+                Verdict.Exhausted("BUDGET_TIME", "the wall-clock budget of ${limits.wallClockMs} ms is used up")
             modelCalls + 1 > limits.maxModelCalls ->
-                Exhausted("BUDGET_MODEL_CALLS", "the model-call budget of ${limits.maxModelCalls} is used up")
+                Verdict.Exhausted("BUDGET_MODEL_CALLS", "the model-call budget of ${limits.maxModelCalls} is used up")
             reserve > limits.tokenBudget ->
                 Exhausted(
                     "BUDGET_CONTEXT",
@@ -98,7 +98,7 @@ class RunBudget(
     /** The pre-action gate for device-touching tools; on Ok the action counter advances. */
     fun beforeAction(): Verdict = when {
         actions + 1 > limits.maxActions ->
-            Exhausted("BUDGET_ACTIONS", "the action budget of ${limits.maxActions} is used up")
+            Verdict.Exhausted("BUDGET_ACTIONS", "the action budget of ${limits.maxActions} is used up")
         else -> {
             actions++
             Verdict.Ok

@@ -136,6 +136,17 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 7 — commit 975d339 (runtime/agent: RunBudget + ToolPipeline compile)
+
+- **ToolPipeline:85** — `is AhResult.Ok` needs `<*>` (Ok<T> is generic; Err is not). The when
+  branches adjusted.
+- **RunBudget "Unresolved 'Exhausted'"** — a cascading resolution error from ArgValidator
+  (the module compiles all files together; one file's resolution error poisons the package's
+  symbol table). The ArgValidator cast (Run 6) + the Exhausted qualification (`Verdict.Exhausted`)
+  eliminate it.
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via

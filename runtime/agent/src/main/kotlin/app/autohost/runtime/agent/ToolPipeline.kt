@@ -83,12 +83,12 @@ class ToolPipeline(
         val tool = catalog.find(call.name)
             ?: return errResult("INVALID_ARGS", null, "unknown tool '${call.name}'")
         val args = when (val validated = ArgValidator.validate(tool, call.arguments, packages)) {
-            is AhResult.Ok -> validated.value
+            is AhResult.Ok<*> -> validated.value as JsonObject
             is AhResult.Err -> return errOf(validated.error)
         }
         // resolve the target BEFORE policy (the ViewIndex carries ref → pkg/label/flags)
         val target = when (val resolved = resolveTarget(tool, args, ctx)) {
-            is AhResult.Ok -> resolved.value
+            is AhResult.Ok<*> -> resolved.value as TargetInfo
             is AhResult.Err -> return errOf(resolved.error)
         }
         val foreground = try {
