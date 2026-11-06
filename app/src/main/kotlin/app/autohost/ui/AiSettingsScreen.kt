@@ -38,7 +38,14 @@ fun AiSettingsHost(graph: app.autohost.AppGraph, onBack: () -> Unit) {
     val store = remember {
         AppProfileStore(graph.data.settings, graph.secrets, graph.secretRegistry)
     }
-    val state = remember { AiSettingsState(keys = store, tester = app.autohost.ai.TestConnection.seam(store, graph)) }
+    val keys = remember {
+        object : AiSettingsState.KeyStore {
+            override suspend fun put(profileId: String, value: String) = store.putApiKey(profileId, value)
+            override suspend fun delete(profileId: String) = store.deleteApiKey(profileId)
+            override suspend fun has(profileId: String): Boolean = store.hasApiKey(profileId)
+        }
+    }
+    val state = remember { AiSettingsState(keys = keys, tester = app.autohost.ai.TestConnection.seam(store, graph)) }
     var model by remember { mutableStateOf(state.model) }
 
     // hydrate once; the graph carries the AI facts (fail-closed booleans until set here)
@@ -70,7 +77,7 @@ fun AiSettingsHost(graph: app.autohost.AppGraph, onBack: () -> Unit) {
         for ((profileId, on) in model.screenshots) {
             graph.data.settings.setBool(AppProfileStore.settingScreenshots(profileId), on)
         }
-        graph.refreshAiFacts(model.enabled, model.profiles)
+        graph.refreshAiFacts(model.enabled, model.profiles, model.cleartextLoopback)
     }
 
     AiSettingsScreen(state = state, model = model, onBack = onBack)

@@ -124,7 +124,7 @@ fun AgentRunDetail(
 }
 
 @Composable
-private fun UsageStat(label: String, value: String) {
+internal fun UsageStat(label: String, value: String) {
     Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
         Text(value, style = MaterialTheme.typography.labelLarge)
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

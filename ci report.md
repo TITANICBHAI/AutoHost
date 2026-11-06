@@ -216,6 +216,21 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 14 — commit fa46177 (the NEXT app compile layer: 6 errors)
+
+- **AgentRunDetailState:68** — `event.data` is `JsonObject?` — `?.str()` needed on the progress
+  branch.
+- **AgentBundleViewer** — the private `UsageStat` in AgentRunDetail.kt is file-private; made
+  `internal`.
+- **AskSheet:102** — missing `import androidx.compose.ui.Alignment`.
+- **AgentLoopFactory** — `floorFilteredSnapshot` calls the suspend `transport.call` — made
+  suspend.
+- **AiSettingsScreen:41** — `AppProfileStore` doesn't implement `AiSettingsState.KeyStore` —
+  the adapter object added (putApiKey/deleteApiKey/hasApiKey).
+- **AiSettingsScreen:73** — the `refreshAiFacts` call needs the cleartextLoopback parameter.
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via

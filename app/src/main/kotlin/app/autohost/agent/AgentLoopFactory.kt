@@ -139,7 +139,7 @@ class AgentLoopFactory(
     }
 
     /** Snapshot → §8 floor. A withheld observation becomes an honest EMPTY screen with its reason. */
-    private fun floorFilteredSnapshot(transport: BinderAgentTransport, agentConfig: AgentConfig): JsonObject {
+    private suspend fun floorFilteredSnapshot(transport: BinderAgentTransport, agentConfig: AgentConfig): JsonObject {
         val snapshot = transport.call(
             "device.ui", "snapshot",
             buildJsonObject { put("compact", false) },
