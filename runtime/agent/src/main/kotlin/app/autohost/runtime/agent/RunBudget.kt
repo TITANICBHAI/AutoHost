@@ -73,12 +73,12 @@ class RunBudget(
             modelCalls + 1 > limits.maxModelCalls ->
                 Verdict.Exhausted("BUDGET_MODEL_CALLS", "the model-call budget of ${limits.maxModelCalls} is used up")
             reserve > limits.tokenBudget ->
-                Exhausted(
+                Verdict.Exhausted(
                     "BUDGET_CONTEXT",
                     "even one call does not fit: prompt estimate + max output = $reserve > budget ${limits.tokenBudget}",
                 )
             tokensUsed + reserve > limits.tokenBudget ->
-                Exhausted(
+                Verdict.Exhausted(
                     "BUDGET_TOKENS",
                     "the token budget of ${limits.tokenBudget} is used up ($tokensUsed used, $reserve reserved)",
                 )

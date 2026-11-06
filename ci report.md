@@ -147,6 +147,21 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 8 — commit a267542 (only 2 compile errors left per run — the cascade shrinks)
+
+- **RunBudget:76,81** — the BUDGET_CONTEXT/BUDGET_TOKENS Exhausted constructions were split
+  across lines — the first qualification pass matched only the single-line forms. Fixed.
+- **ToolPipeline:85 "Unresolved 'ArgValidator'"** — CASCADING from ArgValidator's own errors
+  (the module compiles all files together; one file's resolution error poisons the package's
+  symbol table, making same-package declarations unresolvable). The ArgValidator spec cast
+  (Run 6) eliminates the root cause.
+- **The challenge test** — the fix IS in the tree (host.challenge is set, the expected kind is
+  "anti_bot") but the test still reports AssertionError. The assertion could be
+  `assertTrue(envelope.ok)` failing rather than the kind assert — or the FakeHost page() body
+  rendering. Investigated by reasoning; the next run's annotations will narrow it.
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via
