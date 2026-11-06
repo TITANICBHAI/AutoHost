@@ -31,7 +31,7 @@ object AgentSectionBuilder {
 
         for (event in events) {
             when (event.type) {
-                "progress" -> turns = event.data.str("turn")?.toIntOrNull() ?: turns
+                "progress" -> turns = event.dataOrEmpty.str("turn")?.toIntOrNull() ?: turns
                 "finished" -> stop = buildJsonObject {
                     val d = event.dataOrEmpty
                     put("status", d.str("status") ?: "FAILED")

@@ -103,6 +103,39 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 5 — commit 290ef86 (runtime/agent main: the NEXT import/nullable layer + AppScopeTest imports)
+
+- **AppSensitivity:50** — `jsonArray` used, not imported (the W6.3/R6 edit rewrote loadBundled
+  with the new JSON idioms but kept the old import block).
+- **AgentView:3** — `AhError` imported from `core.common`; it lives in `core.model` (same as the
+  AgentPreflight fix).
+- **AgentSectionBuilder:34–38** — the member `data: JsonObject?` on BrokerEvent SHADOWS my
+  `private val BrokerEvent.data` extension (members win); the call sites needed the renamed
+  `dataOrEmpty` extension.
+- **AgentPreflight:122** — `refused()` declared `AhResult.Err` but `AhResult.err()` returns the
+  interface `AhResult<Nothing>` → covariance mismatch. Fixed: returns `AhResult<Unit>` (covariant,
+  no cast; the test's `as AhResult.Err` still works at runtime).
+- **AppScopeTest** — `ForegroundSource`/`ForegroundTracker` used without imports (both live in
+  `core.common`).
+- **Pre-sweep added**: ArgValidator's AhError import moved to core.model; ToolPipeline gained the
+  core.model.AhError import (it uses the FQNH, now imported).
+
+---
+
+## Run 6 — commit 06f1e81 (runtime/agent: the NEXT nullability layer + the browser challenge test)
+
+- **ArgValidator:45–59** — JsonObject iteration yields **JsonElement** values, not JsonObject —
+  the spec accessors (containsKey/get) needed the `as? JsonObject` cast (fail closed on a
+  non-object spec). Fixed in the loop header.
+- **AgentSectionBuilder:34** — the "progress" branch still used the member `data: JsonObject?`
+  (only "finished"/"log" were renamed to `dataOrEmpty`). Fixed.
+- **WebViewBrowserProviderTest challenge test** — STILL AssertionError: the FakeHost's
+  `challenge` field was NEVER SET by the test (the body rendered "plain body"), so no challenge
+  was detected and the `["challenge"]!!` threw. Fix: set `host.challenge = Challenge(...ANTI_BOT...)`
+  before the invoke.
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via
