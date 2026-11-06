@@ -187,6 +187,15 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 11 — commit 5f8f378 (the browser test FIXED; the next surface: vision)
+
+- **The browser challenge test is FIXED** — the challenge surfaces with the domain grant.
+- **The next jvm-capabilities surface: capabilities/vision** — VisionModuleTest has 11 missing
+  imports (`jsonPrimitive` ×9, `ErrorCode` ×3, `DeviceEnv(sdkInt)` ×1). Fixed with the imports +
+  the explicit sdkInt.
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via

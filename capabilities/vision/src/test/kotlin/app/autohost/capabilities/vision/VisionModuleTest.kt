@@ -1,6 +1,8 @@
 package app.autohost.capabilities.vision
 
-import kotlinx.serialization.json.jsonObject
+import app.autohost.core.model.ErrorCode
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -180,7 +182,7 @@ class VisionProviderTest {
 
     @Test fun `missing engines surface as needs setup`() = kotlinx.coroutines.runBlocking {
         val provider = VisionProvider(null, null, FakeImages(null), { 0 })
-        val availability = provider.availability(app.autohost.core.broker.DeviceEnv())
+        val availability = provider.availability(app.autohost.core.broker.DeviceEnv(sdkInt = 29))
         assertEquals("VISION_ENGINES_ABSENT", (availability as app.autohost.core.model.Availability.Unsupported).reason)
         val envelope = provider.invoke(ctx(), "ocr", kotlinx.serialization.json.JsonObject(emptyMap()))
         assertEquals(ErrorCode.NEEDS_SETUP, ErrorCode.valueOf(envelope.error!!.code))
