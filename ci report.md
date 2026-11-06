@@ -174,6 +174,19 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 10 — commit bfa0d4c (the runtime/agent compile is CLEAN; the challenge test root cause found)
+
+- **The APK build's runtime/agent compile is CLEAN** — the only remaining failure is the
+  browser challenge test.
+- **The challenge test's ROOT CAUSE:** `granted()` with NO domains produces
+  `{"domains": []}` — BrowserPolicy's **explicit deny-all** — so the web URL
+  `https://example.com/protected` was DENIED at the gate (`assertTrue(envelope.ok)` failed with
+  a bare AssertionError, not the kind assert). Fix: `granted("example.com")`.
+- The APK annotations are empty because the failure is a TEST failure (not a compile error) —
+  the Gradle build reports it to the test report, not as an annotation.
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via

@@ -193,11 +193,14 @@ class WebViewBrowserProviderTest {
     @Test fun `challenge pages surface in the result`() = runBlocking {
         val host = FakeHost()
         host.nextUrl = "https://example.com/protected"
+        // R5 fix: `granted()` with NO domains is an explicit deny-all (BrowserPolicy's rule) —
+        // the web URL must be allowed for the challenge to surface
+        val grants = granted("example.com")
         // R5 fix: the FakeHost's challenge field drives the page body — the test never set it,
         // so the body was "plain body" and no challenge was detected (the ["challenge"]!! NPE)
         host.challenge = ChallengeDetector.Challenge(ChallengeDetector.Kind.ANTI_BOT, "test marker")
         val provider = WebViewBrowserProvider(host, { "pg-x" })
-        val envelope = provider.invoke(ctx(grants = granted()), "open", buildJsonObject {
+        val envelope = provider.invoke(ctx(grants = grants), "open", buildJsonObject {
             put("url", JsonPrimitive("https://example.com/protected"))
         })
         assertTrue(envelope.ok)
