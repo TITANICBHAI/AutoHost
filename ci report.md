@@ -36,6 +36,25 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 2 — commit cca4462 (ci GREEN; jvm-core + jvm-capabilities compile-red)
+
+### jvm-core — core:data compile: SecretStoreTest.FakeDao
+- **Cause:** the W1 FakeDao `delete` insertion landed INSIDE `deleteForProfile`'s body (the
+  regex matched the lambda's `}` as the method's close). "Modifier 'override' is not applicable
+  to 'local function'" + the missing-abstract-member error.
+- **Fix:** restructured — deleteForProfile closes, then `delete` as a sibling.
+
+### jvm-capabilities — capabilities/a11y TEST compile: GestureInjectorTest
+- **Cause:** the W2.4 test used `async`/`withTimeoutOrNull`/`launch` with only
+  `kotlinx.coroutines.test.runTest` imported (run 1 never reached test compilation — the main
+  sources failed first, so run 2 surfaced the next layer).
+- **Fix:** added `kotlinx.coroutines.{async, launch, withTimeoutOrNull}` imports.
+- **Note:** pre-checked all other new test files for the same class of missing coroutine
+  imports — one false positive (AgentSecuritySuiteTest's `awaitCancellation` is a private
+  top-level wrapper, no import needed), zero real gaps.
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via

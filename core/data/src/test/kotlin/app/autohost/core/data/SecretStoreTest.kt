@@ -44,10 +44,10 @@ class SecretStoreTest {
 
         override suspend fun deleteForProfile(profileId: String) {
             rows.keys.removeIf { it.startsWith("$profileId/") }
+        }
 
         override suspend fun delete(profileId: String, key: String) {
             rows.remove(idOf(profileId, key))
-        }
         }
     }
 
