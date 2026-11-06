@@ -39,6 +39,7 @@ jobs:
       # X-17-anomaly: one STEP PER MODULE — a wedged module is pinpointed by name and cannot
       # consume the other modules' verification. Socket-based modules run last.
       - name: JVM tests :capabilities:a11y
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -50,6 +51,7 @@ jobs:
           fi
 
       - name: JVM tests :capabilities:app
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -61,6 +63,7 @@ jobs:
           fi
 
       - name: JVM tests :capabilities:ime
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -72,6 +75,7 @@ jobs:
           fi
 
       - name: JVM tests :capabilities:screen
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -83,6 +87,7 @@ jobs:
           fi
 
       - name: JVM tests :capabilities:projection
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -94,6 +99,7 @@ jobs:
           fi
 
       - name: JVM tests :capabilities:clipboard
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -105,6 +111,7 @@ jobs:
           fi
 
       - name: JVM tests :capabilities:intents
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -116,6 +123,7 @@ jobs:
           fi
 
       - name: JVM tests :capabilities:files
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -127,6 +135,7 @@ jobs:
           fi
 
       - name: JVM tests :capabilities:audio
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -138,6 +147,7 @@ jobs:
           fi
 
       - name: JVM tests :capabilities:browser
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -149,6 +159,7 @@ jobs:
           fi
 
       - name: JVM tests :capabilities:vision
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -160,6 +171,7 @@ jobs:
           fi
 
       - name: JVM tests :capabilities:data
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -171,6 +183,7 @@ jobs:
           fi
 
       - name: JVM tests :plugin-sdk
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -182,6 +195,7 @@ jobs:
           fi
 
       - name: JVM tests :runtime:python
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -193,6 +207,7 @@ jobs:
           fi
 
       - name: JVM tests :runtime:flow
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -204,6 +219,7 @@ jobs:
           fi
 
       - name: JVM tests :app
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -215,6 +231,7 @@ jobs:
           fi
 
       - name: JVM tests :testing:fixture-app
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -226,6 +243,7 @@ jobs:
           fi
 
       - name: JVM tests :capabilities:notifications (socket modules — X-17-anomaly watch)
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -237,6 +255,7 @@ jobs:
           fi
 
       - name: JVM tests :capabilities:net (socket modules — X-17-anomaly watch)
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -248,6 +267,7 @@ jobs:
           fi
 
       - name: JVM tests :capabilities:rawbridge (socket modules — X-17-anomaly watch)
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
@@ -259,6 +279,7 @@ jobs:
           fi
 
       - name: JVM tests :capabilities:shell (socket modules — X-17-anomaly watch)
+        timeout-minutes: 15
         shell: bash
         run: |
           set +e
