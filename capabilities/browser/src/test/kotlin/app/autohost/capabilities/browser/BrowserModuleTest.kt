@@ -199,7 +199,10 @@ class WebViewBrowserProviderTest {
         })
         assertTrue(envelope.ok)
         val challenge = envelope.result!!.jsonObject["challenge"]!!.jsonObject
-        assertEquals("captcha", challenge["kind"]!!.jsonPrimitive.content)
+        // R3 fix: the FakeHost's body ("Verify you are human") is the ANTI_BOT marker — the
+        // original assert expected "captcha", which no marker in this fixture produces
+        // (CAPTCHA needs a captcha/recaptcha/hcaptcha/turnstile URL marker).
+        assertEquals("anti_bot", challenge["kind"]!!.jsonPrimitive.content)
     }
 
     @Test fun `disallowed url is a scope violation and never reaches the host`() = runBlocking {

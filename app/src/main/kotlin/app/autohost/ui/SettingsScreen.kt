@@ -34,7 +34,12 @@ import kotlinx.coroutines.launch
  * Dev API ships OFF (docs/DEVAPI.md §1); enabling starts the localhost server under the rotated token.
  */
 @Composable
-fun SettingsScreen(graph: AppGraph, onOpenHealth: () -> Unit, onOpenSurfaces: () -> Unit = {}) {
+fun SettingsScreen(
+    graph: AppGraph,
+    onOpenHealth: () -> Unit,
+    onOpenSurfaces: () -> Unit = {},
+    onOpenAiSettings: () -> Unit = {},
+) {
     var devApiOn by remember { mutableStateOf(graph.devApiEnabled) }
     var token by remember { mutableStateOf(graph.devApiTokens.currentOrNull() ?: "") }
     val clipboard = LocalClipboardManager.current
@@ -92,6 +97,18 @@ fun SettingsScreen(graph: AppGraph, onOpenHealth: () -> Unit, onOpenSurfaces: ()
                         app.autohost.capabilities.screen.ScreenGuardService.stop(graph.appContext)
                     }) { Text("Disable guard") }
                 }
+            }
+        }
+        SectionHeader("AI features")
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text("The Ask bar and its provider profiles", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "Off by default. Enabling shows what leaves the device; the agent can only go " +
+                        "where you allow and cannot confirm its own success.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Button(onClick = onOpenAiSettings, modifier = Modifier.padding(top = 8.dp)) { Text("Open") }
             }
         }
         SectionHeader("Surfaces")

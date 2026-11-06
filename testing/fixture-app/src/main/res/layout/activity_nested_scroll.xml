@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <TextView android:id="@id/fx_pager_status"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:padding="8dp" android:text="swipe left to page 2" />
+
+    <!-- A4: the horizontal pager — one screen-level scrollable wrapping another. -->
+    <HorizontalScrollView android:id="@id/fx_pager"
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="2000dp" android:layout_height="match_parent"
+            android:orientation="horizontal">
+
+            <LinearLayout android:layout_width="1000dp" android:layout_height="match_parent"
+                android:orientation="vertical" android:padding="16dp">
+                <TextView
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="page 1 — the list is on page 2" />
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="1000dp" android:layout_height="match_parent"
+                android:orientation="vertical" android:padding="16dp">
+                <!-- The nested vertical scrollable: 60 rows, TARGET-60 last. -->
+                <ListView android:id="@id/fx_list"
+                    android:layout_width="match_parent" android:layout_height="600dp" />
+            </LinearLayout>
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <TextView android:id="@id/fx_state"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:textSize="10sp" android:text="{}" />
+</LinearLayout>

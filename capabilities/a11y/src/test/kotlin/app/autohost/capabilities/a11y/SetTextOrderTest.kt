@@ -86,4 +86,25 @@ class SetTextOrderTest {
         }
         assertTrue(NodeActions.setTextVia(handle, "hello"))
     }
+
+    @Test
+    fun `given a field that accepts the set but keeps its old value when set then NOT verified (the NumberPicker port, RM-G2)`() {
+        // NodeActionPerformerTest's silent failure: the framework reports success while the value
+        // never changes (NumberPicker shape; the fixture's SilentFieldScreen reproduces it live).
+        // The verify read is what exposes it — never a blind "perform returned true".
+        val handle = object : NodeActions.SetTextHandle {
+            val order = mutableListOf<String>()
+            override fun performSetText(newText: String): Boolean {
+                order.add("perform"); return true // accepted...
+            }
+            override fun refresh(): Boolean {
+                order.add("refresh"); return true
+            }
+            override fun readText(): String {
+                order.add("read"); return "22" // ...but the value is unchanged
+            }
+        }
+        assertFalse(NodeActions.setTextVia(handle, "27"))
+        assertEquals(listOf("perform", "refresh", "read"), handle.order)
+    }
 }

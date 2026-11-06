@@ -91,6 +91,7 @@ Dev-mode grants everything (→ X-15); FileProvider root exposes `files/adb` (�
 | Area | State | Evidence |
 |---|---|---|
 | Plan, docs, schemas, AIDL, stubs, samples, prompts | Done (design) | `plan.md` v3, `docs/`, `schemas/` |
+| **Phases 12–14 + the X-items (W1–W6.4, the writing-first sequence)** | **Written — D-26** (compile+test deferred to the git/CI hand-back) | `docs/PROGRESS.md` (40 `WRITTEN — D-26` rows), `left.md` (the remainder by kind), `AGENT_STATE.md` (the live pointer) |
 | Python SDK (`sdk-python/autohost`, stdlib only) | **Written and tested** | **283 tests** (`cd sdk-python && python3 -m unittest discover -s tests -t tests -p "test_*.py"`) — **392 after P11 part 1** (379 after P10 + **13 test_p11_part1**) |
 | **UI-handler path (P7-03)** | **Written; Python side tested, Kotlin written** | `_runtime.run_ui_handler` (HandlerSpec in → run-outcome JSON out; HANDLER_NOT_FOUND/HANDLER_RESULT classification); AIDL `IUiHandlerWorker`; `UiHandlerWorkerService` (single-flight, 30 s caps both sides, idle self-stop); `UiHandlerController` (per-call token from the task's grants, empty profile, revoked after); `UiHandlerPolicy` + test; ADR-055 |
 | **Tier B declarative UI (P7-01)** | **Written** | `:core:model` `taskui/DeclarativeUi.kt` (parser + bindings + actions, DeclarativeUiTest 10) → `:app` `DeclarativeRenderer.kt` + task-detail **UI tab** + `TaskUiController` (state patches, console lines, action dispatch); sample `task-ui-demo` |

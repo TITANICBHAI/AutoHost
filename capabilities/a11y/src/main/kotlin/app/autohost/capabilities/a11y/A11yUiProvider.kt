@@ -88,10 +88,16 @@ class A11yUiProvider(
     override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope {
         val observePackages = ctx.scopePackages("device.ui.observe")
         val actPackages = ctx.scopePackages("device.ui.act")
+        // P12-16 (A7): refs are RUN-SCOPED — every put/resolve carries the run id, so run B can
+        // never act on run A's handles (one registry is shared by all runs).
+        val runScope = ctx.runId
+        // P12-16 (A8): the spec scope flags bind whenever the act grant is explicit (absent = false).
+        val allowCoordinates = ctx.scopeFlag("device.ui.act", "allow_coordinates")
+        val allowGlobal = ctx.scopeFlag("device.ui.act", "allow_global")
         return when (method) {
-            "snapshot" -> snapshot(args, observePackages)
-            "find" -> find(args, observePackages, timeoutMs = 0)
-            "wait_for" -> find(args, observePackages, timeoutMs = longArg(args, "timeout_ms", 10_000)).let { env ->
+            "snapshot" -> snapshot(args, observePackages, runScope)
+            "find" -> find(args, observePackages, timeoutMs = 0, runScope = runScope)
+            "wait_for" -> find(args, observePackages, timeoutMs = longArg(args, "timeout_ms", 10_000), runScope = runScope).let { env ->
                 // Parity with the simulator: wait_for resolves to {node: firstOrNull?} — a timeout
                 // yields node:null (200), never an error envelope.
                 if (!env.ok && env.error?.reason == "NO_MATCH") {
@@ -112,11 +118,34 @@ class A11yUiProvider(
             "long_click" -> click(ctx, args, actPackages, observePackages, longClick = true)
             "set_text" -> setText(args, actPackages, observePackages)
             "scroll_until" -> scrollUntil(ctx, args, actPackages, observePackages)
-            "swipe" -> swipe(args)
-            "tap" -> tap(args)
-            "press" -> press(args)
+            "swipe" -> swipe(args, allowCoordinates)
+            "tap" -> tap(args, allowCoordinates)
+            "press" -> press(args, allowGlobal)
             "hide_keyboard" -> hideKeyboard(args, observePackages)
             else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown device.ui method '$method'")
+        }
+    }
+
+    /** P12-16 (A8): the coordinate tools are gated behind `allow_coordinates` (absent = false). */
+    private fun coordinateGate(flag: Boolean?): Envelope? = when (flag) {
+        false -> Envelope.err(
+            ErrorCode.SCOPE_VIOLATION,
+            "this run's device.ui.act grant does not include allow_coordinates (tap/swipe need it)",
+            reason = "SCOPE_NOT_GRANTED",
+        )
+        else -> null // true, or null = unrestricted (dev grant-all keeps the pre-ADR-098 behaviour)
+    }
+
+    /** P12-16 (A8): `back` stays always allowed (AGENT_RUNTIME §6); the rest need `allow_global`. */
+    private fun globalGate(key: String?, flag: Boolean?): Envelope? {
+        if (key == "back") return null
+        return when (flag) {
+            false -> Envelope.err(
+                ErrorCode.SCOPE_VIOLATION,
+                "this run's device.ui.act grant does not include allow_global (press home/recents/notifications need it)",
+                reason = "SCOPE_NOT_GRANTED",
+            )
+            else -> null
         }
     }
 
@@ -144,7 +173,7 @@ class A11yUiProvider(
 
     private class ReadBudgetExhausted(val detail: String) : Exception(detail)
 
-    private suspend fun snapshot(args: JsonObject, packages: Set<String>?): Envelope {
+    private suspend fun snapshot(args: JsonObject, packages: Set<String>?, runScope: String?): Envelope {
         val requested = requestedPackages(args, packages)
         val (snap, meta) = try {
             read(requested)
@@ -157,7 +186,7 @@ class A11yUiProvider(
                 "the accessibility service sees no active window (device frozen or service restarting)",
             )
         }
-        val refs = snap.nodes.map { node -> registry.put(node, snap.infoAt(node.index)) }
+        val refs = snap.nodes.map { node -> registry.put(node, snap.infoAt(node.index), runScope) }
         val compact = CompactDump.render(
             nodes = snap.nodes,
             pkg = snap.pkg ?: "",
@@ -188,7 +217,12 @@ class A11yUiProvider(
         )
     }
 
-    private suspend fun find(args: JsonObject, packages: Set<String>?, timeoutMs: Long): Envelope {
+    private suspend fun find(
+        args: JsonObject,
+        packages: Set<String>?,
+        timeoutMs: Long,
+        runScope: String? = null,
+    ): Envelope {
         val selector = parseSelector(args) ?: return Envelope.err(
             ErrorCode.INVALID_ARGS, "find/wait_for need a 'selector' argument",
         )
@@ -205,7 +239,7 @@ class A11yUiProvider(
             // its own ref (the simulator has spoken this shape since P6; ADR-077 host parity).
             val matches = SelectorEngine.findAll(snap.nodes, selector)
             if (matches.isNotEmpty()) {
-                val refs = matches.map { registry.put(it, snap.infoAt(it.index)) }
+                val refs = matches.map { registry.put(it, snap.infoAt(it.index), runScope) }
                 return Envelope.ok(
                     buildJsonObject {
                         put("nodes", JsonArray(matches.zip(refs).map { (node, ref) -> node.summary(ref) }))
@@ -291,7 +325,7 @@ class A11yUiProvider(
         observePackages: Set<String>?,
         longClick: Boolean,
     ): Envelope {
-        val guardResult = guardAndResolve(args, actPackages, observePackages)
+        val guardResult = guardAndResolve(args, actPackages, observePackages, ctx.runId)
         val info = when (guardResult) {
             is AhResult.Ok -> guardResult.value
             is AhResult.Err -> return mapResolveError(guardResult.error, "click target not found")
@@ -299,7 +333,9 @@ class A11yUiProvider(
         // P12-03 (A2/RM-A4): the nodes are captured BEFORE the click so the effect is computed
         // by the state-aware ChangeDetector (checked/selected/encluded included, focused excluded).
         val nodesBefore = nodesOfCurrent(observePackages)
-        val outcome = if (longClick) actions.longClick(info) else actions.click(info)
+        // P12-07 (A3/RM-A2): the chain is AWAITED — a refused/hung coordinate stroke reports
+        // NOT_DISPATCHED instead of "dispatchGesture returned true".
+        val outcome = if (longClick) actions.awaitedLongClick(info) else actions.awaitedClick(info)
         // P12-04 (A2): the effect verification happens FIRST (settle happens in the caller's next
         // observation); `retry_if_no_change` then repeats the accepted action ONCE when the screen
         // did not change — and re-observes, never falling through to another channel after
@@ -310,7 +346,7 @@ class A11yUiProvider(
         ) {
             // One repeat with the same handle is the documented single retry; a second miss is
             // reported, never looped.
-            if (longClick) actions.longClick(info) else actions.click(info)
+            if (longClick) actions.awaitedLongClick(info) else actions.awaitedClick(info)
         }
         val verifiedByExpect = verifyExpect(args, observePackages)
         if (verifiedByExpect != null) return verifiedByExpect
@@ -353,8 +389,9 @@ class A11yUiProvider(
         args: JsonObject,
         actPackages: Set<String>?,
         observePackages: Set<String>?,
+        runScope: String?,
     ): AhResult<android.view.accessibility.AccessibilityNodeInfo?> {
-        val resolved = resolveTarget(args, actPackages, observePackages)
+        val resolved = resolveTarget(args, actPackages, observePackages, runScope)
         val info = when (resolved) {
             is AhResult.Ok -> resolved.value
             is AhResult.Err -> return AhResult.err(resolved.error)
@@ -404,7 +441,9 @@ class A11yUiProvider(
                 (n.id.isNotEmpty() && suffixes.any { n.id.endsWith(it) } ||
                     decision.dialog.labels.any { l -> (n.text + n.desc).contains(l, ignoreCase = true) })
         } ?: return false
-        val info = snap.infoAt(target.index) ?: registry.resolve(registry.put(target, null)).getOrNull() ?: return false
+        val info = snap.infoAt(target.index)
+            ?: registry.resolve(registry.put(target, null, ctx.runId), ctx.runId).getOrNull()
+            ?: return false
         return try {
             info.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
         } catch (e: RuntimeException) {
@@ -474,7 +513,7 @@ class A11yUiProvider(
         val text = args["text"]?.let { it as? JsonPrimitive }?.content
             ?: return Envelope.err(ErrorCode.INVALID_ARGS, "set_text needs a 'text' argument")
         val secret = (args["secret"] as? JsonPrimitive)?.content?.toBooleanStrict() ?: false
-        val info = when (val result = guardAndResolve(args, actPackages, observePackages)) {
+        val info = when (val result = guardAndResolve(args, actPackages, observePackages, ctx.runId)) {
             is AhResult.Ok -> result.value
             is AhResult.Err -> return mapResolveError(result.error, "set_text target not found")
         }
@@ -553,7 +592,7 @@ class A11yUiProvider(
             }
             val match = SelectorEngine.findFirst(snap.nodes, selector)
             if (match != null) {
-                val ref = registry.put(match, snap.infoAt(match.index))
+                val ref = registry.put(match, snap.infoAt(match.index), ctx.runId)
                 return Envelope.ok(
                     buildJsonObject {
                         put("found", true)
@@ -575,11 +614,13 @@ class A11yUiProvider(
         return Envelope.err(ErrorCode.NOT_FOUND, "element never appeared within $maxSwipes swipes", reason = "NO_MATCH")
     }
 
-    private fun swipe(args: JsonObject): Envelope {
+    private fun swipe(args: JsonObject, allowCoordinates: Boolean?): Envelope {
         val x1 = floatArg(args, "x1") ?: return invalidSwipe(args)
         val y1 = floatArg(args, "y1") ?: return invalidSwipe(args)
         val x2 = floatArg(args, "x2") ?: return invalidSwipe(args)
         val y2 = floatArg(args, "y2") ?: return invalidSwipe(args)
+        // the flag gate rides AFTER arg validation (validate → policy, the pipeline's order)
+        coordinateGate(allowCoordinates)?.let { return it }
         val durationMs = longArg(args, "duration_ms", 300)
         val dispatched = actions.swipe(x1, y1, x2, y2, durationMs)
         // P12-01: the frozen spec promises {method:'COORDINATE'} (refused gesture = typed error).
@@ -596,9 +637,11 @@ class A11yUiProvider(
     private fun invalidSwipe(args: JsonObject): Envelope =
         Envelope.err(ErrorCode.INVALID_ARGS, "swipe needs x1, y1, x2, y2 (numbers)")
 
-    private fun tap(args: JsonObject): Envelope {
+    private fun tap(args: JsonObject, allowCoordinates: Boolean?): Envelope {
         val x = floatArg(args, "x") ?: return Envelope.err(ErrorCode.INVALID_ARGS, "tap needs numeric 'x'")
         val y = floatArg(args, "y") ?: return Envelope.err(ErrorCode.INVALID_ARGS, "tap needs numeric 'y'")
+        // the flag gate rides AFTER arg validation (validate → policy, the pipeline's order)
+        coordinateGate(allowCoordinates)?.let { return it }
         val dispatched = actions.tap(x, y)
         // P12-01: the frozen spec promises {method:'COORDINATE'}; a refused gesture is a typed
         // error, never a method value (same rule as click).
@@ -612,12 +655,13 @@ class A11yUiProvider(
         return Envelope.ok(buildJsonObject { put("method", "COORDINATE") })
     }
 
-    private fun press(args: JsonObject): Envelope {
+    private fun press(args: JsonObject, allowGlobal: Boolean?): Envelope {
         val key = args["key"]?.let { it as? JsonPrimitive }?.content
             ?: return Envelope.err(ErrorCode.INVALID_ARGS, "press needs a 'key' (back, home, recents, notifications)")
         if (key !in GlobalActions.known()) {
             return Envelope.err(ErrorCode.INVALID_ARGS, "unknown key '$key'; known: back, home, recents, notifications")
         }
+        globalGate(key, allowGlobal)?.let { return it }
         val performed = actions.global(key)
         // P12-01: the frozen spec promises {ok:bool} — the simulator already speaks this shape.
         return Envelope.ok(buildJsonObject { put("ok", performed) })
@@ -634,34 +678,55 @@ class A11yUiProvider(
 
     // --- shared helpers ----------------------------------------------------------------------------------------
 
-    /** Ref target from the registry, or selector target from a fresh scoped read. */
+    /**
+     * Ref target from the registry, or selector target from a fresh scoped read. P12-16 (A7):
+     * the resolution is RUN-SCOPED, and the resolved target's package is checked against the
+     * ACT scope — a ref to a node of package P under an act scope of {Q} is a SCOPE_VIOLATION
+     * (reason SCOPE_NOT_GRANTED, the ScopeInterceptor vocabulary), never a silent act.
+     */
     private suspend fun resolveTarget(
         args: JsonObject,
         actPackages: Set<String>?,
         observePackages: Set<String>?,
+        runScope: String?,
     ): AhResult<android.view.accessibility.AccessibilityNodeInfo?> {
-        args["ref"]?.let { it as? JsonPrimitive }?.content?.let { ref -> return resolveHandle(ref) }
+        args["ref"]?.let { it as? JsonPrimitive }?.content?.let { ref -> return resolveHandle(ref, actPackages, runScope) }
         args["target"]?.let { target ->
             (target as? JsonObject)?.get("ref")?.let { r ->
-                return resolveHandle((r as JsonPrimitive).content)
+                return resolveHandle((r as JsonPrimitive).content, actPackages, runScope)
             }
         }
         args["selector"]?.let {
-            val found = find(buildJsonObject { put("selector", it) }, observePackages, timeoutMs = 0)
+            val found = find(buildJsonObject { put("selector", it) }, observePackages, timeoutMs = 0, runScope = runScope)
             val nodes = (found.result as? JsonObject)?.get("nodes") as? JsonArray
             val firstRef = nodes?.firstOrNull()?.jsonObject?.get("ref")?.let { r -> (r as JsonPrimitive).content }
-            if (firstRef != null) return resolveHandle(firstRef)
+            if (firstRef != null) return resolveHandle(firstRef, actPackages, runScope)
         }
         return AhResult.err(app.autohost.core.model.AhError.of(ErrorCode.INVALID_ARGS, "click needs 'ref' or 'selector'"))
     }
 
-    private fun resolveHandle(ref: String): AhResult<android.view.accessibility.AccessibilityNodeInfo?> =
-        when (val result = registry.resolve(ref)) {
+    private fun resolveHandle(
+        ref: String,
+        actPackages: Set<String>? = null,
+        runScope: String? = null,
+    ): AhResult<android.view.accessibility.AccessibilityNodeInfo?> {
+        val node = registry.nodeOf(ref, runScope)
+        if (node != null && actPackages != null && node.pkg !in actPackages) {
+            return AhResult.err(
+                app.autohost.core.model.AhError.of(
+                    app.autohost.core.model.ErrorCode.SCOPE_VIOLATION,
+                    "node ref '$ref' points at '${node.pkg}', which is outside this run's act scope",
+                    reason = "SCOPE_NOT_GRANTED",
+                ),
+            )
+        }
+        return when (val result = registry.resolve(ref, runScope)) {
             is AhResult.Err -> AhResult.err(result.error)
             // A registry entry without a live handle is not stale — the node was seen. The action
             // seam turns a null handle into an honest unverified outcome (ServiceUiActions).
             is AhResult.Ok -> AhResult.ok(result.value)
         }
+    }
 
     private fun mapResolveError(e: AhError, fallback: String): Envelope = when (e.code) {
         ErrorCode.NOT_FOUND.name -> Envelope.err(ErrorCode.NOT_FOUND, fallback, reason = "NO_MATCH")

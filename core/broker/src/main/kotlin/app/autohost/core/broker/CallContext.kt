@@ -26,6 +26,25 @@ class CallContext(
         return grant["packages"]?.asPackageSet()
     }
 
+    /**
+     * P12-16 (A8): a scope FLAG from the grant object (e.g. `scope.allow_coordinates`):
+     *  - null → the grant is unrestricted (no grant object or the literal `"*"`) — the flags do
+     *    not bind (dev-mode grant-all keeps its pre-ADR-098 behaviour);
+     *  - else → the flag's boolean; ABSENT means **false** — an explicit grant without the flag
+     *    refuses the flagged behaviour (fail closed, the A8 rule).
+     */
+    fun scopeFlag(permission: String, flag: String): Boolean? {
+        val grant = grants[permission] ?: return null
+        val packages = grant["packages"]
+        val unrestricted = when (packages) {
+            null -> true
+            is JsonPrimitive -> packages.content == "*"
+            else -> false
+        }
+        if (unrestricted) return null
+        return (grant[flag] as? JsonPrimitive)?.content?.toBooleanStrictOrNull() ?: false
+    }
+
     private fun JsonElement.asPackageSet(): Set<String>? = when (this) {
         is JsonArray -> mapNotNull { (it as? JsonPrimitive)?.content }.toSet()
         is JsonPrimitive -> if (content == "*") null else setOf(content)

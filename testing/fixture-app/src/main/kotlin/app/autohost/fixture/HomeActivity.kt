@@ -27,6 +27,16 @@ class HomeActivity : Activity() {
         R.id.fx_open_notification to NotificationScreenActivity::class.java,
         R.id.fx_open_crash to CrashScreenActivity::class.java,
         R.id.fx_open_locale to LocaleScreenActivity::class.java,
+        // v4 action-hardening surfaces (P12-12, docs/FIXTURE_APP.md)
+        R.id.fx_open_toggle to ToggleScreenActivity::class.java,
+        R.id.fx_open_transition to TransitionScreenActivity::class.java,
+        R.id.fx_open_silent to SilentFieldScreenActivity::class.java,
+        R.id.fx_open_container to ClickContainerScreenActivity::class.java,
+        R.id.fx_open_nested to NestedScrollScreenActivity::class.java,
+        R.id.fx_open_gesture to GestureTargetScreenActivity::class.java,
+        // Phase-13 agent-safety surfaces (P13-17/R11)
+        R.id.fx_open_injection to InjectionScreenActivity::class.java,
+        R.id.fx_open_approval to ApprovalScreenActivity::class.java,
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {

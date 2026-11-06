@@ -1,0 +1,38 @@
+{
+  "name": "scroll-then-click",
+  "description": "A4: the target is below the fold — scroll first (accessibility-first tool), then click, then finish.",
+  "goal": "Find the toggle further down the list and turn it on.",
+  "packages": ["com.example.fixture"],
+  "observation": {
+    "package": "com.example.fixture",
+    "keyboard": "hidden",
+    "node_count": 1,
+    "nodes": [
+      {
+        "ref": "ref-1", "pkg": "com.example.fixture",
+        "class": "android.widget.ListView", "id": "fx_list",
+        "text": "", "desc": "",
+        "bounds": [0, 200, 1080, 2200],
+        "flags": ["scrollable"],
+        "index": 0
+      }
+    ]
+  },
+  "tool_results": {
+    "ui_scroll_until": {"ok": true, "method": "COORDINATE", "verified": true, "effect": "changed", "swipes": 2},
+    "ui_click": {"ok": true, "method": "NODE_ACTION", "verified": true, "effect": "changed"}
+  },
+  "script": [
+    {"tool_calls": [{"name": "ui_scroll_until", "arguments": "{\"selector\":\"fx_toggle\",\"direction\":\"up\",\"max_swipes\":5}"}]},
+    {"tool_calls": [{"name": "ui_click", "arguments": "{\"id\":\"[1]\"}"}]},
+    {"tool_calls": [{"name": "finish", "arguments": "{\"status\":\"done\",\"summary\":\"Scrolled and toggled.\"}"}]}
+  ],
+  "expect": {
+    "finished": true,
+    "tools": ["ui_scroll_until", "ui_click", "finish"],
+    "not_tools": ["app_launch"],
+    "max_steps": 5,
+    "contains": ["[1] ListView"],
+    "not_contains": []
+  }
+}

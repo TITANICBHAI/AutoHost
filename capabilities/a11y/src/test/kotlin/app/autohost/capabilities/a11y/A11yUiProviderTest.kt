@@ -148,6 +148,10 @@ class A11yUiProviderTest {
             },
             "device.ui.act" to buildJsonObject {
                 put("packages", JsonArray(listOf(JsonPrimitive("app.autohost.fixture"))))
+                // P12-16: this file tests dispatch/shape behaviour; the flag REFUSALS are
+                // ScopeClosureTest's subject
+                put("allow_coordinates", true)
+                put("allow_global", true)
             },
         ),
         nowMs = 0L,

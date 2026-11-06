@@ -1,0 +1,36 @@
+{
+  "name": "toggle-once",
+  "description": "A2: one click flips the toggle once — the model acts exactly once and finishes.",
+  "goal": "Turn the toggle on in the fixture app.",
+  "packages": ["com.example.fixture"],
+  "observation": {
+    "package": "com.example.fixture",
+    "keyboard": "hidden",
+    "node_count": 1,
+    "nodes": [
+      {
+        "ref": "ref-1", "pkg": "com.example.fixture",
+        "class": "android.widget.Switch", "id": "fx_toggle",
+        "text": "", "desc": "",
+        "bounds": [40, 812, 1040, 940],
+        "flags": ["clickable", "checked"],
+        "index": 0
+      }
+    ]
+  },
+  "tool_results": {
+    "ui_click": {"ok": true, "method": "NODE_ACTION", "verified": true, "effect": "changed"}
+  },
+  "script": [
+    {"tool_calls": [{"name": "ui_click", "arguments": "{\"id\":\"[1]\"}"}]},
+    {"tool_calls": [{"name": "finish", "arguments": "{\"status\":\"done\",\"summary\":\"Toggle is on.\"}"}]}
+  ],
+  "expect": {
+    "finished": true,
+    "tools": ["ui_click", "finish"],
+    "not_tools": ["app_launch", "ui_press"],
+    "max_steps": 3,
+    "contains": ["[1] Switch", "\"effect\":\"changed\""],
+    "not_contains": []
+  }
+}

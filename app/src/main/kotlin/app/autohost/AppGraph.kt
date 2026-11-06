@@ -90,6 +90,7 @@ import app.autohost.export.AppRunExporter
 import app.autohost.prompt.UiPromptProvider
 import app.autohost.recorder.RecorderController
 import app.autohost.runtime.api.RuntimeRegistry
+import app.autohost.runtime.agent.AgentRuntimeProvider
 import app.autohost.runtime.flow.FlowRuntimeProvider
 import app.autohost.runtime.flow.FlowBinderTransport
 import app.autohost.runtime.js.JsBrokerCaller
@@ -233,6 +234,46 @@ class AppGraph(val application: Application) {
         }.getOrDefault(false),
     )
 
+    /**
+     * P13-12 (AGENT_RUNTIME §3/§11): the fourth runtime — in-process like flows/js, registered
+     * beside them. **BrokerTransport decision, RECORDED (P13-12): DUPLICATE, not lift.** The
+     * flow's `FlowBinderTransport` is String/JSON-shaped for the interpreter; the agent's
+     * `BrokerTransport` takes typed `JsonObject` args and binds the run token PER RUN (the
+     * loop factory closes over `spec.runToken`). Lifting one shared interface would fit
+     * neither runtime's call shape; `:app` adapts the binder to each — exactly what it already
+     * does inline for the flow transport above.
+     *
+     * The loop factory (P14-07) builds the REAL chain per run; `lazy` because it reads
+     * `aiProfileStore`, declared later in this graph.
+     */
+    val agentRuntime: AgentRuntimeProvider by lazy {
+        AgentRuntimeProvider(
+            dispatchers = dispatchers,
+            scope = appScope,
+            emit = { runToken, eventJson -> binder.emit(runToken, eventJson) },
+            loopFactory = app.autohost.agent.AgentLoopFactory(
+                binder = binder,
+                profileStore = aiProfileStore,
+                dispatchers = dispatchers,
+                clock = clock,
+                sensitivity = app.autohost.runtime.agent.AppSensitivity(), // the bundled BLOCKED floor (user additions ride P13-17's list)
+                urlEnv = {
+                    // X-14: the loopback cleartext gate is the AUDITED insecure switch
+                    // (`ai_cleartext_loopback` — InsecureFeatures; relaxed covers it, deny beats
+                    // it), the same state snapshot MODEL_GATEWAY §4 names — not a parallel key
+                    app.autohost.core.llm.BaseUrlValidator.UrlEnv(
+                        cleartextLoopbackEnabled = loopbackCleartextAllowed(),
+                        debugBuild = application.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0,
+                    )
+                },
+                screenMetrics = {
+                    application.resources.displayMetrics.widthPixels to
+                        application.resources.displayMetrics.heightPixels
+                },
+            ),
+        )
+    }
+
     /** P6-09: the recorder controller (armed a11y tap → steps → flow.json + sidecar). */
     val recorder = RecorderController(
         clock = clock,
@@ -274,6 +315,39 @@ class AppGraph(val application: Application) {
     private val crashReconciler by lazy { CrashReconciler(this) }
 
     fun runsRoot(): File = File(application.filesDir, "runs").apply { mkdirs() }
+
+    /**
+     * P13-13 (AGENT_RUNTIME §4/§12): the agent start path — the §12 preflight runs HERE and a
+     * failure starts no run. The AI facts are fail-closed until the AI settings exist (P14-06):
+     * with no settings surface the honest verdict is AI_DISABLED. The device facts come from
+     * the live helpers; targets are checked per-package (the installed-app list is never read).
+     */
+    val agentRunStarter = app.autohost.agent.AgentRunStarter(
+        orchestrator = orchestrator,
+        clock = clock,
+        runsRoot = { runsRoot().absolutePath },
+        grantsFor = { manifest, config ->
+            // the SAME closed grant model the orchestrator builds with (X-15: devMode = false);
+            // the synthesized manifest's explicit scopes survive putIfAbsent, so the §12
+            // package-scope check sees exactly what the run will hold
+            GrantBuilder(permissionIndex, devMode = false).build(manifest, config, JsonObject(emptyMap()))
+        },
+        androidFacts = {
+            val power = application.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+            val keyguard = application.getSystemService(android.content.Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+            val pm = application.packageManager
+            app.autohost.agent.AgentRunStarter.AndroidFacts(
+                // P14-06: the live AI facts — fail-closed until the settings screen enables them
+                aiEnabled = aiFacts.enabled,
+                profileReady = aiFacts.anyProfileReady,
+                urlOk = aiFacts.anyUrlOk,
+                a11yConnected = app.autohost.capabilities.a11y.A11yBridge.service.value != null,
+                screenOk = power.isInteractive && !keyguard.isKeyguardLocked,
+                isInstalled = { pkg -> runCatching { pm.getPackageInfo(pkg, 0) }.isSuccess },
+                uiRunActive = runStore.runs.value.any { it.active },
+            )
+        },
+    )
 
     // ---- Phase 4: locks + scheduler + self-heal (plan §11) ----
     val resourceLocks = ResourceLocks(clock)
@@ -328,6 +402,47 @@ class AppGraph(val application: Application) {
             .build()
     }
     val secretRegistry = SecretRegistry()
+
+    /** P14-06: the live AI facts snapshot the agent preflight reads (fail-closed until set). */
+    data class AiFactsSnapshot(
+        val enabled: Boolean = false,
+        val anyProfileReady: Boolean = false,
+        val anyUrlOk: Boolean = false,
+    )
+
+    @Volatile
+    var aiFacts = AiFactsSnapshot()
+        private set
+
+    /**
+     * P14-06: recomputes the AI facts from the settings screen's state. Fail-closed: no facts
+     * until the master switch is on, a key exists, and one URL passes the §4 policy.
+     */
+    /** X-14: ONE loopback-cleartext decision — the audited `ai_cleartext_loopback` switch
+     *  (explicitly enabled, or relaxed mode with it not denied; InsecureFeatures.evaluate's rule). */
+    fun loopbackCleartextAllowed(): Boolean {
+        val state = insecureSwitches.state
+        return "ai_cleartext_loopback" in state.enabled ||
+            (state.relaxed && "ai_cleartext_loopback" !in state.denied)
+    }
+
+    suspend fun refreshAiFacts(enabled: Boolean, profiles: List<app.autohost.core.llm.ProviderProfile>, cleartextLoopback: Boolean) {
+        val anyKey = profiles.any { aiProfileStore.hasApiKey(it.id) }
+        val urlEnv = app.autohost.core.llm.BaseUrlValidator.UrlEnv(
+            cleartextLoopbackEnabled = loopbackCleartextAllowed(),
+            debugBuild = application.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0,
+        )
+        val anyUrl = profiles.any {
+            app.autohost.core.llm.BaseUrlValidator.validate(it.baseUrl, urlEnv) is
+                app.autohost.core.llm.BaseUrlValidator.Verdict.Accepted
+        }
+        aiFacts = AiFactsSnapshot(enabled = enabled, anyProfileReady = anyKey, anyUrlOk = anyUrl)
+    }
+
+    /** The one ProfileStore over the settings repo + SecretStore (the screen and the facts share it). */
+    val aiProfileStore: app.autohost.ai.AppProfileStore by lazy {
+        app.autohost.ai.AppProfileStore(data.settings, secrets, secretRegistry)
+    }
     val redactor = Redactor(secretRegistry)
     val secrets: SecretStore by lazy {
         SecretStore(database.secretBlobDao(), AndroidKeystoreAead(), secretRegistry, clock)
@@ -1221,6 +1336,14 @@ class AppGraph(val application: Application) {
     // dev-folder tasks
     val devTasks = DevFolderTaskSource(application, clock)
 
+    /** X-19: the dev-folder start facade — packs injection included (see [DevTaskStarter]). */
+    val devTaskStarter = DevTaskStarter(
+        packInjector = { manifest, config -> packController.injectPacks(manifest, config) },
+        runsRoot = { runsRoot().absolutePath },
+        clock = clock,
+        start = { request -> orchestrator.start(request) },
+    )
+
     init {
         // Crash-fix 1.3: make this graph readable through AutoHostApp.graph BEFORE any controller starts.
         // Controllers launch background coroutines that read AutoHostApp.graph while this constructor is still
@@ -1356,6 +1479,8 @@ class AppGraph(val application: Application) {
         runtimes.register(flowRuntime)
         // P11-01: the third runtime — manifest `runtime.type: "javascript"` resolves here.
         runtimes.register(jsRuntime)
+        // P13-12: the fourth runtime — `runtime.type: "agent"` resolves here (beside flow, §4).
+        runtimes.register(agentRuntime)
 
         // P4-11: `ctx.next_run` proposals land here (plan §11.7), clamped by the controller.
         orchestrator.onNextRun = { runId, payload ->
@@ -1387,6 +1512,9 @@ class AppGraph(val application: Application) {
                 } else {
                     RunForegroundService.stop(application)
                 }
+                // X-20 (ADR-100): the a11y event path may do its expensive tree work only while
+                // a run is active — idle, events are counted, not processed
+                app.autohost.capabilities.a11y.A11yBridge.runActive = runs.any { it.active }
                 for (run in runs) {
                     val previous = previousStatuses[run.runId]
                     if (run.active) visionImages.activeRunId = run.runId // P10-05: vision reads this run's dirs

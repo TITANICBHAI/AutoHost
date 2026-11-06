@@ -74,6 +74,16 @@ class AppRunExporter(
         val checkpointJson = checkpoint?.let {
             redactor.redact(AhJson.json.encodeToString(JsonObject.serializer(), redactor.redactJsonKeys(it)))
         }
+        // P14-05 (S31, with P13-15): an agent run carries the `agent.json` section — rebuilt from
+        // the SAME persisted events with the SAME redactor as the rest of the bundle (Gate 5-d)
+        val agentJson = if (record.taskId == "builtin.agent.adhoc") {
+            app.autohost.runtime.agent.AgentSectionBuilder.fromEvents(
+                events,
+                redact = { text -> redactor.redact(text) },
+            )?.let { AhJson.json.encodeToString(JsonObject.serializer(), it) }
+        } else {
+            null
+        }
         return exporter.build(
             RunExporter.Bundle(
                 runId = runId,
@@ -85,6 +95,7 @@ class AppRunExporter(
                 incidentsJson = incidentsJson,
                 environmentJson = AhJson.json.encodeToString(JsonObject.serializer(), environment),
                 evidence = collectEvidence(runId),
+                agentJson = agentJson,
             ),
         )
     }

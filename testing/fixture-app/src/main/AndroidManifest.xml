@@ -33,6 +33,16 @@
         <activity android:name=".NotificationScreenActivity" android:exported="true" />
         <activity android:name=".CrashScreenActivity" android:exported="true" />
         <activity android:name=".LocaleScreenActivity" android:exported="true" />
+        <!-- v4 action-hardening surfaces (P12-12, docs/FIXTURE_APP.md) -->
+        <activity android:name=".ToggleScreenActivity" android:exported="true" />
+        <activity android:name=".TransitionScreenActivity" android:exported="true" />
+        <activity android:name=".SilentFieldScreenActivity" android:exported="true" />
+        <activity android:name=".ClickContainerScreenActivity" android:exported="true" />
+        <activity android:name=".NestedScrollScreenActivity" android:exported="true" />
+        <activity android:name=".GestureTargetScreenActivity" android:exported="true" />
+        <!-- Phase-13 agent-safety surfaces (P13-17/R11, docs/FIXTURE_APP.md) -->
+        <activity android:name=".InjectionScreenActivity" android:exported="true" />
+        <activity android:name=".ApprovalScreenActivity" android:exported="true" />
 
         <activity android:name=".DeepLinkActivity" android:exported="true">
             <intent-filter>

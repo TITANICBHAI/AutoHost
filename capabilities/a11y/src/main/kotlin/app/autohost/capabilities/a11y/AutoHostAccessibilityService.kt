@@ -116,7 +116,10 @@ class AutoHostAccessibilityService : AccessibilityService() {
      * view id, falling back to the localized labels — Gate 3-e verifies this end to end on the phone.
      */
     private fun consultAutoAccept() {
-        if (autoAcceptGate.pendingFlow == AutoAcceptPolicy.Flow.NONE) return
+        // X-20 (ADR-100): the tree consult is the expensive event-path work — it runs ONLY while
+        // a host flow is pending or a run is active. Idle, the service builds no tree: events
+        // are counted, not processed.
+        if (!A11yIdlePolicy.mayConsultTree(autoAcceptGate.pendingFlow, A11yBridge.runActive)) return
         val metas = SimpleA11yReader({ this }, A11yBridge.clock).windows()
         val top = metas.firstOrNull { it.pkg?.startsWith("com.android") == true && it.hasRoot } ?: return
         val pkg = top.pkg ?: return
@@ -207,6 +210,10 @@ object A11yBridge {
 
     @Volatile
     var clock: app.autohost.core.common.Clock = app.autohost.core.common.SystemClockImpl()
+
+    /** X-20 (ADR-100): a run is active somewhere — the a11y event path may do its expensive work. */
+    @Volatile
+    var runActive: Boolean = false
 
     /** Wall-clock of the last window content/state change; drives wait_for_settle. */
     @Volatile

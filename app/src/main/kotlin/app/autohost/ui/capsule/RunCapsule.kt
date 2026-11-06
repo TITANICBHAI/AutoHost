@@ -17,7 +17,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import app.autohost.core.designsystem.theme.Tokens
 
@@ -40,7 +43,7 @@ fun RunCapsule(
         is RunCapsuleState.Mode.Running -> Surface(
             modifier = modifier
                 .fillMaxWidth()
-                .semantics { contentDescription = "Run running: ${mode.taskName}" },
+                .semantics { contentDescription = "Run running: ${mode.taskName}"; liveRegion = LiveRegionMode.Polite },
             shape = RoundedCornerShape(Tokens.radiiDp[1].dp),
             color = MaterialTheme.colorScheme.surfaceVariant,
         ) {
@@ -59,7 +62,9 @@ fun RunCapsule(
                     if (state.stopVisible) {
                         Button(
                             onClick = onStop,
-                            modifier = Modifier.heightIn(min = Tokens.MIN_TOUCH_TARGET_DP.dp),
+                            modifier = Modifier
+                                .heightIn(min = Tokens.MIN_TOUCH_TARGET_DP.dp)
+                                .semantics { stateDescription = "Stops the run immediately" },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.errorContainer,
                             ),
@@ -72,7 +77,7 @@ fun RunCapsule(
         is RunCapsuleState.Mode.Stopping -> Surface(
             modifier = modifier
                 .fillMaxWidth()
-                .semantics { contentDescription = "Run stopping: ${mode.taskName}" },
+                .semantics { contentDescription = "Run stopping: ${mode.taskName}"; liveRegion = LiveRegionMode.Polite },
             shape = RoundedCornerShape(Tokens.radiiDp[1].dp),
             color = MaterialTheme.colorScheme.surfaceVariant,
         ) {
@@ -86,7 +91,7 @@ fun RunCapsule(
         is RunCapsuleState.Mode.Done -> Surface(
             modifier = modifier
                 .fillMaxWidth()
-                .semantics { contentDescription = "Run done: ${mode.taskName}" },
+                .semantics { contentDescription = "Run done: ${mode.taskName}"; liveRegion = LiveRegionMode.Polite },
             shape = RoundedCornerShape(Tokens.radiiDp[1].dp),
             color = MaterialTheme.colorScheme.surfaceVariant,
         ) {
@@ -100,7 +105,7 @@ fun RunCapsule(
         is RunCapsuleState.Mode.Error -> Surface(
             modifier = modifier
                 .fillMaxWidth()
-                .semantics { contentDescription = "Run failed: ${mode.taskName}" },
+                .semantics { contentDescription = "Run failed: ${mode.taskName}"; liveRegion = LiveRegionMode.Assertive },
             shape = RoundedCornerShape(Tokens.radiiDp[1].dp),
             color = MaterialTheme.colorScheme.errorContainer,
         ) {

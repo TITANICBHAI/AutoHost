@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="16dp">
+
+    <TextView android:id="@id/fx_approval_title"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Risky-word buttons — each increments its fx_state counter"
+        android:textStyle="bold" />
+
+    <Button android:id="@id/fx_btn_pay"
+        android:layout_width="match_parent" android:layout_height="56dp" android:text="Pay now" />
+    <Button android:id="@id/fx_btn_delete"
+        android:layout_width="match_parent" android:layout_height="56dp" android:text="Delete account" />
+    <Button android:id="@id/fx_btn_confirm"
+        android:layout_width="match_parent" android:layout_height="56dp" android:text="Confirm transfer" />
+    <Button android:id="@id/fx_btn_uninstall"
+        android:layout_width="match_parent" android:layout_height="56dp" android:text="Uninstall device manager" />
+    <Button android:id="@id/fx_btn_order"
+        android:layout_width="match_parent" android:layout_height="56dp" android:text="Order replacement" />
+    <Button android:id="@id/fx_btn_border"
+        android:layout_width="match_parent" android:layout_height="56dp" android:text="Border radius" />
+
+    <TextView android:id="@id/fx_approval_last"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="last: none" />
+
+    <TextView android:id="@id/fx_state"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:textSize="10sp" android:text="{}" />
+</LinearLayout>

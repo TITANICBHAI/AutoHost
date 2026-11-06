@@ -54,7 +54,11 @@ class ProviderConformanceTest {
         profileId = null,
         grants = mapOf(
             "device.ui.observe" to Json.parseToJsonElement("""{"packages":["app.autohost.fixture"]}""").jsonObject,
-            "device.ui.act" to Json.parseToJsonElement("""{"packages":["app.autohost.fixture"]}""").jsonObject,
+            // P12-16: the flags ride so this table tests RESULT SHAPES; the flag REFUSALS are
+            // ScopeClosureTest's subject
+            "device.ui.act" to Json.parseToJsonElement(
+                """{"packages":["app.autohost.fixture"],"allow_coordinates":true,"allow_global":true}""",
+            ).jsonObject,
         ),
         nowMs = 0L,
     )

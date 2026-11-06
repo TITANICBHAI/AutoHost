@@ -105,6 +105,73 @@ metacharacter deny — one allowlisted command can never become arbitrary shell.
   via `uses_packs`; a fix ships once and every task picks it up next run. The run result names
   the pack version that was actually used.
 
+## 9a. The Ask bar (the AI agent)
+
+The **Ask** bar is a fourth kind of run: you state a goal ("Open Settings and turn on Do Not
+Disturb", pick the apps it may touch, and an AI model drives the phone one step at a time until
+the goal is done, a budget runs out, or you press Stop. It is **supervised by design** — the
+model proposes, AutoHost disposes:
+
+- **One action per turn.** The model sees one observation of the screen at a time and asks for
+  exactly one action. Extra asks are refused, never executed.
+- **It can only go where you allowed.** Before an Ask starts you pick the target apps. The
+  agent cannot add an app mid-run, cannot use tools that are not on its allowlist (no shell, no
+  SMS, no clipboard reading, no app lists), and cannot act in an app that is on your **blocked
+  list** — content from blocked apps never reaches the model at all.
+- **Risky actions ask you first.** When a control is labelled pay / send / delete / buy / order /
+  confirm… or the app is unknown, AutoHost asks: **Allow once / Allow for this run / Deny**. No
+  answer in time means **deny and the run stops**; "Deny" refuses just that action and the agent
+  can try another way. The approval names the control as you see it — never "node 17".
+- **It never types secrets.** Password, PIN, one-time-code and card fields are off limits even
+  when the goal seems to need them.
+- **It cannot declare itself done.** When the model says it finished, AutoHost takes a final
+  screenshot-of-record and asks **you**: "The assistant says it is done: … Is it?" Only your
+  Yes succeeds the run. No answer or a No ends it honestly (`COMPLETION_UNVERIFIED` /
+  `COMPLETION_REJECTED`).
+- **Budgets, always.** Turns, wall-clock time, model calls, tokens and device actions are capped;
+  hitting a cap ends the run with a `BUDGET_*` reason. An interrupted Ask is **never** re-run
+  behind your back.
+- **Stop works mid-everything.** Stop, the notification and the kill switch interrupt even an
+  in-flight model call or tap. Pause waits for the current step and holds before the next.
+
+Requirements: AI set up (provider + key, Settings → AI), the accessibility service on, the
+screen unlocked, and no other UI run active. Each failed requirement gives a typed reason with a
+fix button and **starts no run**.
+
+### What is sent to the AI provider (the data-egress disclosure)
+
+First use shows this disclosure; it is repeated here in full.
+
+**Sent to the provider:** your goal text; the agent's instructions; the list of tools it may use;
+filtered observations of the screens it works with (element class, id, visible text or label up
+to 80 characters, state flags, position and size, package names); the results of its tool calls;
+your answers to its questions.
+
+**Never sent:** screenshots (unless you turn them on for a provider), password text, API keys or
+secrets of any kind, run tokens, the clipboard (the agent has no clipboard tool), notification
+contents, your installed-app list, and **anything from a blocked app**.
+
+Logs and the AI audit trail carry sizes and counts, not content. A full step-by-step transcript
+is kept only if you turn `keep_transcript` on for a run, and then only inside that run's folder,
+redacted; exporting it in a `.aarun` bundle is always your explicit choice.
+
+### Action results: `effect` and `retry_if_no_change`
+
+Every `device.ui` action result tells you what actually happened, not just that a call was
+accepted:
+
+- **`effect`** is `changed` (the screen state really moved — the state-aware check includes
+  toggle/selection/enabled state), `unchanged` (nothing observable moved — treat the action as
+  suspect), or `unverifiable` (the screen could not be compared honestly — never assumed either
+  way). `verified` alone only ever means "the call was accepted", never "it worked".
+- **`retry_if_no_change`** (opt-in on click/long_click) repeats the accepted action **once**
+  when the screen did not change, then reports. It never loops, and it never falls through to
+  another channel after an `unchanged` verdict — a second click that would flip a toggle back is
+  exactly what this guard exists to prevent.
+- Set-text results carry the same honesty: `verified` is true only when a read-back of the field
+  shows exactly the requested text; a field that accepts the set but renders nothing reports
+  honestly instead of succeeding.
+
 ## 10. Troubleshooting
 
 | Symptom | First checks |

@@ -18,7 +18,40 @@
     <item name="fx_open_notification" type="id" />
     <item name="fx_open_crash" type="id" />
     <item name="fx_open_locale" type="id" />
+    <item name="fx_open_toggle" type="id" />
+    <item name="fx_open_transition" type="id" />
+    <item name="fx_open_silent" type="id" />
+    <item name="fx_open_container" type="id" />
+    <item name="fx_open_nested" type="id" />
+    <item name="fx_open_gesture" type="id" />
+    <item name="fx_open_injection" type="id" />
+    <item name="fx_open_approval" type="id" />
     <item name="fx_state" type="id" />
+    <!-- v4 action-hardening surfaces (P12-12, docs/FIXTURE_APP.md) -->
+    <item name="fx_toggle" type="id" />
+    <item name="fx_toggle_status" type="id" />
+    <item name="fx_btn_transition" type="id" />
+    <item name="fx_transition_status" type="id" />
+    <item name="fx_silent" type="id" />
+    <item name="fx_silent_echo" type="id" />
+    <item name="fx_container" type="id" />
+    <item name="fx_btn_child" type="id" />
+    <item name="fx_pager" type="id" />
+    <item name="fx_pager_status" type="id" />
+    <item name="fx_gesture" type="id" />
+    <item name="fx_gesture_status" type="id" />
+    <!-- Phase-13 agent-safety surfaces (P13-17/R11, docs/FIXTURE_APP.md) -->
+    <item name="fx_injection_title" type="id" />
+    <item name="fx_injection_text" type="id" />
+    <item name="fx_injection_obeyed" type="id" />
+    <item name="fx_approval_title" type="id" />
+    <item name="fx_btn_pay" type="id" />
+    <item name="fx_btn_delete" type="id" />
+    <item name="fx_btn_confirm" type="id" />
+    <item name="fx_btn_uninstall" type="id" />
+    <item name="fx_btn_order" type="id" />
+    <item name="fx_btn_border" type="id" />
+    <item name="fx_approval_last" type="id" />
     <!-- button screen -->
     <item name="fx_btn_continue" type="id" />
     <item name="fx_btn_continue_es" type="id" />

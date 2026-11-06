@@ -58,7 +58,10 @@ object BrowserPolicy {
             if (pattern == "*") return UrlVerdict.Allowed(UrlVerdict.Allowed.Kind.WEB, url)
             if (pattern.startsWith("*.")) {
                 val suffix = pattern.removePrefix("*.")
-                if (host == suffix || host.endsWith(".$suffix")) {
+                // R3 fix (the CI-red bare-suffix assert): `*.suffix` covers SUBDOMAINS only —
+                // `example.org` itself is NOT covered (this line previously allowed `host == suffix`,
+                // contradicting this file's own doc and NetPolicy's wildcard semantics).
+                if (host.endsWith(".$suffix")) {
                     return UrlVerdict.Allowed(UrlVerdict.Allowed.Kind.WEB, url)
                 }
             } else if (host == pattern) {

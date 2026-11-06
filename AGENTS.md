@@ -44,6 +44,7 @@ You do not decide *what* to build — the docs do. You decide *how to implement 
 | **Now** The assignment queue, the owner's machine and Windows build commands | `HANDOFF.md` §0 |
 | **Now** Permanent agent operating rules (session order, Git/CI, batching, evidence, handoffs) | `docs/AGENT_OPERATING_PROTOCOL.md` |
 | **Now** Compact working memory for the next session | `AGENT_STATE.md` |
+| The security model — what is and isn't isolated | `SECURITY.md` |
 | The crash-fix pass and its Checkpoints A/B (Epoch V step 0, X-17) | `CRASH_FIX_PLAN.md`, `docs/PROACTIVE-CRASH-REVIEW.md` |
 | What the plan-merge pass changed and where the other plan's originals are (**historical, not instructions**) | `docs/PLAN_MERGE.md`, `archive/pack-B/README.md` |
 

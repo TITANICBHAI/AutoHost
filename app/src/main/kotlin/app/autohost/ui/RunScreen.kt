@@ -64,6 +64,33 @@ fun RunScreen(activity: MainActivity, runId: String?, onBack: () -> Unit) {
     val audit = runId?.let { graph.auditMem.forRun(it).takeLast(20) }.orEmpty()
     val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
+    // P14-04 (S30): agent runs render the thought → action timeline, the usage panel and the
+    // host verdict. The holder ignores non-agent events, so feeding unconditionally is safe;
+    // the detail renders only for the synthesized agent task.
+    val agentDetailState = remember(runId) { app.autohost.ui.agent.AgentRunDetailState(graph.clock) }
+    var agentDetail by remember(runId) { mutableStateOf(agentDetailState.snapshot()) }
+    LaunchedEffect(runId) {
+        val activeRunId = runId ?: return@LaunchedEffect
+        graph.runStore.snapshot(activeRunId, limit = 500).forEach {
+            agentDetailState.onEvent(it)
+        }
+        agentDetail = agentDetailState.snapshot()
+        graph.runStore.events(activeRunId).collect { event ->
+            agentDetailState.onEvent(event)
+            agentDetail = agentDetailState.snapshot()
+        }
+    }
+    val isAgentRun = run?.taskId == "builtin.agent.adhoc"
+
+    // R4/S31: the just-exported bundle can be viewed in place (no picker); the viewer also
+    // accepts an external bundle via its own document picker
+    val agentViewerState = remember(runId) {
+        // identity redact is CORRECT here: a bundle was already redacted at export time
+        // (AppRunExporter applies the shared Redactor before the zip is written)
+        app.autohost.ui.agent.AgentSectionViewerState(redact = { it })
+    }
+    var agentViewerBytes by remember(runId) { mutableStateOf<ByteArray?>(null) }
+
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             Modifier.fillMaxWidth(),
@@ -88,6 +115,23 @@ fun RunScreen(activity: MainActivity, runId: String?, onBack: () -> Unit) {
                 reason,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.error,
+            )
+        }
+
+        if (isAgentRun) {
+            app.autohost.ui.agent.AgentRunDetail(state = agentDetailState, modifier = Modifier.fillMaxWidth())
+            // `agentDetail` is read to recompose this scope when the state advances
+            Text(
+                "${agentDetail.entries.size} timeline entries",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            // R4/S31: the .aarun agent-section viewer — in place for the just-exported bundle,
+            // with the document picker for an external one
+            app.autohost.ui.agent.AgentBundleViewer(
+                state = agentViewerState,
+                initialBundleBytes = agentViewerBytes,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
 
@@ -123,6 +167,7 @@ fun RunScreen(activity: MainActivity, runId: String?, onBack: () -> Unit) {
                 graph.appScope.launch(Dispatchers.IO) {
                     val bytes = graph.runExporter.export(exportRunId) ?: return@launch
                     File(graph.runsRoot(), "$exportRunId.aarun").writeBytes(bytes)
+                    agentViewerBytes = bytes // R4: view the just-exported bundle in place
                     withContext(Dispatchers.Main) {
                         android.widget.Toast.makeText(
                             graph.appContext,

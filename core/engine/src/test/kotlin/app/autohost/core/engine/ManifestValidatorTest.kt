@@ -86,6 +86,18 @@ class ManifestValidatorTest {
     }
 
     @Test
+    fun `builtin-prefixed ids are reserved for host-built tasks (P13-13)`() {
+        val r = validate(good.replace("\"com.example.press\"", "\"builtin.agent.adhoc\""))
+        assertTrue("RESERVED_ID" in rules(r))
+    }
+
+    @Test
+    fun `a builtin prefix inside a longer reverse-dns id is still refused`() {
+        val r = validate(good.replace("\"com.example.press\"", "\"builtin.my-task\""))
+        assertTrue("RESERVED_ID" in rules(r))
+    }
+
+    @Test
     fun `bad semver is rejected`() {
         val r = validate(good.replace("\"1.2.3-rc.1\"", "\"1.2\""))
         assertTrue("PATTERN" in rules(r))
@@ -165,6 +177,21 @@ class ManifestValidatorTest {
         )
         assertTrue("TYPE" in rules(validate(asArray)))
         assertTrue(validate(good).ok) // sanity: the original still passes
+    }
+
+    @Test
+    fun `x-secret is valid ONLY under profile_schema (the X-12 split)`() {
+        // a config value is stored in run snapshots/checkpoints/exports in PLAINTEXT — it can
+        // never be a secret, so the schema and the validator refuse it at the source
+        val inConfig = good.replace(
+            "\"wait_seconds\": {\"type\": \"integer\", \"default\": 20, \"minimum\": 1, \"maximum\": 600}",
+            "\"wait_seconds\": {\"type\": \"integer\", \"x-secret\": true}",
+        )
+        val configResult = validate(inConfig)
+        assertTrue("RESERVED" in rules(configResult))
+        assertTrue("the message names the rule", configResult.errors.any { it.message.contains("profile_schema") })
+        // the SAME field under profile_schema stays valid (the original good manifest has it)
+        assertTrue(validate(good).ok)
     }
 
     @Test

@@ -127,10 +127,10 @@
       "additionalProperties": false
     },
     "config_schema": {
-      "$ref": "#/$defs/objectSchema"
+      "$ref": "#/$defs/configObjectSchema"
     },
     "profile_schema": {
-      "$ref": "#/$defs/objectSchema"
+      "$ref": "#/$defs/profileObjectSchema"
     },
     "stages": {
       "type": "array",

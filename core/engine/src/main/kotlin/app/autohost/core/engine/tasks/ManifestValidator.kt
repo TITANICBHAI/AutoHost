@@ -19,7 +19,7 @@ import app.autohost.core.common.AhJson
  *  - `id` reverse-DNS pattern; `version` strict semver; name length; description length
  *  - runtime cross rules: python→.py entry, flow→.yaml/.yml/.json, javascript→.js
  *  - needs.capabilities/optional: permission-shaped ids; needs.apps: package + optional min_version_code
- *  - config_schema/profile_schema: the schema's `$defs.objectSchema` subset (type, required, properties,
+ *  - config_schema/profile_schema: the object-schema subset (type, required, properties,
  *    per-property type/title/default/enum/min/max/x-secret/x-ui)
  *  - execution bounds (timeout 1..1440, idle >= 10, attempts 1..10, verification enum)
  *  - ui: mode required; declarative/html require `file`
@@ -137,6 +137,11 @@ object ManifestValidator {
         if (id == null || !ID_REGEX.matches(id)) {
             errors += Issue("/id", "PATTERN", "\"id\" must be reverse-DNS like com.example.my-task")
         }
+        // P13-13 (AGENT_RUNTIME §4.1): `builtin.` ids are reserved for host-built tasks (the
+        // synthesized agent manifest is `builtin.agent.adhoc`) — a user task can never impersonate one.
+        if (id != null && id.startsWith("builtin.")) {
+            errors += Issue("/id", "RESERVED_ID", "\"builtin.\" ids are reserved for host-built tasks")
+        }
         val name = (root["name"] as? JsonPrimitive)?.content
         when {
             name == null -> errors += Issue("/name", "REQUIRED", "\"name\" is required")
@@ -183,8 +188,10 @@ object ManifestValidator {
         }
 
         validateNeeds(root["needs"], errors, warnings)
-        validateObjectSchema(root["config_schema"], "/config_schema", errors)
-        validateObjectSchema(root["profile_schema"], "/profile_schema", errors)
+        // X-12 (ADR-099): `x-secret` is valid ONLY under profile_schema — a config value lives
+        // in run snapshots/checkpoints/exports in PLAINTEXT, so it can never be a secret.
+        validateObjectSchema(root["config_schema"], "/config_schema", errors, allowSecret = false)
+        validateObjectSchema(root["profile_schema"], "/profile_schema", errors, allowSecret = true)
         validateExecution(root["execution"], errors)
         validateUi(root["ui"], errors)
 
@@ -260,8 +267,8 @@ object ManifestValidator {
         }
     }
 
-    /** Validate the `$defs.objectSchema` subset used by config_schema/profile_schema. */
-    private fun validateObjectSchema(node: Any?, path: String, errors: MutableList<Issue>) {
+    /** Validate the object-schema subset used by config_schema/profile_schema. */
+    private fun validateObjectSchema(node: Any?, path: String, errors: MutableList<Issue>, allowSecret: Boolean) {
         if (node == null) return
         val obj = node as? JsonObject
         if (obj == null) {
@@ -292,8 +299,15 @@ object ManifestValidator {
             if (prop.containsKey("enum") && prop["enum"] !is JsonArray) {
                 errors += Issue("$propPath/enum", "TYPE", "\"enum\" must be an array")
             }
-            if (prop.containsKey("x-secret") && (prop["x-secret"] as? JsonPrimitive)?.content?.toBooleanStrictOrNull() == null) {
-                errors += Issue("$propPath/x-secret", "TYPE", "\"x-secret\" must be a boolean")
+            if (prop.containsKey("x-secret")) {
+                if (!allowSecret) {
+                    errors += Issue(
+                        "$propPath/x-secret", "RESERVED",
+                        "\"x-secret\" is valid only under profile_schema (a config value is stored in plaintext)",
+                    )
+                } else if ((prop["x-secret"] as? JsonPrimitive)?.content?.toBooleanStrictOrNull() == null) {
+                    errors += Issue("$propPath/x-secret", "TYPE", "\"x-secret\" must be a boolean")
+                }
             }
             if (prop.containsKey("x-ui") && prop["x-ui"] !is JsonObject) {
                 errors += Issue("$propPath/x-ui", "TYPE", "\"x-ui\" must be an object")

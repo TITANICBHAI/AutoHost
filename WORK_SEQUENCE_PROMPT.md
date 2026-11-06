@@ -6,6 +6,8 @@
 > verification allowed is static file checking (reading code/tests; `progress.py --check`,
 > `doc_check.py`, `licence_check.py`, the architecture scanner, `ast.parse`/brace sanity).
 > Every rule here defers to `AGENTS.md` §3 and `docs/AGENT_OPERATING_PROTOCOL.md`.
+>
+> **STATUS (2026-11-06): EXECUTED — W1 through W5.4 and W6.1–W6.4 are complete** (W5.5 was done earlier). All rows carry `(WRITTEN — static evidence under D-26)` in `docs/PROGRESS.md`. The remainder is mapped in `left.md`. Any NEW session starts from `left.md` + `AGENT_STATE.md`, not from this file's tables.
 
 ## 0. Mode rules (owner instructions, 2026-11-04/05 — bind every session on this file)
 

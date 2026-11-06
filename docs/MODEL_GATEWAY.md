@@ -1,6 +1,6 @@
 # MODEL_GATEWAY — the host's model client (`:core:llm`, Phase 13 Stage A)
 
-> **Status: DESIGN — nothing here is built or verified.** Decision record: ADR-090 (`docs/DECISIONS.md`). Consumer: `docs/AGENT_RUNTIME.md`. Facts about existing code carry paths (read 2026-10-29, static only). Numbers marked **(placeholder)** are tuned later.
+> **Status: WRITTEN — D-26 (2026-11-06).** The module exists (`:core:llm`, P13-01…07) with its JVM suites; nothing here is COMPILED or run yet (owner mode D-26 — see `docs/PROGRESS.md`). The design sections below remain the specification; the placeholder numbers are tuned by P13-16 later. Decision record: ADR-090 (`docs/DECISIONS.md`). Consumer: `docs/AGENT_RUNTIME.md`. Facts about existing code carry paths (read 2026-10-29, static only). Numbers marked **(placeholder)** are tuned later.
 > Scope: a **host-internal** service. Scripts cannot call a model in Stage A; a later `ai.llm` capability (if ever wanted) would be a thin provider over this module with its own ADR.
 
 ---
@@ -11,7 +11,7 @@
 |---|---|---|
 | No OkHttp/ktor dependency; engines use `HttpURLConnection` behind a seam | `gradle/libs.versions.toml`; ADR-090 context | the production engine is `java.net` only → it lives in the pure-JVM `:core:llm` and is tested with the JDK's own `HttpServer` |
 | `INTERNET` is declared in the **main** manifest, so `core` and `full` both have it | `app/src/main/AndroidManifest.xml:6` | AI features are gated by the *user setting*, not by flavor |
-| The manifest sets neither `usesCleartextTraffic` nor `networkSecurityConfig`; `res/xml/network_security_config.xml` does not exist, although `docs/ANDROID_MANIFEST.md` §2/§5 describe one | `app/src/main/AndroidManifest.xml`; ADR-096 | **PREDICTION (unverified):** at targetSdk 36 the platform default blocks cleartext, so even loopback `http` would fail until X-14 reconciles manifest and docs. The URL policy below is necessary but not sufficient |
+| X-14 RESOLVED (2026-11-06, W6.4): the manifest now carries `usesCleartextTraffic="false"` + `networkSecurityConfig="@xml/network_security_config"`, and the config denies cleartext everywhere EXCEPT the loopback hosts (127.0.0.1/localhost/10.0.2.2) — the loopback `http` the §4 policy allows when `ai_cleartext_loopback` is on is now platform-supported; the URL policy remains the runtime gate | `app/src/main/AndroidManifest.xml`; `app/src/main/res/xml/network_security_config.xml` | The platform compliance (a loopback call actually succeeding) is verified by G13-d when emulator work returns |
 | `SecretsProvider` is a typed NOT_FOUND stub; the flow runtime passes `secrets = emptyMap()` | `core/engine/.../host/SecretsProvider.kt`; `runtime/flow/.../FlowRuntimeProvider.kt:89` | the gateway must **not** go through the `secrets` capability; it reads the Keystore store directly (host side) |
 | `SecretStore` is per-profile (`put/get(profileId, key)`), AEAD via Keystore; `SecretRegistry` holds live values **in memory only** | `core/data/.../secrets/SecretStore.kt:33-114` | a key read after a process restart is **not** in the `Redactor` unless it is registered again → the gateway registers it at load |
 | `Redactor` also masks JSON keys named `api_key`, `authorization`, `token`, `secret`, `password` … | `SecretStore.kt:161` | helpful, not sufficient (a key can appear as a value anywhere) |

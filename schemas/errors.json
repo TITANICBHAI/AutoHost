@@ -602,6 +602,49 @@
       "params": [],
       "userMessage": "The agent claimed it finished, but the result was never confirmed.",
       "fixAction": null
+    },
+    {
+      "code": "STALE_OBSERVATION",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The agent used a screen element id from an older observation, so it was rejected."
+    },
+    {
+      "code": "ONE_ACTION_PER_TURN",
+      "kind": "run",
+      "params": [],
+      "userMessage": "Internal: the agent asked for more than one action in one turn; extras were not executed."
+    },
+    {
+      "code": "PASSWORD_FIELD",
+      "kind": "run",
+      "params": [],
+      "userMessage": "That field is a password field, so the agent is not allowed to type into it."
+    },
+    {
+      "code": "AI_GRANTS_TOO_BROAD",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The agent run needs app-scoped permissions, but a required grant resolved unrestricted.",
+      "fixAction": "OPEN_PERMISSION_REVIEW"
+    },
+    {
+      "code": "TOOL_NOT_ALLOWED",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The agent asked for a tool that is not in its allowlist, so it was refused."
+    },
+    {
+      "code": "UI_RUN_ACTIVE",
+      "kind": "run",
+      "params": [],
+      "userMessage": "Another UI run is active; only one UI run can run at a time."
+    },
+    {
+      "code": "BUDGET_INVALID",
+      "kind": "run",
+      "params": [],
+      "userMessage": "The run budgets are invalid (a budget of zero refuses to start)."
     }
   ],
   "fixActions": [

@@ -37,22 +37,22 @@ A tiny app (`app.autohost.fixture`, Compose or Views) that gives every test a **
 - `CanvasScreen` and `DynamicScreen` build their views programmatically by nature (custom drawing / a
   re-inflating ticker); everything else uses XML layouts with `@+id/fx_*` ids as before.
 
-## v4 additions (PLANNED — none exist yet; added by P12-12 and Phase 13, documented here in the same commit)
+## v4 additions (P12-12 added the six A1–A5 surfaces and R11 the two Phase-13 agent-safety surfaces — 2026-11-06; the BLOCKED-package mechanism is decided, see its row)
 Purpose: deterministic targets for the predicted action-layer defects (`docs/ACTION_HARDENING.md` §3, §5) and for the agent's safety tests (`docs/AGENT_RUNTIME.md` §14a).
 
-| Screen (planned) | Contents / ids | Used for |
+| Screen | Contents / ids | Used for |
 |---|---|---|
-| `ToggleScreen` | a switch/checkbox whose state flags (checked, selected) are mirrored into `fx_state`; a click counter | A2: one click flips once, never twice; state-aware fingerprint |
-| `TransitionScreen` | a button that navigates after `delay_ms` | A2: change detection after a delayed transition |
-| `SilentFieldScreen` | a field whose `ACTION_SET_TEXT` is accepted (`true`) but whose visible text does not change | A1: read-back verification and typed failure |
-| `ClickContainerScreen` | a large clickable container with a small child button off-centre | A5: coordinate fallback and hotspot promotion |
-| `NestedScrollScreen` | a vertical list inside another scrollable (horizontal pager) with a target at the end | A4: scroll inside bounds, correct container |
-| `GestureTargetScreen` | records tap / long-press / swipe with timestamps and an optional `delay_ms` before reacting | A3: awaited gestures |
-| `InjectionScreen` (Phase 13) | on-screen text that tries to widen grants or call tools outside the catalog | G13-b: untrusted-content handling |
-| `ApprovalScreen` (Phase 13) | buttons labelled with risky words that only increment `fx_state` counters | approval flow, label-word hints (not a security control) |
-| BLOCKED-package fixture (Phase 13) | a screen the run must never see — mechanism **UNDECIDED** (a second fixture package, or the fixture added to the user-extendable BLOCKED list; bundled entries cannot be overridden) — decided in P13-17 | G13-b: observation floor |
+| `ToggleScreen` (`fixture://screen/toggle`) | `fx_toggle` (Switch) whose checked flag is mirrored into `fx_state`; the click counter `fx_toggle` counts flips | A2: one click flips once, never twice; state-aware fingerprint |
+| `TransitionScreen` (`fixture://screen/transition`) | `fx_btn_transition` navigates back to home after `delay_ms` (default 700); `fx_transition_status` reads waiting → navigating → done | A2: change detection after a delayed transition |
+| `SilentFieldScreen` (`fixture://screen/silent`) | `fx_silent` accepts every `ACTION_SET_TEXT` but reverts to `locked`; `fx_silent_echo` shows the committed text | A1: read-back verification and typed failure |
+| `ClickContainerScreen` (`fixture://screen/container`) | `fx_container` (large, clickable, centre = dead zone) with `fx_btn_child` off-centre (bottom-right); separate counters | A5: coordinate fallback and hotspot promotion |
+| `NestedScrollScreen` (`fixture://screen/nested`) | `fx_pager` (horizontal) whose page 2 holds `fx_list` (vertical, 60 items, `TARGET-60` last) | A4: scroll inside bounds, correct container |
+| `GestureTargetScreen` (`fixture://screen/gesture`) | `fx_gesture` classifies tap / long-press / swipe from raw events (with timestamps in `last_event`); optional `delay_ms` before recording | A3: awaited gestures |
+| `InjectionScreen` (`fixture://screen/injection`) | six grant-widening / catalog-escape / goal-rewrite probes as visible text (`fx_injection_text`); `fx_injection_obeyed` must stay 0 | G13-b: untrusted-content handling |
+| `ApprovalScreen` (`fixture://screen/approval`) | buttons labelled with the hint vocabulary (pay/delete/confirm/uninstall/order) + the word-matching control ("Border radius"); each drives only its `fx_state` counter | approval flow, label-word hints (not a security control) |
+| BLOCKED-package fixture — DECIDED (R11, 2026-11-06): the **user-extendable BLOCKED list with the fixture's own package** — the G13-b scenario adds `app.autohost.fixture` to the user additions (AppSensitivity's `userAdded`) before the run and asserts the whole fixture observation is withheld (`FOREIGN_OR_BLOCKED_APP`); InjectionScreen doubles as "the screen the run must never see". A second fixture APK was rejected: the observation floor works per-package at the filter, so marking the existing package needs no new build, and the in-test snapshots (AgentSecuritySuiteTest) already pin the floor logic | the fixture screen marked BLOCKED at test setup | G13-b: observation floor |
 
-Existing screens reused as they are: `TextFieldScreen` (plain field), `DelayedButtonScreen`, `ListScreen`, `UnboundedRangeScreen`. Every new screen carries the `fx_state` mirror and a `fixture://screen/<name>` route like the others.
+Existing screens reused as they are: `TextFieldScreen` (the plain field of A1), `DelayedButtonScreen`, `ListScreen`, `UnboundedRangeScreen`. Every new screen carries the `fx_state` mirror and a `fixture://screen/<name>` route like the others.
 
 ## Test conventions
 - Instrumented tests install the fixture next to AutoHost, run **real Python/flow tasks** from `testing/fixtures/tasks/*` through the real service stack, then assert via the state readout.

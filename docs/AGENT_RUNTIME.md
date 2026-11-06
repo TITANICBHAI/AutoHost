@@ -1,6 +1,6 @@
 # AGENT_RUNTIME — the optional, host-owned AI agent runtime (Phase 13)
 
-> **Status: DESIGN. Nothing in this document is built, compiled or verified.** It specifies what the implementing agent builds in Phase 13 (`docs/PROGRESS.md`), under ADR-086…098 (`docs/DECISIONS.md`). Facts about the *existing* code carry a path and were read on 2026-10-29 (static reading only — Gradle and Android were unavailable). Numbers marked **(placeholder)** are tuned by the eval harness (P13-16), never taken as measured.
+> **Status: WRITTEN — D-26 (2026-11-06).** Phase 13 Stage A is written end to end (P13-01…17 minus the D-24/25-blocked rows) with its JVM suites; nothing is COMPILED or run yet (owner mode D-26 — `docs/PROGRESS.md` carries the per-row evidence). This document remains the specification; §16's placeholder numbers stand until P13-16 measures them. It specifies what the implementing agent builds in Phase 13 (`docs/PROGRESS.md`), under ADR-086…098 (`docs/DECISIONS.md`). Facts about the *existing* code carry a path and were read on 2026-10-29 (static reading only — Gradle and Android were unavailable). Numbers marked **(placeholder)** are tuned by the eval harness (P13-16), never taken as measured.
 > Precedence: `plan.md` §3.2/§7.12/§18 > this file. If they disagree, log it in `docs/DECISIONS.md`.
 
 Related: `docs/MODEL_GATEWAY.md` (the model client), `docs/ACTION_HARDENING.md` (the layer the agent leans on), `docs/LOCAL_INFERENCE.md` (Phase 16), `docs/REUSE_MATRIX.md` (what may be adapted), `docs/UI_SPEC.md` §RunCapsule (Phase 14), `drafts/agent.schema.draft.json` (Stage B manifest block).
@@ -96,7 +96,7 @@ Fakes live in each module's test sources (or `testFixtures`): `FakeLlm` (scripte
 | `execution.maxAttempts` / `autoResume` | `1` / `false` | an interrupted agent run is **never** silently re-run (`autoResume` defaults to `true` in `Execution`, `TaskManifest.kt:61`) |
 | `execution.minIntervalMinutes`, `ui`, `configSchema`, `profileSchema`, `usesPacks` | null / empty | |
 
-**Known gap to close in P13-12:** `AppGraph.kt:1358-1369` reads the idle budget from the *database* manifest (`data.tasks.latestVersion(taskId)`) and falls back to 300 s, so a non-persisted manifest silently gets 300 s. The orchestrator already holds the in-memory `StartRequest` (`requests[runId]`); `idleLimitMsFor` must prefer `requests[runId].manifest.execution` (X-16 covers the general fix).
+**Gap CLOSED (X-16, 2026-11-05):** `RunOrchestrator.idleLimitMsFor` now prefers the in-memory `requests[runId].manifest` (`RunOrchestrator.kt:278-282`) — a synthesized (non-persisted) manifest never silently falls back to the 300 s default; the AppGraph DB read remains only as the fallback for runs whose request is gone. (The original gap text: `AppGraph.kt:1358-1369` read the idle budget from the *database* manifest and fell back to 300 s.)
 
 ### 4.2 `config.agent` (reserved run-config key; ADR-080 precedent — no AIDL / `RunSpec` change)
 

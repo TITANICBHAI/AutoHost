@@ -11,31 +11,94 @@ import kotlin.math.abs
  */
 object NodeActions {
 
+    /** Stroke durations for the coordinate fallback (Gestures' legacy defaults, kept identical). */
+    const val GESTURE_TAP_MS = 60L
+    const val GESTURE_LONG_PRESS_MS = 600L
+
     enum class Route { NODE, PARENT, COORDINATE }
 
     data class ClickOutcome(val route: Route?, val verified: Boolean)
 
-    fun click(service: AccessibilityService, info: AccessibilityNodeInfo): ClickOutcome {
-        if (perform(info, AccessibilityNodeInfo.ACTION_CLICK)) return ClickOutcome(Route.NODE, true)
+    fun click(service: AccessibilityService, info: AccessibilityNodeInfo): ClickOutcome =
+        runNodeChain(info, AccessibilityNodeInfo.ACTION_CLICK) { rect ->
+            val dispatched = Gestures.tap(service, rect.exactCenterX(), rect.exactCenterY())
+            ClickOutcome(if (dispatched) Route.COORDINATE else null, dispatched)
+        }
+
+    fun longClick(service: AccessibilityService, info: AccessibilityNodeInfo): ClickOutcome =
+        runNodeChain(info, AccessibilityNodeInfo.ACTION_LONG_CLICK) { rect ->
+            val dispatched = Gestures.longPress(service, rect.exactCenterX(), rect.exactCenterY())
+            ClickOutcome(if (dispatched) Route.COORDINATE else null, dispatched)
+        }
+
+    /**
+     * P12-07 (A3/RM-A2 integration): the click chain with the coordinate stroke **awaited**.
+     * The node/parent routes are identical to [click]; the coordinate fallback goes through
+     * [GestureInjector.awaitStroke], so a refused/cancelled/hung stroke is a typed not-dispatched
+     * outcome — never "dispatchGesture returned true" mistaken for "the tap happened".
+     */
+    suspend fun awaitedClick(
+        service: AccessibilityService?,
+        info: AccessibilityNodeInfo,
+        tapTimeoutSource: GestureInjector.TapTimeoutSource = ViewTapTimeoutSource,
+        timeoutMs: Long = GestureInjector.DEFAULT_TIMEOUT_MS,
+    ): ClickOutcome = runNodeChain(info, AccessibilityNodeInfo.ACTION_CLICK) { rect ->
+        awaitedOutcome(
+            GestureInjector.awaitStroke(
+                ServiceGestureDispatcher { service },
+                rect.exactCenterX(), rect.exactCenterY(), rect.exactCenterX(), rect.exactCenterY(),
+                durationMs = GESTURE_TAP_MS,
+                tapTimeoutSource = tapTimeoutSource,
+                timeoutMs = timeoutMs,
+            ),
+        )
+    }
+
+    /** The awaited long-press chain (the coordinate fallback awaits a long-press stroke). */
+    suspend fun awaitedLongClick(
+        service: AccessibilityService?,
+        info: AccessibilityNodeInfo,
+        tapTimeoutSource: GestureInjector.TapTimeoutSource = ViewTapTimeoutSource,
+        timeoutMs: Long = GestureInjector.DEFAULT_TIMEOUT_MS,
+    ): ClickOutcome = runNodeChain(info, AccessibilityNodeInfo.ACTION_LONG_CLICK) { rect ->
+        awaitedOutcome(
+            GestureInjector.awaitStroke(
+                ServiceGestureDispatcher { service },
+                rect.exactCenterX(), rect.exactCenterY(), rect.exactCenterX(), rect.exactCenterY(),
+                durationMs = GESTURE_LONG_PRESS_MS,
+                tapTimeoutSource = tapTimeoutSource,
+                timeoutMs = timeoutMs,
+            ),
+        )
+    }
+
+    /**
+     * The pure outcome mapping (P12-07): an awaited stroke counts as a coordinate click ONLY when
+     * the OS callback reported completion — Refused/Cancelled/TimedOut are all not-dispatched
+     * (route=null), which the provider reports as the typed NOT_DISPATCHED error.
+     */
+    fun awaitedOutcome(result: GestureInjector.Result): ClickOutcome = when (result) {
+        GestureInjector.Result.Injected -> ClickOutcome(Route.COORDINATE, true)
+        else -> ClickOutcome(null, false)
+    }
+
+    /** The shared node→ancestor→coordinate chain; the coordinate step is the caller's policy. */
+    private inline fun runNodeChain(
+        info: AccessibilityNodeInfo,
+        action: Int,
+        coordinateFallback: (android.graphics.Rect) -> ClickOutcome,
+    ): ClickOutcome {
+        if (perform(info, action)) return ClickOutcome(Route.NODE, true)
         var ancestor = safeParent(info)
         var hops = 0
         while (ancestor != null && hops < 8) {
-            if (ancestor.isClickable && perform(ancestor, AccessibilityNodeInfo.ACTION_CLICK)) {
+            if (ancestor.isClickable && perform(ancestor, action)) {
                 return ClickOutcome(Route.PARENT, true)
             }
             ancestor = safeParent(ancestor)
             hops++
         }
-        val rect = UiTreeBuilder.safeBounds(info)
-        val dispatched = Gestures.tap(service, rect.exactCenterX(), rect.exactCenterY())
-        return ClickOutcome(if (dispatched) Route.COORDINATE else null, dispatched)
-    }
-
-    fun longClick(service: AccessibilityService, info: AccessibilityNodeInfo): ClickOutcome {
-        if (perform(info, AccessibilityNodeInfo.ACTION_LONG_CLICK)) return ClickOutcome(Route.NODE, true)
-        val rect = UiTreeBuilder.safeBounds(info)
-        val dispatched = Gestures.longPress(service, rect.exactCenterX(), rect.exactCenterY())
-        return ClickOutcome(if (dispatched) Route.COORDINATE else null, dispatched)
+        return coordinateFallback(UiTreeBuilder.safeBounds(info))
     }
 
     /**

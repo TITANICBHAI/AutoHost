@@ -1,0 +1,30 @@
+{
+  "note": "P13-16 (RM-G1 adapted, clean-room): recorded baselines for the JVM eval runner (AgentEvalHarnessTest, :runtime:agent). The runner FAILS on expect-clause violations and reports MOVEMENT against these numbers (steps / model_calls / executed tools); a movement failure means behaviour changed — re-record DELIBERATELY by editing this file in the same change. The fixture-app half of G13-e (real device model over the stub server) stays behind git/CI hand-back and is NOT covered here.",
+  "recorded": "2026-11-06",
+  "scenarios": {
+    "toggle-once": {
+      "status": "pass",
+      "steps": 2,
+      "model_calls": 2,
+      "executed_tools": ["ui_click", "finish"]
+    },
+    "scroll-then-click": {
+      "status": "pass",
+      "steps": 3,
+      "model_calls": 3,
+      "executed_tools": ["ui_scroll_until", "ui_click", "finish"]
+    },
+    "blocked-screen-finishes": {
+      "status": "pass",
+      "steps": 1,
+      "model_calls": 1,
+      "executed_tools": ["finish"]
+    },
+    "nudge-recovers": {
+      "status": "pass",
+      "steps": 2,
+      "model_calls": 3,
+      "executed_tools": ["ui_click", "finish"]
+    }
+  }
+}

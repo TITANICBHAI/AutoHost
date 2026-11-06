@@ -76,7 +76,28 @@ fun AppNavHost(
         Routes.SETTINGS -> {
             val graph = (activity.application as app.autohost.AutoHostApp).graph
             androidx.compose.material3.Surface {
-                SettingsScreen(graph, onOpenHealth = { onNavigate(Routes.HEALTH, null) }, onOpenSurfaces = { onNavigate(Routes.SURFACES, null) })
+                SettingsScreen(
+                    graph,
+                    onOpenHealth = { onNavigate(Routes.HEALTH, null) },
+                    onOpenSurfaces = { onNavigate(Routes.SURFACES, null) },
+                    onOpenAiSettings = { onNavigate(Routes.AI_SETTINGS, null) },
+                )
+            }
+        }
+        Routes.AI_SETTINGS -> {
+            val graph = (activity.application as app.autohost.AutoHostApp).graph
+            androidx.compose.material3.Surface {
+                AiSettingsHost(graph, onBack = { onNavigate(Routes.SETTINGS, null) })
+            }
+        }
+        Routes.ASK -> {
+            val graph = (activity.application as app.autohost.AutoHostApp).graph
+            androidx.compose.material3.Surface {
+                AskSheetHost(
+                    graph,
+                    onBack = { onNavigate(Routes.LIBRARY, null) },
+                    onOpenRun = { runId -> onNavigate(Routes.RUN, runId) },
+                )
             }
         }
         Routes.SURFACES -> {
@@ -164,6 +185,8 @@ fun LibraryScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit)
             Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = { onNavigate(Routes.RUNS_HISTORY, null) }) { Text("History") }
+                // P14-07 (S33): the Ask bar's entry point sits beside the templates entry
+                OutlinedButton(onClick = { onNavigate(Routes.ASK, null) }) { Text("Ask") }
                 OutlinedButton(onClick = { showTemplates = true }) { Text("+ Template") }
                 // P6-09: record a flow — arms the a11y tap; the ● REC overlay (a11y service
                 // window) stays visible over other apps and its Stop parks the session. Android
@@ -213,20 +236,11 @@ fun LibraryScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit)
                             )
                             Button(
                                 onClick = {
-                                    val record = graph.orchestrator.start(
-                                        app.autohost.core.engine.orchestrator.StartRequest(
-                                            taskId = task.taskId,
-                                            taskName = task.name,
-                                            manifest = task.manifest,
-                                            config = task.config,
-                                            profile = kotlinx.serialization.json.JsonObject(emptyMap()),
-                                            profileId = null,
-                                            taskPath = task.dir.absolutePath,
-                                            runDir = java.io.File(
-                                                graph.runsRoot(),
-                                                app.autohost.core.common.Ids.ulid(graph.clock.nowMs()),
-                                            ).absolutePath,
-                                        ),
+                                    // X-19: dev-folder starts go through the facade — the inline
+                                    // StartRequest bypassed the packs injection (ADR-089 prediction,
+                                    // fixed by the DevTaskStarter extraction)
+                                    val record = graph.devTaskStarter.start(
+                                        task.taskId, task.name, task.manifest, task.config, task.dir.absolutePath,
                                     ).getOrNull()
                                     if (record != null) onNavigate(Routes.RUN, record.runId)
                                 },

@@ -52,9 +52,10 @@ back it up OFFLINE (the registered package is bound to this key — losing it lo
 | Webhooks | localhost, token-mandatory | `WebhookServer` (ADR-061) |
 | Insecure-feature switches | all OFF (deny wins) | `InsecureFeatures` + tests |
 | Import guard (raw bridge) | ON | `ImportPipeline(rawBridgeGuard = true)` |
-| Cleartext traffic | no `usesCleartextTraffic`; `net.http` allows https (+ http by explicit task scope policy) | `NetPolicy` + manifest |
+| Cleartext traffic | manifest `usesCleartextTraffic="false"` + the NSC: base deny, loopback-only allow (127.0.0.1/localhost/10.0.2.2, gated by the audited `ai_cleartext_loopback` switch at the URL-policy layer); `net.http` allows https (+ http by explicit task scope policy) | `NetPolicy` + manifest + `network_security_config.xml` (X-14, W6.4) |
 | Backup | secrets never exported (names only) | `BackupCodec` refusal rules (ADR-082) |
 | Log/evidence retention | 30/14 days, redacted | retention sweeper + `Redactor` |
+| **Tree-drift guard** | every row above that is a TREE FACT is asserted by `ReleaseHardeningTest` (app) — flipping a manifest attribute or an NSC line fails the suite | `app/src/test/.../ReleaseHardeningTest.kt` (X-05) |
 
 ## 4. Licence hygiene (Gate 11-e, CI-enforced)
 

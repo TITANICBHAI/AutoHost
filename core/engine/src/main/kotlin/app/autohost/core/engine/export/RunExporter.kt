@@ -25,6 +25,8 @@ class RunExporter(private val formatVersion: Int = 1) {
         val incidentsJson: String,
         val environmentJson: String,
         val evidence: List<EvidenceFile> = emptyList(),
+        /** P13-15 (AGENT_RUNTIME §11): the agent section — present for agent runs only. */
+        val agentJson: String? = null,
     ) {
         data class EvidenceFile(val name: String, val bytes: ByteArray)
     }
@@ -40,6 +42,7 @@ class RunExporter(private val formatVersion: Int = 1) {
             put(zip, "audit.jsonl", bundle.auditJsonl)
             put(zip, "incidents.json", bundle.incidentsJson)
             put(zip, "environment.json", bundle.environmentJson)
+            bundle.agentJson?.let { put(zip, "agent.json", it) }
             for (file in bundle.evidence) {
                 putBytes(zip, "evidence/${file.name}", file.bytes)
             }
@@ -58,8 +61,9 @@ class RunExporter(private val formatVersion: Int = 1) {
         |- audit.jsonl       every broker call with capability, method, outcome and duration
         |- incidents.json    incidents opened by failed actions; resolved ones carry resolvedAtMs
         |- checkpoint.json   the last saved run checkpoint (secrets stripped; null when none)
-        |- environment.json  device model, API level, host version, providers
-        |- evidence/         screenshots and dumps referenced by the events (when retained)
+|- environment.json  device model, API level, host version, providers
+|- agent.json        the agent section: goal, budgets, usage counters, trace bounds with the visible drop counter (agent runs only)
+|- evidence/         screenshots and dumps referenced by the events (when retained)
         |
         |Secrets are redacted at capture time in the worker and again on the host; if a secret value
         |appears here anyway, it was never registered as a secret.

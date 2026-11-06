@@ -45,6 +45,16 @@ class DeepLinkActivity : Activity() {
         "notification" -> NotificationScreenActivity::class.java
         "crash" -> CrashScreenActivity::class.java
         "locale" -> LocaleScreenActivity::class.java
+        // v4 action-hardening surfaces (P12-12, docs/FIXTURE_APP.md)
+        "toggle" -> ToggleScreenActivity::class.java
+        "transition" -> TransitionScreenActivity::class.java
+        "silent" -> SilentFieldScreenActivity::class.java
+        "container" -> ClickContainerScreenActivity::class.java
+        "nested" -> NestedScrollScreenActivity::class.java
+        "gesture" -> GestureTargetScreenActivity::class.java
+        // Phase-13 agent-safety surfaces (P13-17/R11)
+        "injection" -> InjectionScreenActivity::class.java
+        "approval" -> ApprovalScreenActivity::class.java
         else -> HomeActivity::class.java
     }
 }

@@ -1,0 +1,239 @@
+{
+  "_note": "RM-C7 (P13-10): the AgentView render golden vectors. Consumed by AgentViewGoldenTest (runtime/agent) which runs the REAL AgentView against these cases. The expected values were hand-derived from AGENT_RUNTIME §7.3's rules (the same ones AgentViewTest pins inline): generation-local [n] ids, the CompactDump keep rule, flag order (clickable,checked,editable,scrollable,focused,selected + rest sorted), the {password} marker, the caps, and the state-aware fingerprint (focused excluded, sorted lines).",
+  "screen_size": [
+    1080,
+    2400
+  ],
+  "cases": [
+    {
+      "name": "settings_screen_password_and_keep_rule",
+      "generation": 7,
+      "observation": {
+        "package": "com.android.settings",
+        "keyboard": "hidden",
+        "node_count": 4,
+        "nodes": [
+          {
+            "ref": "ref-1",
+            "pkg": "com.android.settings",
+            "class": "android.widget.Switch",
+            "id": "dnd",
+            "text": "",
+            "desc": "Do Not Disturb",
+            "bounds": [
+              40,
+              812,
+              1040,
+              940
+            ],
+            "flags": [
+              "clickable",
+              "checked"
+            ],
+            "index": 0
+          },
+          {
+            "ref": "ref-2",
+            "pkg": "com.android.settings",
+            "class": "android.widget.EditText",
+            "id": "search",
+            "text": "Search settings",
+            "desc": "",
+            "bounds": [
+              24,
+              120,
+              1056,
+              200
+            ],
+            "flags": [
+              "editable",
+              "focused"
+            ],
+            "index": 1
+          },
+          {
+            "ref": "ref-3",
+            "pkg": "com.android.settings",
+            "class": "android.widget.EditText",
+            "id": "pw",
+            "text": "",
+            "desc": "",
+            "bounds": [
+              24,
+              240,
+              1056,
+              320
+            ],
+            "flags": [
+              "clickable",
+              "editable",
+              "password"
+            ],
+            "index": 2
+          },
+          {
+            "ref": "ref-4",
+            "pkg": "com.android.settings",
+            "class": "android.widget.Button",
+            "id": "tiny",
+            "text": "off-screen",
+            "desc": "",
+            "bounds": [
+              0,
+              3000,
+              100,
+              3100
+            ],
+            "flags": [
+              "clickable"
+            ],
+            "index": 3
+          }
+        ]
+      },
+      "expected_render": "SCREEN gen=7 app=com.android.settings keyboard=hidden shown=3/4 truncated=no\n[1] Switch \"dnd\" \"Do Not Disturb\" {clickable,checked} (40,812,1040,940)\n[2] EditText \"search\" \"Search settings\" {editable,focused} (24,120,1056,200)\n[3] EditText \"pw\" \"{password}\" {clickable,editable,password} (24,240,1056,320)",
+      "expected_fingerprint": "android.widget.EditText|pw||clickable,editable,password|24,240,1056,320\nandroid.widget.EditText|search|Search settings|editable|24,120,1056,200\nandroid.widget.Switch|dnd|Do Not Disturb|checked,clickable|40,812,1040,940",
+      "expected_index": {
+        "1": {
+          "ref": "ref-1",
+          "pkg": "com.android.settings",
+          "flags": [
+            "clickable",
+            "checked"
+          ],
+          "bounds": [
+            40,
+            812,
+            1040,
+            940
+          ]
+        },
+        "2": {
+          "ref": "ref-2",
+          "pkg": "com.android.settings",
+          "flags": [
+            "editable",
+            "focused"
+          ],
+          "bounds": [
+            24,
+            120,
+            1056,
+            200
+          ]
+        },
+        "3": {
+          "ref": "ref-3",
+          "pkg": "com.android.settings",
+          "flags": [
+            "clickable",
+            "editable",
+            "password"
+          ],
+          "bounds": [
+            24,
+            240,
+            1056,
+            320
+          ]
+        }
+      }
+    },
+    {
+      "name": "cap_and_truncation",
+      "generation": 1,
+      "observation": {
+        "package": "com.x",
+        "keyboard": "visible",
+        "node_count": 3,
+        "nodes": [
+          {
+            "ref": "ref-0",
+            "pkg": "com.x",
+            "class": "android.widget.Button",
+            "id": "b0",
+            "text": "B0",
+            "desc": "",
+            "bounds": [
+              0,
+              0,
+              100,
+              15
+            ],
+            "flags": [
+              "clickable"
+            ],
+            "index": 0
+          },
+          {
+            "ref": "ref-1",
+            "pkg": "com.x",
+            "class": "android.widget.Button",
+            "id": "b1",
+            "text": "B1",
+            "desc": "",
+            "bounds": [
+              0,
+              20,
+              100,
+              35
+            ],
+            "flags": [
+              "clickable"
+            ],
+            "index": 1
+          },
+          {
+            "ref": "ref-2",
+            "pkg": "com.x",
+            "class": "android.widget.Button",
+            "id": "b2",
+            "text": "B2",
+            "desc": "",
+            "bounds": [
+              0,
+              40,
+              100,
+              55
+            ],
+            "flags": [
+              "clickable"
+            ],
+            "index": 2
+          }
+        ]
+      },
+      "max_nodes": 2,
+      "expected_render": "SCREEN gen=1 app=com.x keyboard=visible shown=2/3 truncated=yes\n[1] Button \"b0\" \"B0\" {clickable} (0,0,100,15)\n[2] Button \"b1\" \"B1\" {clickable} (0,20,100,35)",
+      "expected_fingerprint": "android.widget.Button|b0|B0|clickable|0,0,100,15\nandroid.widget.Button|b1|B1|clickable|0,20,100,35\nandroid.widget.Button|b2|B2|clickable|0,40,100,55",
+      "expected_index": {
+        "1": {
+          "ref": "ref-0",
+          "pkg": "com.x",
+          "flags": [
+            "clickable"
+          ],
+          "bounds": [
+            0,
+            0,
+            100,
+            15
+          ]
+        },
+        "2": {
+          "ref": "ref-1",
+          "pkg": "com.x",
+          "flags": [
+            "clickable"
+          ],
+          "bounds": [
+            0,
+            20,
+            100,
+            35
+          ]
+        }
+      }
+    }
+  ]
+}

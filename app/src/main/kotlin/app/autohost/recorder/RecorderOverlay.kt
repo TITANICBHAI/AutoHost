@@ -9,6 +9,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import app.autohost.capabilities.a11y.A11yBridge
+import app.autohost.surfaces.OverlayWindowFlags
 
 /**
  * P6-09: the recorder overlay (plan §7.9, UI_SPEC S18) — a small always-on-top strip showing
@@ -62,9 +63,8 @@ class RecorderOverlay(
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            OverlayWindowFlags.TYPE,
+            OverlayWindowFlags.RECORDER,
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL

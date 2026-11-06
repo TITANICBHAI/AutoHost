@@ -82,6 +82,14 @@ class SecretStore(
         // values are gone from the store; the redactor keeps name-agnostic patterns for the session only
     }
 
+    /**
+     * P14-06: deletes ONE secret — a deleted provider profile's key. Under HOST_SCOPE this
+     * removes only that provider's key, never the whole host scope (§3's rule preserved).
+     */
+    suspend fun delete(profileId: String, key: String) {
+        dao.delete(profileId, key)
+    }
+
     /** The grant view of secrets: only the key names ever appear in reviews or exports (plan §9.1). */
     fun declaredKeys(secretKeys: List<String>): JsonObject = buildJsonObject {
         put("keys", secretKeys.joinToString(", "))

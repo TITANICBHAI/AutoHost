@@ -200,7 +200,7 @@ Shown inside the Dev API card once a token exists: a `ws://pc-host:8090` URL fie
 ### S27 — Task Studio (P11-05, Library → Studio)
 Three modes behind one tab row: **Tasks** (New-task card: id + name + a python/flow/javascript runtime selector; the dev-folder task list with Edit), **Repo** (index URL field + Load, then per-entry cards: title, `id · version · verdict message`, and Install/Upgrade buttons only for verdicts that allow them — UpToDate/Rejected rows state their case), **Editor** (Name / Description / Version fields, the entry file in a monospace editor, Save (validates) + Validate buttons, and the standing note: "Drafts live in the dev folder… Studio never edits installed bundles"). Validation messages are the ManifestValidator's own strings — the Studio never paraphrases the rules it enforces.
 
-## 10. v4 — Phase 14 surfaces for the optional agent (PLANNED; nothing built; ADR-094)
+## 10. v4 — Phase 14 surfaces for the optional agent (WRITTEN — D-26: S28–S33 exist as state holders + tests + composables; compile deferred; ADR-094)
 Principle: take ClosePaw's **structure**, not its identity. Its design docs (capsule architecture, state machine, overlay rules, style grid) are *references*; its Compose code is **not** copied (REUSE_MATRIX RM-F3 = rewrite) and its brand — palette, fonts, glyph, ornaments — is not adopted. All numbers below are candidates from the reference style doc, to be confirmed in P14-01.
 
 - **Tokens (P14-01, `:core:designsystem`):** 4 dp grid (candidate steps 4/8/12/20/32 dp), radii (candidate 8/10/16 dp), motion durations (candidate 120/240/480/900 ms, no springs), a `reducedMotion()` contract that every animation honours; light and dark; unit-tested.

@@ -62,8 +62,11 @@ class AppProvider(
     override suspend fun invoke(ctx: CallContext, method: String, args: kotlinx.serialization.json.JsonObject): Envelope {
         return when (method) {
             "query" -> query(args)
-            "list" -> list(args)
-            "foreground" -> foregroundInfo()
+            // P12-17 (A9): list/foreground honour the granted packages — `list` under a
+            // restricted device.app.query grant returns ONLY the granted packages, and the
+            // foreground of an out-of-scope app is redacted to {in_scope:false}, never named.
+            "list" -> list(args, ctx.scopePackages("device.app.query"))
+            "foreground" -> foregroundInfo(ctx.scopePackages("device.app.query"))
             "wait_foreground" -> waitForeground(args)
             "launch" -> launch(args)
             "stop" -> stop(args)
@@ -86,9 +89,9 @@ class AppProvider(
         )
     }
 
-    private fun list(args: kotlinx.serialization.json.JsonObject): Envelope {
+    private fun list(args: kotlinx.serialization.json.JsonObject, granted: Set<String>?): Envelope {
         val filter = args["filter"]?.let { it as? JsonPrimitive }?.content
-        val apps = packages.list(filter)
+        val apps = packages.list(filter).filter { granted == null || it.pkg in granted }
         return Envelope.ok(
             buildJsonObject {
                 put(
@@ -106,9 +109,14 @@ class AppProvider(
         )
     }
 
-    private fun foregroundInfo(): Envelope {
+    private fun foregroundInfo(granted: Set<String>?): Envelope {
         val current = foreground.current()
             ?: return Envelope.err(ErrorCode.NOT_FOUND, "nothing tracked in the foreground yet", reason = "NO_FOREGROUND")
+        if (granted != null && current.pkg !in granted) {
+            // ADR-098 (4): the real foreground package is never named outside the grant — the
+            // same redaction shape the agent's observation floor uses.
+            return Envelope.ok(buildJsonObject { put("in_scope", false) })
+        }
         return Envelope.ok(
             buildJsonObject {
                 put("package", current.pkg)

@@ -236,19 +236,19 @@ tests/ …  tests/mcp-evals/*.yaml
 | `sdk-python/autohost/**/*.pyi` | same path |
 | `schemas/*`, `samples/*`, `prompts/*`, `tools/progress.py`, `docs/*`, `AGENTS.md`, `plan.md`, `THIRD_PARTY_NOTICES.md` | same path |
 
-## 7. v4 additions (PLANNED — nothing here exists in the tree unless marked *exists*)
+## 7. v4 additions (rows marked WRITTEN — D-26 exist in the tree; compile+test deferred to the git/CI hand-back)
 Source of truth for scope: `plan.md` §7.11, §17 and Phases 12–16; task IDs in `docs/PROGRESS.md`.
 
 | Path | What | Tasks | State |
 |---|---|---|---|
-| `core/llm/` → `:core:llm` (pure JVM) | provider-neutral types, OpenAI-compatible non-streaming codec, URL policy (`BaseUrlValidator`), retry, reason codes, host-key reader seam, `LlmGateway`; the production `HttpUrlConnection` engine is wired in `:app` | P13-01…07 | PLANNED |
-| `runtime/agent/` → `:runtime:agent` (pure JVM, in-process) | loop and budgets, stuck detector, `AppSensitivity`, generated tool catalog, `AgentView`, tool pipeline/policy and approvals, completion verifier, event log | P13-08…P13-17 (the provider glue P13-12 lives in `:app`) | PLANNED |
-| `app/.../AgentRuntimeProvider` | registered beside the flow runtime; started only by the internal "Ask" path in Stage A | P13-12 | PLANNED |
-| `testing/stub-model/stub_model.py` | scripted OpenAI-compatible server reached with `adb reverse` | P13-06 | PLANNED |
-| `testing/agent-evals/` | scenarios with `expect` clauses + recorded baselines | P13-16 | PLANNED |
-| `testing/golden/` | golden vectors (codec, tool catalog) | Phase 13 | PLANNED |
-| `core/designsystem` tokens, `RunCapsule`, `RunCapsuleState` | Phase 14 | P14-01, P14-02 | PLANNED |
-| Gradle flavor dimension `runtime` = `py` \| `lite` | second dimension beside the existing `tier` (`app/build.gradle.kts:24`) | P15-03 | PLANNED |
+| `core/llm/` → `:core:llm` (pure JVM) | provider-neutral types, OpenAI-compatible non-streaming codec, URL policy (`BaseUrlValidator`), retry, reason codes, host-key reader seam, `LlmGateway`; the production `HttpUrlConnection` engine is wired in `:app` | P13-01…07 | WRITTEN — D-26 |
+| `runtime/agent/` → `:runtime:agent` (pure JVM, in-process) | loop and budgets, stuck detector, `AppSensitivity`, generated tool catalog, `AgentView`, tool pipeline/policy and approvals, completion verifier, event log | P13-08…P13-17 (the provider glue P13-12 lives in `:app`) | WRITTEN — D-26 |
+| `app/.../AgentRuntimeProvider` | registered beside the flow runtime; started only by the internal "Ask" path in Stage A | P13-12 | WRITTEN — D-26 |
+| `testing/stub-model/stub_model.py` | scripted OpenAI-compatible server reached with `adb reverse` | P13-06 | WRITTEN — D-26 |
+| `testing/agent-evals/` | eval scenarios (`scenarios/*.json`: goal, static observation, canned tool results, a FakeLlm script, `expect{finished,tools,not_tools,max_steps,contains,not_contains}`) + `baselines.json` (movement-only) + `run_stub_eval.py` (the G13-e device half, dormant under D-24/D-25); the JVM runner is `AgentEvalHarnessTest` in `:runtime:agent` | P13-16 | WRITTEN — D-26 |
+| `testing/golden/` | golden vectors (codec, tool catalog) | Phase 13 | WRITTEN — D-26 |
+| `core/designsystem` tokens, `RunCapsule`, `RunCapsuleState` | Phase 14 | P14-01, P14-02 | WRITTEN — D-26 |
+| Gradle flavor dimension `runtime` = `py` \| `lite` | second dimension beside the existing `tier` (`app/build.gradle.kts:24`) — WRITTEN — D-26 | P15-03 | PLANNED |
 | optional `:llm` process module | isolated local inference, **only if spike S6 passes** | P16-02 | PLANNED |
 | `reference/` | findings, verbatim Apache-2.0 snapshots (ClosePaw/opendroid files named in `docs/REUSE_MATRIX.md`), manifests; **never** on any Gradle/Python/test source set; `INDEX.md` lists every file with its licence status | v4 pass | *exists* |
 | `drafts/` | `agent.schema.draft.json` (+ README); promoted by P13-18 or deleted | v4 pass | *exists* |

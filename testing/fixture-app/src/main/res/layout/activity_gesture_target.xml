@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="16dp">
+
+    <!-- A3: the raw-event gesture target (tap / long-press / swipe). -->
+    <View android:id="@id/fx_gesture"
+        android:layout_width="match_parent" android:layout_height="300dp"
+        android:background="#66FF8800" />
+
+    <TextView android:id="@id/fx_gesture_status"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="tap, long-press or swipe the orange area" />
+
+    <TextView android:id="@id/fx_state"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:textSize="10sp" android:text="{}" />
+</LinearLayout>

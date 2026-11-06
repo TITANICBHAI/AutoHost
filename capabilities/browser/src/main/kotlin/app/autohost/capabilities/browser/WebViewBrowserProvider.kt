@@ -82,17 +82,30 @@ class WebViewBrowserProvider(
 
     override fun permissionFor(method: String, args: JsonObject): String? = BrowserPolicy.permissionFor(method)
 
-    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope = when (method) {
-        "open" -> open(ctx, args)
-        "navigate" -> navigate(ctx, args)
-        "click" -> click(ctx, args)
-        "type" -> type(ctx, args)
-        "extract" -> extract(ctx, args)
-        "cookies" -> cookies(ctx, args)
-        "clear_cookies" -> clearCookies(ctx, args)
-        "pages" -> pages(ctx)
-        "close" -> close(ctx, args)
-        else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown browser.webview method '$method'")
+    override suspend fun invoke(ctx: CallContext, method: String, args: JsonObject): Envelope {
+        // R3 fix (the CI-red extract assert): the permission check normally rides the broker's
+        // interceptor chain; a DIRECT provider invoke bypasses it, so the provider enforces its
+        // own minimum (an absent grant = denied — the browser grants are explicit objects).
+        val permission = permissionFor(method, args)
+        if (permission != null && permission !in ctx.grants) {
+            return Envelope.err(
+                ErrorCode.PERMISSION_DENIED,
+                "this run has no $permission grant",
+                fixAction = "OPEN_PERMISSION_REVIEW",
+            )
+        }
+        return when (method) {
+            "open" -> open(ctx, args)
+            "navigate" -> navigate(ctx, args)
+            "click" -> click(ctx, args)
+            "type" -> type(ctx, args)
+            "extract" -> extract(ctx, args)
+            "cookies" -> cookies(ctx, args)
+            "clear_cookies" -> clearCookies(ctx, args)
+            "pages" -> pages(ctx)
+            "close" -> close(ctx, args)
+            else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown browser.webview method '$method'")
+        }
     }
 
     /** The domains scope rides on either permission id of the capability (single scope object). */
@@ -274,6 +287,11 @@ class WebViewBrowserProvider(
 
     private fun close(ctx: CallContext, args: JsonObject): Envelope {
         val pageId = (args["page_id"] as? JsonPrimitive)?.content ?: return Envelope.err(ErrorCode.INVALID_ARGS, "\"page_id\" is required")
+        // R3 fix (the CI-red unknown-page assert): close must verify the page EXISTS in this run
+        // before forwarding — an unknown page is a typed NOT_FOUND, never a silent ok.
+        if (host.pages(ctx.runId).none { it.pageId == pageId }) {
+            return Envelope.err(ErrorCode.NOT_FOUND, "no page '$pageId' in this run")
+        }
         host.close(ctx.runId, pageId)
         return Envelope.ok(buildJsonObject { put("closed", true) })
     }

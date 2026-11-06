@@ -17,9 +17,12 @@ enum class AppTier { BLOCKED, CAUTIOUS, NORMAL }
  * removed (pinned in [classify] too — removal is refused at read time, not just at write time).
  * Unknown packages default to CAUTIOUS (fail safe, per RM-B1).
  */
-class AppSensitivity(userAdded: Map<String, AppTier> = emptyMap()) {
+class AppSensitivity(
+    userAdded: Map<String, AppTier> = emptyMap(),
+    bundledText: String? = null, // test seam: overrides the bundled resource (fail-closed port, RM-G2)
+) {
 
-    private val bundled: Map<String, AppTier> = loadBundled()
+    private val bundled: Map<String, AppTier> = loadBundled(bundledText)
 
     /** The user's additions — BLOCKED additions are allowed; bundled entries can never be lifted. */
     private val effective: Map<String, AppTier> = run {
@@ -36,8 +39,11 @@ class AppSensitivity(userAdded: Map<String, AppTier> = emptyMap()) {
     /** The observation floor: BLOCKED content is withheld wherever it appears. */
     fun isBlocked(pkg: String): Boolean = classify(pkg) == AppTier.BLOCKED
 
-    private fun loadBundled(): Map<String, AppTier> {
-        val text = javaClass.classLoader!!
+    private fun loadBundled(override: String?): Map<String, AppTier> {
+        // Fail closed (the RM-G2 port of AppClassifierSecurityTest's load-failure regression):
+        // a corrupt floor must THROW at construction — the classifier never silently degrades
+        // into "everything is NORMAL".
+        val text = override ?: javaClass.classLoader!!
             .getResourceAsStream(BUNDLED_PATH)!!
             .readBytes().decodeToString()
         val root = Json.parseToJsonElement(text).jsonObject

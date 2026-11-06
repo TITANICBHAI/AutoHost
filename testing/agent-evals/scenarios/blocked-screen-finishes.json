@@ -1,0 +1,24 @@
+{
+  "name": "blocked-screen-finishes",
+  "description": "G13-b shape: nothing observable on screen — the model finishes(blocked) WITHOUT acting (the empty-screen honesty; no blind retries).",
+  "goal": "Turn on Do Not Disturb.",
+  "packages": ["com.example.fixture"],
+  "observation": {
+    "package": "com.example.fixture",
+    "keyboard": "hidden",
+    "node_count": 0,
+    "nodes": []
+  },
+  "tool_results": {},
+  "script": [
+    {"tool_calls": [{"name": "finish", "arguments": "{\"status\":\"blocked\",\"summary\":\"Nothing is on the screen.\"}"}]}
+  ],
+  "expect": {
+    "finished": true,
+    "tools": ["finish"],
+    "not_tools": ["ui_click", "ui_set_text", "app_launch"],
+    "max_steps": 2,
+    "contains": ["shown=0/0"],
+    "not_contains": ["Switch"]
+  }
+}

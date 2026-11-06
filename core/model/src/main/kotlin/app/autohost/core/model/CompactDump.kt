@@ -66,7 +66,12 @@ object CompactDump {
         return if (v.length <= MAX_VALUE) v else v.substring(0, MAX_VALUE - 1) + "\u2026"
     }
 
-    private fun keep(n: UiNode, f: DumpFilter?, sw: Int, sh: Int): Boolean {
+    /**
+     * The node keep rule (on-screen, min size 5, visible ratio ≥ 0.01). P13-10 exposed it
+     * additively (it used to be private) so `AgentView` reuses the exact rule instead of
+     * duplicating it — no behaviour change, no golden-vector change.
+     */
+    fun keep(n: UiNode, f: DumpFilter?, sw: Int, sh: Int): Boolean {
         if (f == null) return true
         val b = n.bounds
         if (minOf(b.width, b.height) < f.minSize) return false

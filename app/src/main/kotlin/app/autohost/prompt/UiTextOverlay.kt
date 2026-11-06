@@ -8,6 +8,7 @@ import android.view.Gravity
 import android.view.WindowManager
 import android.widget.TextView
 import app.autohost.capabilities.a11y.A11yBridge
+import app.autohost.surfaces.OverlayWindowFlags
 
 /**
  * P7-04 (`ui.overlay`, plan §10.2): a short-lived text strip over the current app, attached as
@@ -41,9 +42,8 @@ class UiTextOverlay(private val clock: app.autohost.core.common.Clock) {
                     val params = WindowManager.LayoutParams(
                         WindowManager.LayoutParams.WRAP_CONTENT,
                         WindowManager.LayoutParams.WRAP_CONTENT,
-                        WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-                        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                        OverlayWindowFlags.TYPE,
+                        OverlayWindowFlags.PROMPT_TEXT,
                         PixelFormat.TRANSLUCENT,
                     ).apply {
                         gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL

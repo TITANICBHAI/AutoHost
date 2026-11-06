@@ -98,6 +98,8 @@ enum class Routes(val arg: String? = null) {
     TASK_DETAIL,
     HEALTH,
     SETTINGS,
+    AI_SETTINGS, // P14-06 (S32): Settings → AI features
+    ASK, // P14-07 (S33): the Ask bar/sheet
     SURFACES,
     RECORDER_REVIEW,
     STUDIO, // P11-05 (ADR-083): the in-app Task Studio

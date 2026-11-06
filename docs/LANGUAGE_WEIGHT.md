@@ -41,7 +41,7 @@ Reading: Kotlin main code is about 6.5 times the on-device Python. The on-device
 - `runtime/python/build.gradle.kts`: Chaquopy plugin, `version = "3.13"`, `pip { install("requests") }`, `abiFilters += listOf("arm64-v8a", "x86_64")` (the comment says 3.13 is 64-bit only). The app module also sets `abiFilters` to the same two ABIs (`app/build.gradle.kts:20`). The pinned plugin is `chaquopy = "17.0.0"` (`gradle/libs.versions.toml:7`); 17.1.0 exists (§4) and is **not** adopted by this pass.
 - Each Python run executes in its own OS process: `AndroidManifest.xml` declares `:w0`…`:w3` (comment: "one process each; recycled after every run") plus `:ui`. `BaseTaskWorkerService.kt:56` and `UiHandlerWorkerService.kt:90` call `Python.start(AndroidPlatform(this))` — one interpreter per process.
 - A release build that keeps `x86_64` ships an emulator-only interpreter and its libraries to phones (§6 option C). Whether the release configuration filters it is **UNVERIFIED** here.
-- Flavor dimension today: `tier` (`app/build.gradle.kts:24`). The `runtime` dimension (`py` | `lite`) is planned in P15-03, not present.
+- Flavor dimension today: `tier` (`app/build.gradle.kts:24`) plus the `runtime` dimension (`py` | `lite`) — P15-03 wrote it into `app/build.gradle.kts` (WRITTEN — D-26; compile deferred).
 
 ## 4. Cost model — what each language carries on Android
 

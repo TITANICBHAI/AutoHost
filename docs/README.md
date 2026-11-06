@@ -5,11 +5,11 @@
 | `GATES.md` | Exact procedure + evidence for every gate (Gates 0–16) and the Epoch V exit | planner; agent may refine steps |
 | `REPO_LAYOUT.md` | File-level layout: modules, packages, resources, on-device paths (v4: planned modules marked) | planner; agent updates with an ADR |
 | `ANDROID_MANIFEST.md` | Manifest, permissions per flavor, services, XML | planner; agent on change |
-| `UI_SPEC.md` | Screens, navigation, tokens, UI state, copy (v4: Phase 14 screens planned) | planner; agent on change |
+| `UI_SPEC.md` | Screens, navigation, tokens, UI state, copy (v4: Phase 14 surfaces WRITTEN — D-26) | planner; agent on change |
 | `DEVAPI.md` | Dev API JSON-RPC methods + MCP tools | planner; agent on change |
 | `CONVENTIONS.md` | Standards | planner |
 | `AGENT_OPERATING_PROTOCOL.md` | Pointer to the canonical agent operating protocol (repo-root `AGENT_OPERATING_PROTOCOL.md`) | agent |
-| `FIXTURE_APP.md` | Test app contract (v4: Phase 12/13 surfaces planned) | agent keeps in sync with code |
+| `FIXTURE_APP.md` | Test app contract (v4: the six A1–A5 surfaces WRITTEN — D-26; the three Phase-13 surfaces remain planned — see `rework.md` R11) | agent keeps in sync with code |
 | `REFERENCES.md` | Lessons from reference projects, licence rules | planner |
 | `REUSE_MATRIX.md` | **v4** File-level reuse/adaptation decisions over ClosePaw, opendroid, android-agent, sannabotapp, ARIA; adaptation rules | planner |
 | `ACTION_HARDENING.md` | **v4** Findings A1–A9 on the action layer, `effect` vocabulary, conformance test, Phase 12 procedure | planner |

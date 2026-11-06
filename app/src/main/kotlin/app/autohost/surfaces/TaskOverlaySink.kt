@@ -59,8 +59,8 @@ class TaskOverlaySink : UiOverlayProvider.Sink {
         }
         val params = WindowManager.LayoutParams(
             w, h,
-            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            OverlayWindowFlags.TYPE,
+            OverlayWindowFlags.TASK_VISUAL,
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.START
@@ -98,8 +98,8 @@ class TaskOverlaySink : UiOverlayProvider.Sink {
         }
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            OverlayWindowFlags.TYPE,
+            OverlayWindowFlags.TASK_VISUAL,
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = if (corner == "bottom") Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL else Gravity.TOP or Gravity.CENTER_HORIZONTAL

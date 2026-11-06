@@ -91,6 +91,12 @@ object GestureInjector {
         withTimeoutOrNull(timeoutMs) { await() }
 }
 
+/** The production tap-timing source: the platform `ViewConfiguration.getTapTimeout()`. */
+object ViewTapTimeoutSource : GestureInjector.TapTimeoutSource {
+    override fun tapTimeoutMs(): Long =
+        android.view.ViewConfiguration.getTapTimeout().toLong()
+}
+
 /**
  * The production dispatcher over `AccessibilityService.dispatchGesture` — builds the stroke from
  * the parameters and reports the OS callback through [GestureInjector.Dispatcher]'s contract.

@@ -190,6 +190,7 @@
           "name": "long_click",
           "description": "",
           "params": {
+            "retry_if_no_change": "bool?",
             "target": "NodeRef|Selector"
           },
           "returns": "{method:string, verified?:bool, effect?:'changed|unchanged|unverifiable', warnings?:[string]}",
@@ -517,7 +518,7 @@
     },
     {
       "id": "device.screen",
-      "summary": "Screen/keyguard state (control methods arrive in W2).",
+      "summary": "Screen/keyguard state and control (wake, dismiss, lock, brightness — shipped in P8-10).",
       "permissions": [
         {
           "id": "device.screen.read",

@@ -341,6 +341,10 @@ interface SecretBlobDao {
 
     @Query("DELETE FROM secret_blobs WHERE profileId = :profileId")
     suspend fun deleteForProfile(profileId: String)
+
+    /** P14-06: deletes ONE secret (a deleted provider profile's key — never the whole HOST_SCOPE). */
+    @Query("DELETE FROM secret_blobs WHERE profileId = :profileId AND `key` = :key")
+    suspend fun delete(profileId: String, key: String)
 }
 
 @Dao

@@ -7,7 +7,7 @@
 | `device.ui` | T1, T3 | 29 | Observe and act on other apps' UI through the best available provider (accessibility; shell as fallback). | `snapshot`, `find`, `wait_for`, `wait_for_settle`, `is_window_updating`, `dump`, `click`, `long_click`, `set_text`, `scroll_until`, `swipe`, `tap`, `press`, `hide_keyboard`, `keyboard_visible` | device.ui.observe, device.ui.act |
 | `device.screenshot` | T1, T0, T3 | 29 | Capture the screen (fallback chain: accessibility API 30+ → MediaProjection → shell). | `capture` | device.screenshot |
 | `device.app` | T0, T1, T3 | 29 | Query, launch and stop apps. | `query`, `list`, `foreground`, `wait_foreground`, `launch`, `stop` | device.app.query, device.app.launch, device.app.stop |
-| `device.screen` | T0 | 29 | Screen/keyguard state (control methods arrive in W2). | `is_on`, `is_unlocked` | device.screen.read |
+| `device.screen` | T0 | 29 | Screen/keyguard state and control (wake, dismiss, lock, brightness — shipped in P8-10). | `is_on`, `is_unlocked` | device.screen.read |
 | `device.ime` | T0 | 29 | Reliable text entry and background clipboard through the AutoHost keyboard. | `commit_text`, `clipboard_get`, `clipboard_set` | device.ime |
 | `notify.post` | T0 | 29 | Post a notification (with actions/progress). | `post` | notify.post |
 | `ui.prompt` | T0 | 29 | Ask the user something while a run waits (WAITING_USER). | `ask`, `toast` | ui.prompt |

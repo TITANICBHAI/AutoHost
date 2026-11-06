@@ -72,6 +72,15 @@ class NodeRegistry(private val clock: Clock, private val ttlMs: Long = 60_000) {
         return AhResult.ok(info)
     }
 
+    /**
+     * P12-16 (A7): the minted node for a ref, honouring the run scope — the act-scope check at
+     * ref resolution needs the node's PACKAGE, which the resolved handle does not carry safely.
+     * Null when the ref is unknown or belongs to another run (the caller reports honestly).
+     */
+    @Synchronized
+    fun nodeOf(ref: String, scope: String?): UiNode? =
+        entries[ref]?.takeIf { it.scope == null || scope == null || it.scope == scope }?.node
+
     @Synchronized
     fun prune() = pruneLocked()
 

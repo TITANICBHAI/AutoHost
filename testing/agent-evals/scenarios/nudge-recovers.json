@@ -1,0 +1,37 @@
+{
+  "name": "nudge-recovers",
+  "description": "§7.1: a chatty turn with no tool call gets ONE nudge — the model recovers on the next turn.",
+  "goal": "Tap the continue button.",
+  "packages": ["com.example.fixture"],
+  "observation": {
+    "package": "com.example.fixture",
+    "keyboard": "hidden",
+    "node_count": 1,
+    "nodes": [
+      {
+        "ref": "ref-1", "pkg": "com.example.fixture",
+        "class": "android.widget.Button", "id": "fx_btn_continue",
+        "text": "Continue", "desc": "",
+        "bounds": [40, 812, 1040, 940],
+        "flags": ["clickable"],
+        "index": 0
+      }
+    ]
+  },
+  "tool_results": {
+    "ui_click": {"ok": true, "method": "NODE_ACTION", "verified": true, "effect": "changed"}
+  },
+  "script": [
+    {"text": "I will look at the screen first."},
+    {"tool_calls": [{"name": "ui_click", "arguments": "{\"id\":\"[1]\"}"}]},
+    {"tool_calls": [{"name": "finish", "arguments": "{\"status\":\"done\",\"summary\":\"Tapped continue.\"}"}]}
+  ],
+  "expect": {
+    "finished": true,
+    "tools": ["ui_click", "finish"],
+    "not_tools": [],
+    "max_steps": 4,
+    "contains": ["[1] Button", "\"Continue\""],
+    "not_contains": []
+  }
+}

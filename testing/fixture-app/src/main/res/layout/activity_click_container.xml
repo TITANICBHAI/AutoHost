@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+
+    <!-- A5: the large clickable container; its centre is a dead zone. -->
+    <FrameLayout android:id="@id/fx_container"
+        android:layout_width="match_parent" android:layout_height="400dp"
+        android:layout_margin="16dp"
+        android:background="#6633AAFF"
+        android:clickable="true" android:focusable="true">
+
+        <!-- The actionable child, deliberately OFF-CENTRE (bottom-right region). -->
+        <Button android:id="@id/fx_btn_child"
+            android:layout_width="140dp" android:layout_height="56dp"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="24dp"
+            android:text="fx_btn_child" />
+    </FrameLayout>
+
+    <TextView android:id="@id/fx_state"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:textSize="10sp" android:text="{}" />
+</FrameLayout>

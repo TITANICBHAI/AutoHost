@@ -15,6 +15,17 @@ interface UiActions {
     fun tap(x: Float, y: Float): Boolean
     fun swipe(x1: Float, y1: Float, x2: Float, y2: Float, durationMs: Long): Boolean
     fun global(key: String): Boolean
+
+    /**
+     * P12-07 (A3/RM-A2): the click chains whose coordinate stroke is AWAITED. The default keeps
+     * the legacy unawaited chain so JVM fakes (which override the sync methods) keep working and
+     * recording; [ServiceUiActions] overrides with the real [GestureInjector.awaitStroke] path.
+     */
+    suspend fun awaitedClick(info: android.view.accessibility.AccessibilityNodeInfo?): NodeActions.ClickOutcome =
+        click(info)
+
+    suspend fun awaitedLongClick(info: android.view.accessibility.AccessibilityNodeInfo?): NodeActions.ClickOutcome =
+        longClick(info)
 }
 
 /** Real implementation: everything goes through the connected service. */
@@ -30,6 +41,18 @@ class ServiceUiActions(private val service: () -> AccessibilityService?) : UiAct
         val active = service() ?: return NodeActions.ClickOutcome(null, false)
         info ?: return NodeActions.ClickOutcome(null, false)
         return NodeActions.longClick(active, info)
+    }
+
+    override suspend fun awaitedClick(info: android.view.accessibility.AccessibilityNodeInfo?): NodeActions.ClickOutcome {
+        val active = service() ?: return NodeActions.ClickOutcome(null, false)
+        info ?: return NodeActions.ClickOutcome(null, false)
+        return NodeActions.awaitedClick(active, info)
+    }
+
+    override suspend fun awaitedLongClick(info: android.view.accessibility.AccessibilityNodeInfo?): NodeActions.ClickOutcome {
+        val active = service() ?: return NodeActions.ClickOutcome(null, false)
+        info ?: return NodeActions.ClickOutcome(null, false)
+        return NodeActions.awaitedLongClick(active, info)
     }
 
     override fun setText(info: android.view.accessibility.AccessibilityNodeInfo?, text: String): Boolean {

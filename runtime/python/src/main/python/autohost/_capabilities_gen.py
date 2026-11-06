@@ -170,6 +170,7 @@ CATALOG = [
         ],
         "name": "long_click",
         "params": {
+          "retry_if_no_change": "bool?",
           "target": "NodeRef|Selector"
         },
         "requires": "device.ui.act",
@@ -539,7 +540,7 @@ CATALOG = [
         "scope": {}
       }
     ],
-    "summary": "Screen/keyguard state (control methods arrive in W2).",
+    "summary": "Screen/keyguard state and control (wake, dismiss, lock, brightness \u2014 shipped in P8-10).",
     "tiers": [
       "T0"
     ]

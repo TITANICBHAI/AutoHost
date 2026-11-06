@@ -49,6 +49,30 @@ class AppSensitivityTest {
         assertEquals(AppTier.NORMAL, s.classify("com.example.mygame"))
     }
 
+    @Test
+    fun `given a corrupt bundled floor when constructed then it fails closed (the RM-G2 security port)`() {
+        // AppClassifierSecurityTest's load-failure regression: a broken floor must throw, never
+        // silently degrade into "everything is NORMAL".
+        var threw = false
+        try {
+            AppSensitivity(bundledText = "not valid json")
+        } catch (e: RuntimeException) {
+            threw = true
+        }
+        assertTrue("a corrupt floor must fail closed", threw)
+    }
+
+    @Test
+    fun `given a user override on a bundled cautious package when classified then the user tier wins (only BLOCKED is the floor)`() {
+        val text = javaClass.classLoader!!.getResourceAsStream(AppSensitivity.BUNDLED_PATH)!!.readBytes().decodeToString()
+        val cautious = Json.parseToJsonElement(text).jsonObject["apps"]!!.jsonArray
+            .map { it.jsonObject }
+            .firstOrNull { it["tier"]!!.jsonPrimitive.content == "CAUTIOUS" }?.get("package")?.jsonPrimitive?.content
+            ?: return  // the bundled floor has no CAUTIOUS entry in this build; nothing to lift
+        val s = sensitivity(userAdded = mapOf(cautious to AppTier.NORMAL))
+        assertEquals(AppTier.NORMAL, s.classify(cautious))
+    }
+
     // -- observation withholding (AGENT_RUNTIME §8) ----------------------------------------------
 
     private fun snapshot(foreground: String, nodePkgs: List<String>) = Json.parseToJsonElement(

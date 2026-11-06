@@ -94,6 +94,27 @@ class ExportAndCheckpointsTest {
     }
 
     @Test
+    fun `agent runs carry the agent section in the bundle (P13-15)`() {
+        val bytes = RunExporter().build(
+            RunExporter.Bundle(
+                runId = "run-agent",
+                taskId = "builtin.agent.adhoc",
+                manifestJson = null,
+                checkpointJson = null,
+                eventsJsonl = "",
+                auditJsonl = "",
+                incidentsJson = "{}",
+                environmentJson = "{}",
+                agentJson = """{"goal":"open settings","trace":{"dropped":2}}""",
+            ),
+        )
+        val entries = unzip(bytes)
+        assertTrue("agent.json" in entries)
+        assertTrue(entries["agent.json"]!!.contains("\"goal\":\"open settings\""))
+        assertTrue(entries["README.txt"]!!.contains("agent.json"))
+    }
+
+    @Test
     fun `checkpoint null becomes a literal null in the bundle`() {
         val bytes = RunExporter().build(
             RunExporter.Bundle("r", "t", null, null, "", "", "{}", "{}"),

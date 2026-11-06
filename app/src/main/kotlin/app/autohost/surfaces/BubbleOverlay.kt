@@ -74,8 +74,8 @@ class BubbleOverlay(
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            OverlayWindowFlags.TYPE,
+            OverlayWindowFlags.BUBBLE, // P12-07: NOT_TOUCH_MODAL added — the bubble swallowed every touch outside its bounds
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.START
