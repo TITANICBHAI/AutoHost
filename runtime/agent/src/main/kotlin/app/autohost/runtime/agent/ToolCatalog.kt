@@ -1,5 +1,6 @@
 package app.autohost.runtime.agent
 
+import app.autohost.core.llm.ToolSpec
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -30,6 +31,11 @@ class ToolCatalog private constructor(private val tools: Map<String, Tool>) {
     fun names(): Set<String> = tools.keys
 
     fun find(name: String): Tool? = tools[name]
+
+    /** The typed tool list for `ChatRequest.tools` (P13-10's loop builds the request from this). */
+    fun specs(): List<ToolSpec> = tools.values.sortedBy { it.name }.map { tool ->
+        ToolSpec(name = tool.name, description = tool.description, parameters = tool.args)
+    }
 
     /** The OpenAI `tools[]` array for the request (function specs with JSON-schema parameters). */
     fun wireSpecs(): JsonArray = JsonArray(

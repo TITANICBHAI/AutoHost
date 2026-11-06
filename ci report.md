@@ -76,6 +76,33 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 4 — commit 2f3225c (ci GREEN, jvm-core GREEN; app compile-red on runtime/agent + a11y 2 test failures)
+
+### android-debug-apk — runtime/agent main compile (4 errors, the module's FIRST compile)
+- **Cause 1:** `AgentRuntimeProvider` — `kotlinx.coroutines.coroutineContext.ensureActive()`:
+  `coroutineContext` is `kotlin.coroutines`' suspend property, NOT kotlinx'.
+- **Fix:** `currentCoroutineContext().ensureActive()` + the import.
+- **Cause 2:** `AgentPreflight` imported `app.autohost.core.common.AhError` — AhError lives in
+  `app.autohost.core.model`.
+- **Fix:** the import moved.
+- **Cause 3:** `AgentLoop` — the finish `when` used `FinishVerifier.Confirmed/...` but the
+  sealed cases live on `FinishResult`.
+- **Fix:** the three references renamed.
+- **Cause 4:** `AgentLoop` — `tools = catalog.wireSpecs()` returns JsonArray but ChatRequest
+  wants `List<ToolSpec>`.
+- **Fix:** `ToolCatalog.specs()` (typed) added; the loop uses it.
+
+### jvm-capabilities — a11y test failures (2 REAL assertion failures, the first actual test runs!)
+- **HotspotRefiner**: the tests contradicted each other (T1/T2 written from "smallest
+  fully-contained child wins"; T5/T7 from "the tap point filters") — never compiled, never
+  reconciled. **Fix (the impl + one test):** the tap-point filter applies ONLY when explicitly
+  given (the A5 dead-zone story: no tap → the smallest fully-contained child); full containment
+  replaced the broken "STRICTLY inside" disjunct; T5 repurposed to the explicit-miss case.
+- The impl change matches the fixture story (the container centre is the dead zone; the child
+  off-centre is promoted without a tap).
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via

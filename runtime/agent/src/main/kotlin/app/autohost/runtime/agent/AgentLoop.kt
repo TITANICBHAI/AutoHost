@@ -179,7 +179,7 @@ class AgentLoop(
             val request = ChatRequest(
                 model = config.model,
                 messages = buildMessages(system, history, config),
-                tools = catalog.wireSpecs(),
+                tools = catalog.specs(),
                 maxOutputTokens = config.maxOutputTokens,
             )
             val response = when (val result = client.chat(request)) {
@@ -248,12 +248,12 @@ class AgentLoop(
             if (call.name == "finish") {
                 val summary = call.arguments?.get("summary")?.let { (it as? JsonPrimitive)?.content }
                 return when (finishVerifier.verify(summary)) {
-                    FinishVerifier.Confirmed -> {
+                    FinishResult.Confirmed -> {
                         sink.on("result", buildJsonObject { put("verified_by", "user_confirm") })
                         Outcome.Succeeded(summary, budget.turns)
                     }
-                    FinishVerifier.Rejected -> Outcome.Failed("COMPLETION_REJECTED", "the user rejected the claimed result", budget.turns)
-                    FinishVerifier.Unverified -> Outcome.Failed("COMPLETION_UNVERIFIED", "the claimed result was never confirmed", budget.turns)
+                    FinishResult.Rejected -> Outcome.Failed("COMPLETION_REJECTED", "the user rejected the claimed result", budget.turns)
+                    FinishResult.Unverified -> Outcome.Failed("COMPLETION_UNVERIFIED", "the claimed result was never confirmed", budget.turns)
                 }
             }
 

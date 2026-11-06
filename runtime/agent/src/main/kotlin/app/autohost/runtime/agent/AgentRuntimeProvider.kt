@@ -10,6 +10,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
@@ -94,7 +95,7 @@ class AgentRuntimeProvider(
                         // cooperative pause: no new turn starts while paused; the wait is
                         // cancellable so requestCancel still interrupts it immediately
                         while (paused.get()) {
-                            kotlinx.coroutines.coroutineContext.ensureActive()
+                            currentCoroutineContext().ensureActive()
                             delay(50)
                         }
                     },

@@ -42,14 +42,16 @@ object HotspotRefiner {
         tapX: Int? = null,
         tapY: Int? = null,
     ): Result {
-        val cx = tapX ?: ((targetBounds.l + targetBounds.r) / 2)
-        val cy = tapY ?: ((targetBounds.t + targetBounds.b) / 2)
+        // R3 fix (the CI red pair): the tap-point filter applies ONLY when the tap point is
+        // EXPLICITLY given — the default (no tap) promotes the smallest fully-contained child
+        // (the A5 dead-zone story: the coordinate click at the centre, the child off-centre).
+        // The old "STRICTLY inside" disjunct let a child STICKING OUT of the container be
+        // promoted — full containment is the rule (the overlapping-edge test).
+        val hasTap = tapX != null && tapY != null
         val children = nodes.filter { c ->
             c.bounds.l >= targetBounds.l && c.bounds.r <= targetBounds.r &&
                 c.bounds.t >= targetBounds.t && c.bounds.b <= targetBounds.b &&
-                c.contains(cx, cy) &&
-                (c.bounds.l > targetBounds.l || c.bounds.r < targetBounds.r ||
-                    c.bounds.t > targetBounds.t || c.bounds.b < targetBounds.b) // STRICTLY inside
+                (!hasTap || c.contains(tapX!!, tapY!!))
         }
         if (children.isEmpty()) return Result.Keep
         val minArea = children.minOf { it.area }

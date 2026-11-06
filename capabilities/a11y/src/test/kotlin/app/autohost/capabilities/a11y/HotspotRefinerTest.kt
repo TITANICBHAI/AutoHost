@@ -43,10 +43,14 @@ class HotspotRefinerTest {
     }
 
     @Test
-    fun `given a child outside the tap point when refined then Keep (the tap missed it)`() {
+    fun `given an explicit tap point no child contains when refined then Keep (the tap missed them all)`() {
         val child = candidate("btn", 700, 100, 950, 300)
-        // the tap point (centre) is (500, 200) — the child at 700..950 does not contain it
-        assertEquals(HotspotRefiner.Result.Keep, HotspotRefiner.refine(container, listOf(child)))
+        // R3 fix: the default-centre case contradicted T1/T2 (never-compiled inconsistency);
+        // the tap-miss rule is exercised with an EXPLICIT tap on the other side of the screen
+        assertEquals(
+            HotspotRefiner.Result.Keep,
+            HotspotRefiner.refine(container, listOf(child), tapX = 100, tapY = 200),
+        )
     }
 
     @Test
