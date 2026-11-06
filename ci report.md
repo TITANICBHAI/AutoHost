@@ -231,6 +231,14 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 15 — commit 21cd47f (the vision test's jsonObject import was dropped by the import edit)
+
+- **VisionModuleTest** — my import edit REPLACED the `jsonObject` import instead of adding to
+  the block. Re-added. LESSON: when editing imports, grep the file for ALL usages of the
+  dropped symbol before replacing.
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via
