@@ -196,6 +196,14 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 12 — commit f930470 (the vision imports fixed; the NEXT surface: AgentLoopFactory)
+
+- **AgentLoopFactory** — `spec.runDir` doesn't exist on RunSpec (the AgentRunStarter sets
+  `taskPath = runDir`); fixed to `spec.taskPath`. And the transport class is named
+  `BinderAgentTransport`, not `BrokerAgentTransport` (a design-doc name that leaked into code).
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via

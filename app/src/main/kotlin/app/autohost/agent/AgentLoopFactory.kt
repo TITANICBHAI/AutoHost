@@ -37,7 +37,7 @@ import java.io.File
  * P14-07 (closing P13-12's placeholder): the PRODUCTION loop factory — builds the real chain
  * from a RunSpec:
  *
- *  - the token-bound [BrokerAgentTransport] over the app's broker binder (capability.method);
+ *  - the token-bound [BinderAgentTransport] over the app's broker binder (capability.method);
  *  - the ModelClient adapter over the real [LlmGateway] (the wall-clock deadline rides the
  *    budget's remaining time);
  *  - the host-initiated observer: `device.ui.wait_for_settle` (≤ 3 s) then `device.ui.snapshot`,
@@ -61,7 +61,7 @@ class AgentLoopFactory(
 
     override fun create(spec: RunSpec, sink: AgentLoop.Sink, pauseGate: AgentLoop.PauseGate): AgentLoop {
         val agentConfig = AgentConfig.from(spec.config)
-        val transport = BrokerAgentTransport(spec.runToken, binder, dispatchers.io)
+        val transport = BinderAgentTransport(spec.runToken, binder, dispatchers.io)
         val budget = RunBudget(agentConfig.budgets.toLimits()) { clock.nowMs() }
         val (screenW, screenH) = screenMetrics()
         val view = AgentView(screenW, screenH)
@@ -105,7 +105,7 @@ class AgentLoopFactory(
             },
         )
 
-        val evidenceDir = File(File(spec.runDir), "evidence").apply { mkdirs() }
+        val evidenceDir = File(File(spec.taskPath), "evidence").apply { mkdirs() }
         val verifier = CompletionVerifier(
             observer = { floorFilteredSnapshot(transport, agentConfig) },
             evidence = { snapshot ->
@@ -133,13 +133,13 @@ class AgentLoopFactory(
     }
 
     /** The REAL foreground package — for POLICY (deny decisions); the model sees the filtered view (§5.2 (4)). */
-    private fun foregroundOf(transport: BrokerAgentTransport): String? {
+    private fun foregroundOf(transport: BinderAgentTransport): String? {
         val env = transport.call("device.app", "foreground", JsonObject(emptyMap()))
         return (env["result"] as? JsonObject)?.get("package")?.let { (it as? JsonPrimitive)?.content }
     }
 
     /** Snapshot → §8 floor. A withheld observation becomes an honest EMPTY screen with its reason. */
-    private fun floorFilteredSnapshot(transport: BrokerAgentTransport, agentConfig: AgentConfig): JsonObject {
+    private fun floorFilteredSnapshot(transport: BinderAgentTransport, agentConfig: AgentConfig): JsonObject {
         val snapshot = transport.call(
             "device.ui", "snapshot",
             buildJsonObject { put("compact", false) },
