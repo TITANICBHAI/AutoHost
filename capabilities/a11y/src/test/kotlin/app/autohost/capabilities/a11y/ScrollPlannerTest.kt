@@ -29,8 +29,8 @@ class ScrollPlannerTest {
         for ((w, h) in listOf(720 to 1600, 1080 to 2340, 1080 to 2400)) {
             val plan = ScrollPlanner.plan(w, h, null, false, "down")
             val s = plan.stroke!!
-            assertTrue("$w×$h x", s.x1 in 0f..w && s.x2 in 0f..w)
-            assertTrue("$w×$h y", s.y1 in 0f..h && s.y2 in 0f..h)
+            assertTrue("$w×$h x", s.x1 in 0f..w.toFloat() && s.x2 in 0f..w.toFloat())
+            assertTrue("$w×$h y", s.y1 in 0f..h.toFloat() && s.y2 in 0f..h.toFloat())
         }
     }
 

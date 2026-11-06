@@ -126,7 +126,7 @@ class ScopeClosureTest {
     }
 
     @Test
-    fun `given allow_global absent when pressing home then refused; back stays always allowed`() = runBlocking {
+    fun `given allow_global absent when pressing home then refused while back stays always allowed`() = runBlocking {
         val provider = newProvider()
         val act = Json.parseToJsonElement("""{"packages":["app.autohost.fixture"]}""").jsonObject
         val home = invoke(provider, ctx("r", act), "press", """{"key":"home"}""")

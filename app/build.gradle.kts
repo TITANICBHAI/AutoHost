@@ -115,6 +115,8 @@ dependencies {
     implementation(project(":core:devapi"))
     implementation(project(":core:designsystem"))
     implementation(project(":runtime:api"))
+    implementation(project(":runtime:agent")) // P13: the agent runtime (AgentRuntimeProvider + the seams)
+    implementation(project(":core:llm")) // P13: the model gateway (AgentLoopFactory builds it)
     "pyImplementation"(project(":runtime:python")) // P15-03: absent from the lite flavor
     implementation(project(":runtime:flow")) // P6-06: flow runtime registration + P6-09/10 recorder & editor UI
     implementation(project(":runtime:js")) // P11-01: the JavaScript (QuickJS) runtime (engine touchpoint below)

@@ -4,6 +4,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -23,11 +24,11 @@ class GestureInjectorTest {
             fired = onDone
             true
         }
-        val result = kotlinx.coroutines.async {
+        val result = async {
             GestureInjector.awaitStroke(dispatcher, 10f, 10f, 50f, 50f, 60L, noTapFloor)
         }
         // let the await start, then complete the gesture
-        kotlinx.coroutines.yield()
+        yield()
         fired?.invoke(true)
         assertEquals(GestureInjector.Result.Injected, result.await())
     }
@@ -48,10 +49,10 @@ class GestureInjectorTest {
             fired = onDone
             true
         }
-        val result = kotlinx.coroutines.async {
+        val result = async {
             GestureInjector.awaitStroke(dispatcher, 10f, 10f, 50f, 50f, 60L, noTapFloor)
         }
-        kotlinx.coroutines.yield()
+        yield()
         fired?.invoke(false)
         assertEquals(GestureInjector.Result.Cancelled, result.await())
     }
@@ -99,5 +100,4 @@ class GestureInjectorTest {
         )
     }
 
-    private val noTapFloor: GestureInjector.TapTimeoutSource get() = GestureInjector.TapTimeoutSource { 0L }
 }

@@ -55,6 +55,27 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 3 — commit b0486b8 (ci GREEN, jvm-core GREEN; app + jvm-capabilities compile-red)
+
+### android-debug-apk — app compile: Unresolved `AgentRuntimeProvider` / `agent`
+- **Cause:** `app/build.gradle.kts` never got the `:runtime:agent` dependency (and `:core:llm`
+  for the factory's `LlmGateway`) — AgentLoopFactory/AgentRuntimeProvider/AgentRunStarter were
+  unwritable until the dep existed.
+- **Fix:** added `implementation(project(":runtime:agent"))` + `implementation(project(":core:llm"))`.
+
+### jvm-capabilities — a11y TEST compile (4 errors)
+- **Cause 1:** GestureInjectorTest has TWO `noTapFloor` declarations (line 17 val + line 102 get())
+  — a W2.4-era duplicate, never compiled until now. Fix: removed the bottom one.
+- **Cause 2:** GestureInjectorTest's FQNH calls (`kotlinx.coroutines.async { }`) conflict with my
+  added imports — un-qualified the calls to `async { }` / `yield()` and added
+  `import kotlinx.coroutines.yield`.
+- **Cause 3:** ScopeClosureTest's backtick test name contained `;` — ILLEGAL in backtick names on
+  the JVM. Renamed.
+- **Cause 4:** ScrollPlannerTest's `s.x1 in 0f..w` with w:Int — Int/Float mismatch. Fixed with
+  `w.toFloat()`.
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via
