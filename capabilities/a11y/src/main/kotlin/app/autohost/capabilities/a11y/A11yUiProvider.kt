@@ -116,7 +116,7 @@ class A11yUiProvider(
             "keyboard_visible" -> Envelope.ok(buildJsonObject { put("visible", keyboardState(observePackages).visible) })
             "click" -> click(ctx, args, actPackages, observePackages, longClick = false)
             "long_click" -> click(ctx, args, actPackages, observePackages, longClick = true)
-            "set_text" -> setText(args, actPackages, observePackages)
+            "set_text" -> setText(ctx, args, actPackages, observePackages)
             "scroll_until" -> scrollUntil(ctx, args, actPackages, observePackages)
             "swipe" -> swipe(args, allowCoordinates)
             "tap" -> tap(args, allowCoordinates)
@@ -442,7 +442,7 @@ class A11yUiProvider(
                     decision.dialog.labels.any { l -> (n.text + n.desc).contains(l, ignoreCase = true) })
         } ?: return false
         val info = snap.infoAt(target.index)
-            ?: registry.resolve(registry.put(target, null, ctx.runId), ctx.runId).getOrNull()
+            ?: registry.resolve(registry.put(target, null, null), null).getOrNull()
             ?: return false
         return try {
             info.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
@@ -509,7 +509,7 @@ class A11yUiProvider(
         }
     }
 
-    private suspend fun setText(args: JsonObject, actPackages: Set<String>?, observePackages: Set<String>?): Envelope {
+    private suspend fun setText(ctx: CallContext, args: JsonObject, actPackages: Set<String>?, observePackages: Set<String>?): Envelope {
         val text = args["text"]?.let { it as? JsonPrimitive }?.content
             ?: return Envelope.err(ErrorCode.INVALID_ARGS, "set_text needs a 'text' argument")
         val secret = (args["secret"] as? JsonPrimitive)?.content?.toBooleanStrict() ?: false

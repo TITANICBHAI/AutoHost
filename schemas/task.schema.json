@@ -328,7 +328,58 @@
         }
       }
     },
-    "objectSchema": {
+    "configObjectSchema": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "object"
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "enum": [
+                  "string",
+                  "integer",
+                  "number",
+                  "boolean",
+                  "array",
+                  "object"
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "default": {},
+              "enum": {
+                "type": "array"
+              },
+              "minimum": {
+                "type": "number"
+              },
+              "maximum": {
+                "type": "number"
+              },
+              "x-secret": {
+                "type": "boolean"
+              },
+              "x-ui": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "profileObjectSchema": {
       "type": "object",
       "properties": {
         "type": {

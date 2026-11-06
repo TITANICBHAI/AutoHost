@@ -1,5 +1,7 @@
 package app.autohost.capabilities.a11y
 
+import app.autohost.core.model.Bounds
+
 /**
  * P12-08 (A4, RM-A7): the pure scroll plan. Replaces the hardcoded 1080×2400 defaults
  * (`A11yUiProvider.kt:67-68`) and the screen-centre swipe (521-529) with:
@@ -45,7 +47,7 @@ object ScrollPlanner {
         val h = b - t
         val cx = l + w / 2f
         val cy = t + h / 2f
-        val distance = (if (direction == "up" || direction == "down") h else w) * fraction
+        val distance = (if (direction == "up" || direction == "down") h else w) * fraction.toFloat()
         val stroke = when (direction) {
             "down" -> Stroke(cx, cy + distance / 2, cx, cy - distance / 2) // content moves up
             "up" -> Stroke(cx, cy - distance / 2, cx, cy + distance / 2)
