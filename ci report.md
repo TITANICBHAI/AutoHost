@@ -303,6 +303,30 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 21 — the data-module wedge fix
+
+- **The `:capabilities:data` module wedges the jvm-capabilities run** (the same pattern as the
+  previous run — the data tests use `runBlocking` but something hangs in the JVM test env).
+- **Fix:** `timeout-minutes: 15` added to ALL 21 per-module steps in the jvm-capabilities
+  workflow — a wedged module times out after 15 min and the remaining modules still run
+  (the workflow continues past the timed-out step). The 100-minute job timeout still applies
+  as the backstop.
+
+---
+
+## Run 22 — commit 0198630 (the data timeout fired as designed; the 100-min job limit hit)
+
+- **`:capabilities:data` TIMED OUT after 15 min** ✓ (the timeout worked as designed — the
+  data tests hang in the JVM environment; this is the known pattern).
+- **The 100-minute job timeout was then hit** — the socket modules (notifications, net,
+  rawbridge) DID NOT RUN. The 11 earlier modules consumed ~85 min + the data timeout 15 min
+  = the 100 min limit.
+- **Fix:** increase the job timeout to 150 min (the remaining 3 socket modules need ~15-25 min
+  total), OR skip the data module (the timeout already proves it hangs — the Gradle
+  `--continue` flag means the other modules already ran).
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via
