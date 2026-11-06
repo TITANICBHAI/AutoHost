@@ -133,7 +133,7 @@ class AgentLoopFactory(
     }
 
     /** The REAL foreground package — for POLICY (deny decisions); the model sees the filtered view (§5.2 (4)). */
-    private fun foregroundOf(transport: BinderAgentTransport): String? {
+    private suspend fun foregroundOf(transport: BinderAgentTransport): String? {
         val env = transport.call("device.app", "foreground", JsonObject(emptyMap()))
         return (env["result"] as? JsonObject)?.get("package")?.let { (it as? JsonPrimitive)?.content }
     }

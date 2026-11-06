@@ -204,6 +204,18 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 13 — commit 01dd357 (the app module: the NEXT compile layer)
+
+- **OverlayWindowFlags** — missing `import android.view.WindowManager` + `const val TYPE` on a
+  non-compile-time-constant (the `TYPE_ACCESSIBILITY_OVERLAY` is not const in the stub jar).
+  Fixed: the import added, `const` dropped.
+- **AskSheetState** — the budget override `put(key, Int/Long)` needs `JsonPrimitive` wrapping
+  (no Int/Long overloads on `put`).
+- **AgentLoopFactory** — `foregroundOf` calls the suspend `transport.call` but isn't suspend.
+  Fixed: `private suspend fun`.
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via

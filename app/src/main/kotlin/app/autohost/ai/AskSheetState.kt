@@ -123,8 +123,8 @@ class AskSheetState(private val starter: Starter) {
         }
         model = model.copy(starting = true, refusal = null)
         val budgets = kotlinx.serialization.json.buildJsonObject {
-            model.maxTurnsOverride?.let { put("max_turns", it) }
-            model.maxWallClockSOverride?.let { put("max_wall_clock_s", it) }
+            model.maxTurnsOverride?.let { put("max_turns", kotlinx.serialization.json.JsonPrimitive(it)) }
+            model.maxWallClockSOverride?.let { put("max_wall_clock_s", kotlinx.serialization.json.JsonPrimitive(it)) }
         }
         val override = if (budgets.isNotEmpty()) {
             kotlinx.serialization.json.buildJsonObject { put("budgets", budgets) }

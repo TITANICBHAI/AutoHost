@@ -1,5 +1,7 @@
 package app.autohost.surfaces
 
+import android.view.WindowManager
+
 /**
  * P12-07 (ACTION_HARDENING §5): the OVERLAY WINDOW-FLAG AUDIT as code. One table owns every
  * `WindowManager.LayoutParams` flag set the app creates, so the pass-through property of each
@@ -52,5 +54,5 @@ object OverlayWindowFlags {
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
 
     /** The overlay type every surface shares: no app window may sit above system UI. */
-    const val TYPE: Int = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+    val TYPE: Int = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
 }
