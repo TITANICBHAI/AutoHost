@@ -33,12 +33,13 @@ object AgentSectionBuilder {
             when (event.type) {
                 "progress" -> turns = event.data.str("turn")?.toIntOrNull() ?: turns
                 "finished" -> stop = buildJsonObject {
-                    put("status", event.data.str("status") ?: "FAILED")
-                    event.data.str("reason")?.let { put("reason", it) }
-                    event.data.str("message")?.let { put("message", it) }
+                    val d = event.dataOrEmpty
+                    put("status", d.str("status") ?: "FAILED")
+                    d.str("reason")?.let { put("reason", it) }
+                    d.str("message")?.let { put("message", it) }
                 }
                 "log" -> {
-                    val data = event.data ?: continue
+                    val data = event.dataOrEmpty
                     when (data.str("kind")) {
                         "agent.thought" -> {
                             sawAgentEvent = true
@@ -96,7 +97,7 @@ object AgentSectionBuilder {
         }
     }
 
-    private val BrokerEvent.data: JsonObject get() = this.data ?: JsonObject(emptyMap())
+    private val BrokerEvent.dataOrEmpty: JsonObject get() = this.data ?: JsonObject(emptyMap())
 
     private fun JsonObject.str(key: String): String? = (this[key] as? JsonPrimitive)?.content
 

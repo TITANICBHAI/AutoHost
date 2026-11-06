@@ -6,6 +6,7 @@ package app.autohost.runtime.agent
 // re-declared as AppTier (docs/REUSE_MATRIX.md RM-B1, P13-08).
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 

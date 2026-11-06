@@ -2,6 +2,7 @@ package app.autohost.runtime.agent
 
 import app.autohost.core.common.AhResult
 import app.autohost.core.llm.ToolCall
+import app.autohost.core.model.AhError
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject

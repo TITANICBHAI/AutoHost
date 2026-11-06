@@ -1,7 +1,7 @@
 package app.autohost.runtime.agent
 
-import app.autohost.core.common.AhError
 import app.autohost.core.common.AhResult
+import app.autohost.core.model.AhError
 import app.autohost.core.model.ErrorCode
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive

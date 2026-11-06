@@ -2,6 +2,8 @@ package app.autohost.capabilities.app
 
 import app.autohost.core.broker.CallContext
 import app.autohost.core.common.FakeClock
+import app.autohost.core.common.ForegroundSource
+import app.autohost.core.common.ForegroundTracker
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive

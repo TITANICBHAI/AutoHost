@@ -118,7 +118,7 @@ class AgentPreflight(private val facts: Facts) {
         return AhResult.ok(Unit)
     }
 
-    private fun refused(code: ErrorCode, reason: String?, message: String, fixAction: String?): AhResult.Err =
+    private fun refused(code: ErrorCode, reason: String?, message: String, fixAction: String?): AhResult<Unit> =
         AhResult.err(AhError.of(code, message, reason = reason, fixAction = fixAction))
 
     companion object {
