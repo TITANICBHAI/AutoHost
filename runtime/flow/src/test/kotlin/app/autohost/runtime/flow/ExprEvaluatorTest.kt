@@ -17,7 +17,7 @@ class ExprEvaluatorTest {
             "n" to JsonPrimitive("3"),
             "flag" to JsonPrimitive(true),
         ),
-        run = kotlinx.serialization.json.buildJsonObject { put("attempt", 2) },
+        run = kotlinx.serialization.json.buildJsonObject { put("attempt", JsonPrimitive(2)) },
         secrets = mapOf("s" to "x"),
     )
 

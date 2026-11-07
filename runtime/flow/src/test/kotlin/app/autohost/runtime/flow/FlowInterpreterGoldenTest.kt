@@ -92,7 +92,7 @@ class FlowInterpreterGoldenTest {
             profile = case["profile"]?.jsonObject ?: JsonObject(emptyMap()),
             env = case["env"]?.jsonObject ?: JsonObject(emptyMap()),
             secrets = (case["secrets"] as? JsonObject)?.mapValues { (_, v) -> v.jsonPrimitive.content } ?: emptyMap(),
-            run = case["run"]?.jsonObject ?: buildJsonObject { put("attempt", 1) },
+            run = case["run"]?.jsonObject ?: buildJsonObject { put("attempt", JsonPrimitive(1)) },
         )
         val expected = case.getValue("expected").jsonObject
         assertEquals("case $name: outcome", expected.getValue("outcome").jsonObject, outcome.toJson())

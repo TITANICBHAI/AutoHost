@@ -24,7 +24,7 @@ class VariableScopeTest {
         } ?: buildJsonObject { },
         profile = buildJsonObject { },
         env = env.toMutableMap(),
-        run = buildJsonObject { put("attempt", 1) },
+        run = buildJsonObject { put("attempt", JsonPrimitive(1)) },
         secrets = secrets,
     )
 

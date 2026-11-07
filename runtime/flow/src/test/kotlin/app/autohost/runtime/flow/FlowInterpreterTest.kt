@@ -5,6 +5,7 @@ import app.autohost.core.model.FlowStep
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
@@ -61,7 +62,7 @@ class FlowInterpreterTest {
         suspend fun run(flow: FlowDocument, config: JsonObject = buildJsonObject { },
                         env: JsonObject = buildJsonObject { },
                         secrets: Map<String, String> = emptyMap(),
-                        run: JsonObject = buildJsonObject { put("attempt", 1) }): FlowOutcome =
+                        run: JsonObject = buildJsonObject { put("attempt", JsonPrimitive(1)) }): FlowOutcome =
             FlowInterpreter.runFlow(flow, ex, config = config, env = env, secrets = secrets, run = run)
 
         fun calls(capability: String, method: String) =
@@ -156,7 +157,7 @@ class FlowInterpreterTest {
 
     @Test fun `when visible gates the step`() = kotlinx.coroutines.runBlocking {
         val broker = StubBroker(
-            handlers = mapOf(("device.ui" to "find") to { _ -> buildJsonObject { put("nodes", JsonArray()) } }),
+            handlers = mapOf(("device.ui" to "find") to { _ -> buildJsonObject { put("nodes", JsonArray(emptyList())) } }),
         )
         val recorder = Recorder(broker)
         val outcome = recorder.run(flow("""{"tapOn": {"text": "Continue", "when": {"visible": {"id": "banner"}}}}"""))
@@ -300,7 +301,7 @@ class FlowInterpreterTest {
 
     @Test fun `onFlowStart failure prevents the body`() = kotlinx.coroutines.runBlocking {
         val broker = StubBroker(
-            handlers = mapOf(("device.ui" to "find") to { _ -> buildJsonObject { put("nodes", JsonArray()) } }),
+            handlers = mapOf(("device.ui" to "find") to { _ -> buildJsonObject { put("nodes", JsonArray(emptyList())) } }),
         )
         val recorder = Recorder(broker)
         val outcome = recorder.run(
