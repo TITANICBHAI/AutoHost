@@ -145,7 +145,7 @@ class AiSettingsStateTest {
 
     @Test
     fun `given test connection when run then only the reachability verdict is stored (no key, no prompt)`() = runBlocking {
-        val s = hydrated(tester(message = "reachable in 5 ms"))
+        val s = hydrated(tester = tester(message = "reachable in 5 ms"))
         s.testConnection("p1")
         val result = s.model.lastTest["p1"]!!
         assertTrue(result.ok)
@@ -155,7 +155,7 @@ class AiSettingsStateTest {
 
     @Test
     fun `given a failing connection when tested then the mapped reason shows`() = runBlocking {
-        val s = hydrated(tester(message = "the provider rejected the key (401/403)", ok = false))
+        val s = hydrated(tester = tester(message = "the provider rejected the key (401/403)", ok = false))
         s.testConnection("p1")
         assertFalse(s.model.lastTest["p1"]!!.ok)
         assertTrue(s.model.lastTest["p1"]!!.message.contains("401"))

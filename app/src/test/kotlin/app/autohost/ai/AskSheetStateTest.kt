@@ -1,7 +1,7 @@
 package app.autohost.ai
 
-import app.autohost.core.common.AhError
 import app.autohost.core.common.AhResult
+import app.autohost.core.model.AhError
 import app.autohost.core.engine.orchestrator.RunRecord
 import app.autohost.core.llm.ProviderProfile
 import kotlinx.coroutines.runBlocking
@@ -96,7 +96,7 @@ class AskSheetStateTest {
     }
 
     @Test
-    fun `given the starter succeeds when started then the run id surfaces; a typed refusal surfaces on error`() = runBlocking {
+    fun `given the starter succeeds when started then the run id surfaces and a typed refusal surfaces on error`() = runBlocking {
         val starter = FakeStarter()
         val s = state(starter)
         starter.result = AhResult.err(

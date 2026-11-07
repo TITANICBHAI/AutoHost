@@ -52,7 +52,7 @@ class OverlayWindowFlagsTest {
     }
 
     @Test
-    fun `given every overlay when audited then none takes window focus (rule 7: the service keeps input)`() {
+    fun `given every overlay when audited then none takes window focus (rule 7 — the service keeps input)`() {
         for ((name, flags) in mapOf(
             "bubble" to OverlayWindowFlags.BUBBLE,
             "inspector" to OverlayWindowFlags.INSPECTOR,

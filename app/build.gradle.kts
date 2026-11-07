@@ -108,6 +108,7 @@ kotlin {
 
 dependencies {
     implementation(project(":core:common"))
+    testImplementation(testFixtures(project(":core:common")))
     implementation(project(":core:model"))
     implementation(project(":core:broker"))
     implementation(project(":core:engine"))

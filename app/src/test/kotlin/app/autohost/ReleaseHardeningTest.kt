@@ -33,7 +33,7 @@ class ReleaseHardeningTest {
     private val manifest = repoFile("app/src/main/AndroidManifest.xml").readText()
 
     @Test
-    fun `backup is off (the checklist row + AGENTS rule: no backups of run data)`() {
+    fun `backup is off (the checklist row + AGENTS rule — no backups of run data)`() {
         assertTrue("android:allowBackup must be false", manifest.contains("android:allowBackup=\"false\""))
         assertTrue(
             "the data-extraction rules must be declared (API 31+ backup path)",
@@ -42,7 +42,7 @@ class ReleaseHardeningTest {
     }
 
     @Test
-    fun `cleartext is off with the NSC attached (the W6.4/X-14 row)`() {
+    fun `cleartext is off with the NSC attached (the W6.4 and X-14 row)`() {
         assertTrue(manifest.contains("android:usesCleartextTraffic=\"false\""))
         assertTrue(manifest.contains("android:networkSecurityConfig=\"@xml/network_security_config\""))
     }
