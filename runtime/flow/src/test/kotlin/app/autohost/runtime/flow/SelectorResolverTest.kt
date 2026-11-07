@@ -54,11 +54,11 @@ class SelectorResolverTest {
         assertEquals(listOf("text", "relation", "relation"), terms.map { it.jsonObject.keys.first() })
         assertEquals(
             "below",
-            (terms[1].jsonObject.getValue("relation").jsonObject)["kind"].jsonPrimitive.content,
+            (terms[1].jsonObject.getValue("relation").jsonObject)["kind"]?.jsonPrimitive?.content,
         )
         assertEquals(
             "contains_descendants",
-            (terms[2].jsonObject.getValue("relation").jsonObject)["kind"].jsonPrimitive.content,
+            (terms[2].jsonObject.getValue("relation").jsonObject)["kind"]?.jsonPrimitive?.content,
         )
     }
 
@@ -67,8 +67,8 @@ class SelectorResolverTest {
         val terms = wire["terms"]!! as kotlinx.serialization.json.JsonArray
         assertEquals(1, terms.size)
         val relation = terms[0].jsonObject.getValue("relation").jsonObject
-        assertEquals("index", relation["kind"].jsonPrimitive.content)
-        assertEquals(1, relation["n"].jsonPrimitive.int)
+        assertEquals("index", relation["kind"]?.jsonPrimitive?.content)
+        assertEquals(1, relation["n"]?.jsonPrimitive?.content?.toInt())
         assertEquals(
             """{"op":"and","terms":[{"class":{"labels":["android.widget.Button"],"mode":"eq","case_sensitive":false}}]}""",
             relation.getValue("selector").jsonObject.toString(),

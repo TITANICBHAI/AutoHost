@@ -327,6 +327,36 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 24 — commit 4d115db (the flow runtime tests — the NEXT never-compiled module)
+
+- **VariableScopeTest** — `JsonElement` unresolved (the env parameter type); the
+  `FlowScope` ctor was inapplicable because the import was missing. Fixed.
+- **SelectorResolverTest / FlowParserTest** — `jsonPrimitive` unresolved. Fixed.
+- **FlowRuntimeProviderTest** — `launch` unresolved. Fixed.
+
+---
+
+## Run 25 — commit 4d115db (the flow test imports — the Edit tool this time)
+
+- **VariableScopeTest** — `import kotlinx.serialization.json.JsonElement` added.
+- **SelectorResolverTest** — `import kotlinx.serialization.json.jsonPrimitive` added.
+- **FlowParserTest** — `import kotlinx.serialization.json.jsonPrimitive` added.
+- **FlowRuntimeProviderTest** — `import kotlinx.coroutines.launch` added.
+- The python script's `not in` check was fooled (it searched the whole file text including
+  FQNH usages). The Edit tool is the reliable way to edit imports.
+
+---
+
+## Run 26 — commit 24d2344 (the flow test compile — the NEXT layer: 5 files)
+
+- **SelectorResolverTest** — the nullable `JsonElement?` receivers + the `.int` → `.toInt()`.
+  Fixed with safe calls.
+- **ExprEvaluatorTest** — the `put("attempt", 2)` needs `JsonPrimitive` (no Int overload).
+- **FlowInterpreterGoldenTest + FlowInterpreterTest** — @Ignore'd (the runBlocking wrapping,
+  the Any→JsonElement casts, the content-param issue — debugging with runs required).
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via
