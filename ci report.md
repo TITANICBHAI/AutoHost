@@ -357,6 +357,23 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 27 — commit f1d63ed (the flow tests: the JsonArray() constructor + the put-Int overloads)
+
+- **JsonArray()** — the no-arg constructor doesn't exist in the current kotlinx.serialization;
+  `JsonArray` requires `content: List<JsonElement>`. Fixed: `JsonArray(emptyList())`.
+- **put("attempt", N)** — the `put(String, Int)` overload doesn't exist in the current
+  kotlinx.serialization version used by runtime:flow. Fixed: `JsonPrimitive(N)` wrapping.
+
+---
+
+## Run 28 — commit 5e08047 (the FlowInterpreterGoldenTest compile fixes)
+
+- The `runFlow` call wrapped in `runBlocking { }` (the closing `}` added).
+- The `case["config"]`/`case["profile"]` Any→JsonObject casts via `as? JsonObject`.
+- The `clipboard = args.getValue("text")` Any→JsonPrimitive cast.
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via

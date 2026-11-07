@@ -85,15 +85,15 @@ class FlowInterpreterGoldenTest {
             apiLevel = case["api_level"]?.jsonPrimitive?.content?.toInt() ?: 29,
             subflows = subflows,
         )
-        val outcome = FlowInterpreter.runFlow(
+        val outcome = kotlinx.coroutines.runBlocking { FlowInterpreter.runFlow(
             FlowParser.fromJson(case.getValue("flow").jsonObject),
             ex,
-            config = case["config"]?.jsonObject ?: JsonObject(emptyMap()),
-            profile = case["profile"]?.jsonObject ?: JsonObject(emptyMap()),
+            config = case["config"]?.let { it as? kotlinx.serialization.json.JsonObject } ?: JsonObject(emptyMap()),
+            profile = case["profile"]?.let { it as? kotlinx.serialization.json.JsonObject } ?: JsonObject(emptyMap()),
             env = case["env"]?.jsonObject ?: JsonObject(emptyMap()),
             secrets = (case["secrets"] as? JsonObject)?.mapValues { (_, v) -> v.jsonPrimitive.content } ?: emptyMap(),
             run = case["run"]?.jsonObject ?: buildJsonObject { put("attempt", JsonPrimitive(1)) },
-        )
+        ) }
         val expected = case.getValue("expected").jsonObject
         assertEquals("case $name: outcome", expected.getValue("outcome").jsonObject, outcome.toJson())
         val actualCalls = buildJsonArray {
@@ -258,7 +258,7 @@ class FlowInterpreterGoldenTest {
                     "commit_text" -> buildJsonObject { put("outcome", "VERIFIED"); put("strategy", "IME") }
                     "clipboard_get" -> buildJsonObject { put("text", clipboard ?: JsonNull) }
                     else -> {
-                        clipboard = args.getValue("text").jsonPrimitive.content
+                        clipboard = (args.getValue("text") as kotlinx.serialization.json.JsonPrimitive).content
                         buildJsonObject { put("ok", true) }
                     }
                 }
