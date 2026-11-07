@@ -374,6 +374,15 @@ again** — recurring lessons live in the RECURRING section at the bottom.
 
 ---
 
+## Run 29 — commit 0490928 (the runBlocking fix worked; the 3 remaining Any→JsonElement casts)
+
+- The `put("text", clipboard ?: JsonNull)` pattern — `clipboard` is `String?` and the `put`
+  overload expects `JsonElement` — the `?: JsonNull` covers the null case but the non-null
+  `String` doesn't match. Fixed: `clipboard?.let { JsonPrimitive(it) } ?: JsonNull`.
+- The same pattern for `screenPackage()` and `current` in the "foreground" handler.
+
+---
+
 ## RECURRING — read before every fix cycle
 
 1. **Heredoc-written file edits can silently half-persist.** The W6.3 schema split was done via

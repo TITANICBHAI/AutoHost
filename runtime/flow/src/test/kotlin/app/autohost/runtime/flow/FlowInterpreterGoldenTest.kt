@@ -256,7 +256,7 @@ class FlowInterpreterGoldenTest {
                 else buildJsonObject { put("unlocked", true); put("secure", false) }
                 "device.ime" -> when (method) {
                     "commit_text" -> buildJsonObject { put("outcome", "VERIFIED"); put("strategy", "IME") }
-                    "clipboard_get" -> buildJsonObject { put("text", clipboard ?: JsonNull) }
+                    "clipboard_get" -> buildJsonObject { put("text", clipboard?.let { kotlinx.serialization.json.JsonPrimitive(it) } ?: JsonNull) }
                     else -> {
                         clipboard = (args.getValue("text") as kotlinx.serialization.json.JsonPrimitive).content
                         buildJsonObject { put("ok", true) }
@@ -385,8 +385,8 @@ class FlowInterpreterGoldenTest {
                 }
                 "list" -> buildJsonObject { put("packages", buildJsonArray { }) }
                 "foreground" -> buildJsonObject {
-                    put("package", screenPackage() ?: JsonNull)
-                    put("activity", current ?: JsonNull)
+                    put("package", screenPackage()?.let { kotlinx.serialization.json.JsonPrimitive(it) } ?: JsonNull)
+                    put("activity", current?.let { kotlinx.serialization.json.JsonPrimitive(it) } ?: JsonNull)
                 }
                 "wait_foreground" -> {
                     val pkg = args.getValue("package").jsonPrimitive.content
