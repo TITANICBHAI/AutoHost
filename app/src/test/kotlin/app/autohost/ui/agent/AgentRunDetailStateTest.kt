@@ -23,7 +23,7 @@ class AgentRunDetailStateTest {
     private fun log(kind: String, vararg pairs: Pair<String, Any>) = BrokerEvent(
         type = "log",
         ts = 1_000_000L,
-        data = buildJsonObject { put("kind", kind); pairs.forEach { put(it.first, it.second) } },
+        data = buildJsonObject { put("kind", kind); pairs.forEach { put(it.first, kotlinx.serialization.json.JsonPrimitive(it.second.toString())) } },
     )
 
     @Test
@@ -127,7 +127,7 @@ class AgentRunDetailStateTest {
     }
 
     @Test
-    fun `given a feed of mixed non-agent events when fed then they change nothing (stage/heartbeat/evidence)`() {
+    fun `given a feed of mixed non-agent events when fed then they change nothing (stage, heartbeat, evidence)`() {
         val s = state()
         s.onEvent(BrokerEvent(type = "heartbeat", ts = 1_000_000L))
         s.onEvent(BrokerEvent(type = "stage_begin", ts = 1_000_000L, stage = "observe"))
