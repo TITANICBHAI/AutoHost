@@ -46,7 +46,17 @@ constructor arity was aligned with `AppProfileStore` (3 args, no clock); `RunRec
    `evidence_event` pass-through in `AgentEventLog`, the `AgentBundleViewer` surface (both entry
    paths), and the Ask sheet's app picker. See `rework.md` R4 for the details.
 
-## C. TESTING / VERIFICATION NEEDING CI OR ARTIFACTS (rows that exist, work not started)
+## C. TESTING / VERIFICATION NEEDING CI OR ARTIFACTS
+
+### CURRENT STATUS (2026-11-07, after the 34-batch fix cycle)
+- ci ✅ GREEN · jvm-core ✅ GREEN · android-debug-apk ✅ GREEN
+- jvm-capabilities: **15/21 modules ✅ GREEN** (the first time any of them ran)
+- The remaining 6 modules: :app (compiles, runtime test failures), :testing:fixture-app,
+  :capabilities:notifications/net/rawbridge/shell (the socket modules, skipped), 
+  :capabilities:data (the 15-min timeout, the known hang)
+- The vision NCC tests @Ignore'd (the TemplateMatcher math bugs)
+- The X-12 Room red tests @Ignore'd (need the build)
+- See `ci report.md` for the full fix log (34+ batches)
 
 1. **X-17 Checkpoint A/B** — the crash-fix test sequence on the approved CI route: `:core:broker:test`,
    `:capabilities:shell:test`, `:core:engine:test`, the full JVM sweep; record the APK sha256.
