@@ -170,18 +170,6 @@ jobs:
             exit "$rc"
           fi
 
-      - name: JVM tests :capabilities:data
-        timeout-minutes: 15
-        shell: bash
-        run: |
-          set +e
-          gradle :capabilities:data:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
-          rc=${PIPESTATUS[0]}
-          if [ "$rc" -ne 0 ]; then
-            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
-            exit "$rc"
-          fi
-
       - name: JVM tests :plugin-sdk
         timeout-minutes: 15
         shell: bash
@@ -295,6 +283,19 @@ jobs:
         shell: bash
         run: |
           python3 tools/test_report_digest.py . | head -15 | while read -r l; do echo "::error::${l:0:250}"; done
+      - name: JVM tests :capabilities:data
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          set +e
+          gradle :capabilities:data:test --continue --console=plain --stacktrace 2>&1 | tee /tmp/jvm.log
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            grep -E "^> Task .*FAILED" /tmp/jvm.log | head -4 | while read -r l; do echo "::error::${l:0:250}"; done
+            exit "$rc"
+          fi
+
+
       - name: Build failure block
         if: failure()
         shell: bash
