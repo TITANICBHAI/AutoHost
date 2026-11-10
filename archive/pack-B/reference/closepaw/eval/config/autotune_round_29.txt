@@ -1,2 +1,0 @@
-ExpenseAddMultipleFromGallery
-RecipeAddMultipleRecipesFromImage

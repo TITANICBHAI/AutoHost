@@ -153,7 +153,10 @@ private fun MainTabs(activity: MainActivity, onNavigate: (Routes, String?) -> Un
 @Composable
 fun LibraryScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit) {
     val graph = (activity.application as app.autohost.AutoHostApp).graph
-    val tasks by graph.devTasks.tasks.collectAsState()
+    // U-01: installed tasks (templates, examples, imports) and dev-folder tasks in ONE list.
+    val entries by androidx.compose.runtime.remember(graph) {
+        TaskCatalog.observe(graph.data.tasks.observeActive(), graph.devTasks.tasks)
+    }.collectAsState(initial = emptyList())
     var showTemplates by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -212,41 +215,42 @@ fun LibraryScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit)
                 OutlinedButton(onClick = { onNavigate(Routes.STUDIO, null) }) { Text("Studio") }
             }
         }
-        SectionHeader("DEV-FOLDER TASKS")
-        if (tasks.isEmpty()) {
+        SectionHeader(stringResource(R.string.library_section_title))
+        if (entries.isEmpty()) {
             EmptyState(
                 title = stringResource(R.string.library_empty_title),
                 body = stringResource(R.string.library_empty_body),
             )
         } else {
             LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(tasks, key = { it.dir.absolutePath }) { task ->
+                items(entries, key = { it.taskId }) { entry ->
+                    val devTask = entry.dev
                     Card(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(12.dp)) {
-                            Text(task.name, style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                task.taskId,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                            )
-                            Text(
-                                "${task.manifest.runtime.type} · ${task.manifest.version}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Button(
-                                onClick = {
-                                    // X-19: dev-folder starts go through the facade — the inline
-                                    // StartRequest bypassed the packs injection (ADR-089 prediction,
-                                    // fixed by the DevTaskStarter extraction)
-                                    val record = graph.devTaskStarter.start(
-                                        task.taskId, task.name, task.manifest, task.config, task.dir.absolutePath,
-                                    ).getOrNull()
-                                    if (record != null) onNavigate(Routes.RUN, record.runId)
-                                },
-                                modifier = Modifier.padding(top = 8.dp),
-                            ) {
-                                Text(stringResource(R.string.action_run))
+                            Text(entry.name, style = MaterialTheme.typography.titleMedium)
+                            if (devTask != null) {
+                                Button(
+                                    onClick = {
+                                        // X-19: dev-folder starts go through the facade — the inline
+                                        // StartRequest bypassed the packs injection (ADR-089 prediction,
+                                        // fixed by the DevTaskStarter extraction)
+                                        val record = graph.devTaskStarter.start(
+                                            devTask.taskId, devTask.name, devTask.manifest, devTask.config, devTask.dir.absolutePath,
+                                        ).getOrNull()
+                                        if (record != null) onNavigate(Routes.RUN, record.runId)
+                                    },
+                                    modifier = Modifier.padding(top = 8.dp),
+                                ) {
+                                    Text(stringResource(R.string.action_run))
+                                }
+                            } else {
+                                // Installed tasks run from their detail page (permissions, setup, schedule live there).
+                                Button(
+                                    onClick = { onNavigate(Routes.TASK_DETAIL, entry.taskId) },
+                                    modifier = Modifier.padding(top = 8.dp),
+                                ) {
+                                    Text(stringResource(R.string.action_open))
+                                }
                             }
                         }
                     }

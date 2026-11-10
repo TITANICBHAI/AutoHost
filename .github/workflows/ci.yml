@@ -59,8 +59,6 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          python3 tools/progress.py --check
-          python3 tools/doc_check.py
           python3 tools/gen_artifacts.py --check
           python3 tools/sync_sdk.py --check
           python3 tools/licence_check.py

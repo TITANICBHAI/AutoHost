@@ -5,8 +5,10 @@
     <string name="run_notification_stop">Stop</string>
     <string name="channel_runs">Runs</string>
     <string name="channel_runs_description">Shows what an automation is doing right now and how to stop it</string>
-    <string name="library_empty_title">No tasks yet</string>
-    <string name="library_empty_body">Push a task bundle to the dev folder with adb, then tap Refresh.</string>
+    <string name="library_empty_title">Nothing here yet</string>
+    <string name="library_empty_body">Add your first automation: tap + Template.</string>
+    <string name="library_section_title">YOUR AUTOMATIONS</string>
+    <string name="action_open">Open</string>
     <string name="action_refresh">Refresh</string>
     <string name="action_run">Run</string>
     <string name="action_stop">Stop</string>

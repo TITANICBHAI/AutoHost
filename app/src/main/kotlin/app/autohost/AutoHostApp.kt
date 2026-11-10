@@ -32,6 +32,7 @@ class AutoHostApp : Application() {
             android.util.Log.println(levelPriority(entry.level), "autohost", "[${entry.tag}] ${entry.message}")
         }
         if (!isMainProcess()) return
+        enableStrictModeInDebugBuilds()
         try {
             graph = AppGraph(this)
         } catch (e: OutOfMemoryError) {
@@ -49,6 +50,21 @@ class AutoHostApp : Application() {
      */
     internal fun publishGraph(partial: AppGraph) {
         graph = partial
+    }
+
+    /**
+     * S04-6: in debug builds only, report main-thread disk/network work and leaked closables to logcat so the phone session
+     * can show them. Log only: never `penaltyDeath` (a violation must not crash a build someone is testing), and nothing
+     * goes into the crash log (that would show the "recorded a problem" screen on the next launch).
+     */
+    private fun enableStrictModeInDebugBuilds() {
+        if ((applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) == 0) return
+        android.os.StrictMode.setThreadPolicy(
+            android.os.StrictMode.ThreadPolicy.Builder().detectAll().penaltyLog().build(),
+        )
+        android.os.StrictMode.setVmPolicy(
+            android.os.StrictMode.VmPolicy.Builder().detectLeakedClosableObjects().penaltyLog().build(),
+        )
     }
 
     private fun isMainProcess(): Boolean {

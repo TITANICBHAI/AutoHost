@@ -15,8 +15,10 @@ plugins {
 // ci.yml diagnostics grep (annotations are the only failure channel readable without admin access).
 subprojects {
     tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+        // A hung test must fail by itself instead of eating the CI budget (C-02 and C-03 were silent hangs).
+        timeout.set(java.time.Duration.ofMinutes(8))
         testLogging {
-            events("failed")
+            events("started", "failed") // "started" lets tools/ci_digest.py name the test that hung
             exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
             showExceptions = true
             showCauses = true

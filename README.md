@@ -1,13 +1,24 @@
 # AutoHost
-Android automation platform: a Kotlin host app that runs user scripts (Python first, declarative flows later) with real device capabilities, per-task settings, profiles, schedules and recovery.
 
-**Start with `HANDOFF.md` §0** (state, the next agent's assignment queue, Windows build commands), then `AGENTS.md` and `docs/PROGRESS.md`.
+An Android app that runs small automations on your phone — Python scripts, recorded flows, JavaScript — through a
+permission broker. Every automation shows what it wants to do before it can run, can be stopped from the notification,
+and keeps a log. *A new automation costs a script, not a new app.*
 
-> **Merge pass (2026-11-03):** the two planning packs were merged into this tree (the code is the crash-fixed code of Session 20, untouched). What was merged and why: `docs/PLAN_MERGE.md`. The other pack, verbatim, is in `archive/` — historical, not instructions.
+**Status: alpha, not yet verified on a real phone.** The engine, the Python SDK and a fake-device simulator are tested;
+the Android app builds in CI but has not been run on hardware yet (see `STATUS.md`). Expect rough edges.
 
-> **v4 planning pass (2026-11-01):** `plan.md` is now v4 and adds an *optional* host-owned agent runtime (§7.11), hardened actions, a measure-first footprint track and optional local inference (Phases 12–16), plus a file-level reuse matrix over the reference projects (`docs/REUSE_MATRIX.md`), a verification ladder and **Epoch V** (verify what exists first). **This pass changed documents, the tracker and tooling docs only — no application code was changed, built or run; nothing in Phases 12–16 exists yet.** See `docs/MIGRATION.md` and `docs/VALIDATION_REPORT.md`.
+## Install (sideload)
+1. Download the newest APK from the repository's *Actions → Android debug APK* artifact (or a *Release* once there is one).
+2. Open it on the phone and allow installing from that source.
+3. To control other apps AutoHost needs its **Accessibility** service. On Android 13+ the switch can be greyed out for
+   apps that did not come from a store: open *Settings → Apps → AutoHost → ⋮ → Allow restricted settings*, then enable it.
 
-- `plan.md` — product plan and phases. `docs/` — layout, manifest, UI spec, gates, decisions, tracker.
-- `sdk-python/` — Python SDK + fake-device simulator (**415 tests green**). Phases 1–8 Kotlin (`core/` incl. devapi, `runtime/`, `capabilities/` incl. ime/screen/projection/files/audio/net/notifications, `app/` — scheduling, triggers, reliability/observability/authoring loop, task UI + surfaces, Dev API + MCP), Phase 9 (`:capabilities:shell` — our own ADB client + transports + the shell tier), Phase 10 (`:capabilities:browser` — the visible WebView browser + a11y + CDP links with challenge-to-WAITING_USER routing; `:capabilities:vision` — OCR/template-match/QR with `hint:true` semantics; `:capabilities:data` — contacts/calendar/media, location/camera/mic/sensors, SMS/telephony with money rails; `net.socket`/`net.reverse` riders) and Phase 11 COMPLETE as written (part 1: `:runtime:js` — the JavaScript (QuickJS) runtime as the third runtime over the same broker; part 2: the capability-plugin host + `:plugin-sdk` + `samples/plugin-example`, app packs riding `config.packs` (ADR-080), the in-app Task Studio with the repo tab, `autohost ui web` inspector, the reverse-WS Dev API transport (`autohost bridge`), secret-free backup/restore, release signing + licence CI (`tools/licence_check.py`), `docs/USER_GUIDE.md` + `docs/OEM_MATRIX.md`, and the P11-12 port exercise) — written, unverified; Gate-10 behaviours are sim-proven in `samples/web-login-scrape` + `samples/ocr-demo`; Gate 11-b is **sim-proven** (python + flow + js coexist). PC tooling: `autohost` CLI (full, now with `ui-web`/`bridge`/`repo`), `autohost mcp`, `tools/gen_artifacts.py` (drift-gated catalog), `tools/mcp_eval.py`, `tools/licence_check.py`.
-- Licence: Apache-2.0. Third-party: Shizuku API, ML Kit text-recognition, ZXing core, quickjs-kt (all Apache-2.0, each isolated to one file) — see `THIRD_PARTY_NOTICES.md`; coverage is CI-enforced (`tools/licence_check.py`).
-- User docs: `docs/USER_GUIDE.md` (start here to USE the app) · `docs/OEM_MATRIX.md` (battery-killer steps) · `docs/RELEASE.md` (signing + registration).
+## What it can and cannot do
+Can: read the screen and tap in apps you choose, open apps, call websites you list, post notifications, run on schedules.
+Cannot, by design: solve CAPTCHAs, hide that it is an automation, harvest credentials. Some things Android itself blocks
+(background limits on some phone brands, restricted settings, Advanced Protection mode).
+
+## For contributors and coding agents
+Read `AGENTS.md`, then `STATUS.md`. The plan for getting to a first usable release is in `work/plan/`.
+Licence: Apache-2.0. Third-party notices: `THIRD_PARTY_NOTICES.md`. Security notes: `SECURITY.md`.
+User guide: `docs/USER_GUIDE.md`. Battery-killer steps per phone brand: `docs/OEM_MATRIX.md`.

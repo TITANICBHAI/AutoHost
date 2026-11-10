@@ -1,4 +1,0 @@
-BrowserDraw
-MarkorDeleteNewestNote
-SportsTrackerTotalDistanceForCategoryOverInterval
-RecipeDeleteDuplicateRecipes3

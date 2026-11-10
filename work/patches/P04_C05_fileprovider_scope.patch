@@ -1,0 +1,38 @@
+diff --git a/app/src/main/res/xml/file_paths.xml b/app/src/main/res/xml/file_paths.xml
+index 43b9392..f236685 100644
+--- a/app/src/main/res/xml/file_paths.xml
++++ b/app/src/main/res/xml/file_paths.xml
+@@ -4,5 +4,4 @@
+ <paths xmlns:android="http://schemas.android.com/apk/res/android">
+     <files-path name="taskdata" path="taskdata/" />
+     <cache-path name="shared" path="install/" />
+-    <files-path name="files" path="." />
+ </paths>
+diff --git a/app/src/test/kotlin/app/autohost/FileProviderScopeTest.kt b/app/src/test/kotlin/app/autohost/FileProviderScopeTest.kt
+index 1a07c74..5f521ad 100644
+--- a/app/src/test/kotlin/app/autohost/FileProviderScopeTest.kt
++++ b/app/src/test/kotlin/app/autohost/FileProviderScopeTest.kt
+@@ -1,7 +1,6 @@
+ package app.autohost
+ 
+ import org.junit.Assert.assertTrue
+-import org.junit.Ignore
+ import org.junit.Test
+ import java.io.File
+ 
+@@ -12,13 +11,11 @@ import java.io.File
+  * D-23 decision narrows the paths; THIS test is pre-written so the narrowing is verified the
+  * moment it lands: un-ignore it then, and it fails while the broad path remains.
+  *
+- * Written 2026-11-06 (rework 2 W2) — `@Ignore`d because the narrowing has not happened yet (D-23);
+- * the test is the failing-test-first marker, not a dead check.
++ * Written 2026-11-06 (rework 2 W2) as a failing-test-first marker; active since C-05 removed the broad
++ * `<files-path path="." />` entry (D-23 answered: share only `taskdata/` and `cache/install/`).
+  */
+ class FileProviderScopeTest {
+ 
+-    @Ignore("X-22 RED — un-ignore when the D-23 decision narrows file_paths.xml; it fails while " +
+-        "<files-path path=\".\" /> still covers files/adb/")
+     @Test
+     fun `the FileProvider paths never cover the ADB private key directory`() {
+         val xml = File("src/main/res/xml/file_paths.xml").readText()

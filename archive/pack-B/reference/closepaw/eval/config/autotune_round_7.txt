@@ -1,8 +1,0 @@
-RecipeAddMultipleRecipesFromImage
-RecipeAddMultipleRecipesFromMarkor
-SportsTrackerActivitiesCountForWeek
-TasksCompletedTasksForDate
-TasksDueNextWeek
-TasksIncompleteTasksOnDate
-VlcCreatePlaylist
-VlcCreateTwoPlaylists

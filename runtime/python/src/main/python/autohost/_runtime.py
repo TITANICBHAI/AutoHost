@@ -16,6 +16,7 @@ never a worker crash.
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import sys
 import traceback
@@ -91,19 +92,108 @@ class EntryNotFound(AutoHostError):
         super().__init__(message, reason="ENTRY_NOT_FOUND")
 
 
+class _LogStream:
+    """File-like stand-in for sys.stdout / sys.stderr while a task runs.
+
+    Every printed line becomes a run-log event, so `print("hi")` in a plain user script shows up in the
+    run's LOG (Chaquopy would otherwise send it to Android's logcat, where nobody looks). Secrets are
+    redacted by `Runtime.emit` like any other event. A runaway script cannot flood the bridge: the two
+    streams share one line budget, and one line is cut at MAX_LINE_CHARS.
+    """
+
+    MAX_LINES = 2000
+    MAX_LINE_CHARS = 2000
+    encoding = "utf-8"
+    errors = "replace"
+
+    def __init__(self, rt: Runtime, level: str, stream: str, budget: dict) -> None:
+        self._rt = rt
+        self._level = level
+        self._stream = stream
+        self._budget = budget
+        self._buffer = ""
+
+    def write(self, text: Any) -> int:
+        text = text if isinstance(text, str) else str(text)
+        self._buffer += text
+        while "\n" in self._buffer:
+            line, self._buffer = self._buffer.split("\n", 1)
+            self._emit_line(line)
+        return len(text)
+
+    def flush(self) -> None:
+        # A partial line stays buffered until its newline (or the end of the run).
+        return None
+
+    def finish(self) -> None:
+        """End of run: deliver a last line that had no trailing newline."""
+        if self._buffer:
+            line, self._buffer = self._buffer, ""
+            self._emit_line(line)
+
+    def isatty(self) -> bool:
+        return False
+
+    def writable(self) -> bool:
+        return True
+
+    def fileno(self) -> int:
+        raise io.UnsupportedOperation("fileno")
+
+    def _emit_line(self, line: str) -> None:
+        line = line.rstrip("\r")
+        if not line.strip():
+            return
+        if self._budget["lines"] >= self.MAX_LINES:
+            if not self._budget["cut"]:
+                self._budget["cut"] = True
+                self._send("warn", f"output cut off after {self.MAX_LINES} lines")
+            return
+        self._budget["lines"] += 1
+        self._send(self._level, line[: self.MAX_LINE_CHARS])
+
+    def _send(self, level: str, message: str) -> None:
+        try:
+            self._rt.emit({"type": "log", "level": level, "message": message, "data": {"stream": self._stream}})
+        except Exception:
+            pass  # logging must never crash the script it is describing
+
+
+def _capture_output(rt: Runtime) -> tuple[tuple[Any, Any], tuple[_LogStream, _LogStream]]:
+    budget = {"lines": 0, "cut": False}
+    streams = (_LogStream(rt, "info", "stdout", budget), _LogStream(rt, "warn", "stderr", budget))
+    saved = (sys.stdout, sys.stderr)
+    sys.stdout, sys.stderr = streams
+    return saved, streams
+
+
+def _release_output(saved: tuple[Any, Any], streams: tuple[_LogStream, _LogStream]) -> None:
+    for stream in streams:
+        stream.finish()
+    sys.stdout, sys.stderr = saved
+
+
 def execute_with_runtime(rt: Runtime, task_path: str, entry: str) -> dict:
     """Install [rt], import the entry module from [task_path], run main(), and classify the outcome.
 
     Shared by the Android worker (`_runtime.run`) and the simulator (`autohost_sim.runner`) so both hosts
-    classify failures identically.
+    classify failures identically. `print()` output is captured into the run log (see `_LogStream`).
+    A script without `main()` is a finished run once its top-level code has run (user-picked scripts).
     """
     install(rt)
+    saved_output, streams = _capture_output(rt)
     module_name = "autohost_task_" + _sanitize(rt.task_id)
     task_dir = str(Path(task_path))
     sys.path.insert(0, task_dir)
     try:
         module = load_entry_module(task_dir, entry, module_name)
-        returned = module.main()
+        main = getattr(module, "main", None)
+        if callable(main):
+            returned = main()
+        else:
+            rt.emit({"type": "log", "level": "info", "data": {},
+                     "message": f"{entry} has no main(); it ran once from top to bottom"})
+            returned = None
         if rt.cancelled:
             # A task that cancelled itself (or was cancelled) without raising still counts as cancelled.
             return {"status": "CANCELLED", "reason": "USER_CANCELLED", "message": "run was cancelled"}
@@ -131,6 +221,7 @@ def execute_with_runtime(rt: Runtime, task_path: str, entry: str) -> dict:
             "traceback": traceback.format_exc(),
         }
     finally:
+        _release_output(saved_output, streams)
         if task_dir in sys.path:
             sys.path.remove(task_dir)
         uninstall()

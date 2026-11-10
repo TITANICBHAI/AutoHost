@@ -2,6 +2,7 @@ package app.autohost
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -9,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import app.autohost.core.designsystem.theme.AutoHostTheme
 import app.autohost.diag.CrashLog
+import app.autohost.nav.NavStack
 import app.autohost.ui.AppNavHost
 import app.autohost.ui.CrashReportScreen
 
@@ -18,14 +20,23 @@ import app.autohost.ui.CrashReportScreen
  */
 class MainActivity : ComponentActivity() {
 
-    internal var route by mutableStateOf(Routes.LIBRARY)
-        private set
+    /** U-02: the screens walked through, so Back returns to the previous screen instead of leaving the app. */
+    private var stack by mutableStateOf(NavStack())
 
-    internal var runIdArg by mutableStateOf<String?>(null)
-        private set
+    internal val route: Routes get() = Routes.valueOf(stack.top.route)
+
+    internal val runIdArg: String? get() = stack.top.arg
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putStringArrayList(STATE_STACK, ArrayList(stack.encode()))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        stack = NavStack.decode(savedInstanceState?.getStringArrayList(STATE_STACK)) { name ->
+            Routes.entries.any { it.name == name }
+        }
         // Crash-fix 1.7: if the object graph could not be built, show why instead of crashing on the first screen.
         val startupFailure = (application as AutoHostApp).startupFailure
         if (startupFailure != null) {
@@ -40,8 +51,10 @@ class MainActivity : ComponentActivity() {
         // Crash-fix 1.7: a report left by the previous run (a crash, or a background failure we survived) shows first.
         val previousReport = CrashLog.pending(this)
         // P7-07: a tile (or a notification deep link) can ask for a specific screen on cold start.
-        when (intent?.getStringExtra(EXTRA_ROUTE)) {
-            "surfaces" -> route = Routes.SURFACES
+        if (savedInstanceState == null) {
+            when (intent?.getStringExtra(EXTRA_ROUTE)) {
+                "surfaces" -> stack = stack.navigate(Routes.SURFACES.name)
+            }
         }
         setContent {
             AutoHostTheme {
@@ -57,14 +70,12 @@ class MainActivity : ComponentActivity() {
                         },
                     )
                 } else {
+                    BackHandler(enabled = stack.canPop) { stack = stack.pop() }
                     AppNavHost(
                         activity = this,
                         route = route,
                         runId = runIdArg,
-                        onNavigate = { target, runId ->
-                            route = target
-                            runIdArg = runId
-                        },
+                        onNavigate = { target, runId -> stack = stack.navigate(target.name, runId) },
                     )
                 }
             }
@@ -73,16 +84,17 @@ class MainActivity : ComponentActivity() {
 
     /** Used by the surfaces trampoline/tile to open the app (optionally on a specific screen). */
     fun openOn(routeName: String) {
-        route = when (routeName) {
-            "surfaces" -> Routes.SURFACES
-            else -> Routes.LIBRARY
+        stack = when (routeName) {
+            "surfaces" -> stack.navigate(Routes.SURFACES.name)
+            else -> NavStack()
         }
-        runIdArg = null
     }
 
     companion object {
         /** Intent extra naming the screen to open (`"surfaces"`); used by tiles and trampolines. */
         const val EXTRA_ROUTE = "route"
+
+        private const val STATE_STACK = "nav_stack"
 
         fun intent(context: android.content.Context): android.content.Intent =
             android.content.Intent(context, MainActivity::class.java)

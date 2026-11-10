@@ -1,3 +1,0 @@
-SportsTrackerTotalDistanceForCategoryOverInterval
-TasksCompletedTasksForDate
-TasksDueNextWeek

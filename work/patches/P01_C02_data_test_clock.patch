@@ -1,0 +1,26 @@
+diff --git a/capabilities/data/src/test/kotlin/app/autohost/capabilities/data/DataClusterTest.kt b/capabilities/data/src/test/kotlin/app/autohost/capabilities/data/DataClusterTest.kt
+index ececab8..4371635 100644
+--- a/capabilities/data/src/test/kotlin/app/autohost/capabilities/data/DataClusterTest.kt
++++ b/capabilities/data/src/test/kotlin/app/autohost/capabilities/data/DataClusterTest.kt
+@@ -198,8 +198,10 @@ private class FakeTelephony : TelephonySeams.Telephony {
+     }
+ }
+ 
+-private class TestClock(var ms: Long = 0) : app.autohost.core.common.Clock {
+-    override fun nowMs(): Long = ms
++private class TestClock(var ms: Long = 0, private val stepMs: Long = 0) : app.autohost.core.common.Clock {
++    // stepMs > 0: every nowMs() read advances time, so a polling loop that pairs this clock with a
++    // real delay() reaches its deadline (C-02). The default 0 keeps the clock frozen, as before.
++    override fun nowMs(): Long = ms.also { ms += stepMs }
+     override fun monotonicMs(): Long = ms
+ }
+ 
+@@ -237,7 +239,7 @@ class SmsTelephonyProvidersTest {
+     }
+ 
+     @Test fun `wait_for times out honestly`() = runBlocking {
+-        val clock = TestClock()
++        val clock = TestClock(stepMs = 600)
+         val provider = SmsProvider(FakeSms(), clock)
+         val envelope = provider.invoke(ctx("device.sms.read"), "wait_for", buildJsonObject {
+             put("contains", JsonPrimitive("nope"))

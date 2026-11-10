@@ -6,7 +6,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
@@ -34,12 +37,16 @@ fun SetupScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit = 
     val a11yService by app.autohost.capabilities.a11y.A11yBridge.service.collectAsState()
     val a11yAvailability: Availability = app.autohost.capabilities.a11y.A11yAvailability.current(a11yService != null)
 
-    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    // S-04: the screen scrolls, so everything below the first card (and the Always-on recipe) can be reached on a small phone.
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         Text(stringResource(R.string.setup_title), style = MaterialTheme.typography.headlineSmall)
         SectionHeader("REQUIRED")
         Card {
             Column(Modifier.padding(12.dp)) {
-                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxSize()) {
+                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Text(
                         if (a11yService != null) stringResource(R.string.setup_a11y_on)
                         else stringResource(R.string.setup_a11y_off),
@@ -95,8 +102,11 @@ fun SetupScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit = 
 @Composable
 private fun AlwaysOnChecklist(activity: MainActivity) {
     val graph = (activity.application as AutoHostApp).graph
-    SectionHeader("ALWAYS-ON RECIPE")
-    Card {
+    var open by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    OutlinedButton(onClick = { open = !open }) {
+        Text(if (open) "Hide the always-on recipe" else "Always-on recipe (for scheduled automations)")
+    }
+    if (open) Card {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
                 "For reliable recurring automation: a dedicated (or semi-dedicated) phone on a charger.",

@@ -1,6 +1,0 @@
-TasksDueNextWeek
-SportsTrackerTotalDistanceForCategoryOverInterval
-FilesMoveFile
-MarkorMergeNotes
-SimpleCalendarEventsInNextWeek
-SimpleCalendarAddOneEventRelativeDay

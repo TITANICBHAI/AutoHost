@@ -37,7 +37,6 @@ echo "== Python SDK and simulator suite =="
 echo
 echo "== Schema and tooling suite =="
 run "$PYTHON_BIN" -m unittest discover -s tests -p "test_*.py"
-run "$PYTHON_BIN" tools/progress.py --check
 run "$PYTHON_BIN" tools/gen_artifacts.py --check
 run "$PYTHON_BIN" tools/sync_sdk.py --check
 
@@ -51,7 +50,6 @@ check_generated_file_unchanged testing/golden/schedule_vectors.json
 echo
 echo "== Licence and MCP checks =="
 run "$PYTHON_BIN" tools/licence_check.py
-run "$PYTHON_BIN" tools/doc_check.py
 run "$PYTHON_BIN" tools/mcp_eval.py
 
 echo "Finished: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"

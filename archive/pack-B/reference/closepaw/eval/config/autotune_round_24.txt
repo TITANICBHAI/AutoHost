@@ -1,4 +1,0 @@
-BrowserDraw
-MarkorDeleteNewestNote
-OsmAndMarker
-RetroPlaylistDuration

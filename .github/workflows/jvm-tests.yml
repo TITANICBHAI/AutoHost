@@ -1,0 +1,104 @@
+# All JVM unit tests in ONE Gradle run, then ONE plain-text digest that a reader without access to the
+# Actions UI can fetch:   git fetch origin ci-results && git show origin/ci-results:latest.md
+# Replaces jvm-core.yml + jvm-capabilities.yml (21 sequential Gradle starts, ~100 minutes, two modules never run).
+# Hung tests are stopped by the per-task timeout in the root build.gradle.kts (8 min) and named in the digest, which
+# keeps the intent of the old "one step per module" rule (X-17-anomaly) without paying for 21 Gradle starts.
+# Emulator jobs stay a permanent no-go (D-24).
+name: jvm-tests
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # only the last-but-one step uses it: it pushes the digest to the ci-results branch
+
+concurrency:
+  group: jvm-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  jvm:
+    name: JVM unit tests (all modules) + digest
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"   # Chaquopy 17 needs a build-machine Python 3.13 (docs/VERSIONS.md)
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.13"
+
+      - name: Unit tests - every module, one Gradle run
+        id: tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle --continue --console=plain $(cat scripts/unit-test-tasks.txt) 2>&1 | tee /tmp/gradle.log
+
+      - name: Style baseline (report only, never fails the job)
+        id: quality
+        continue-on-error: true
+        shell: bash
+        run: |
+          gradle ktlintCheck detekt --continue --console=plain > /tmp/quality.log 2>&1 || true
+          tail -n 5 /tmp/quality.log
+
+      - name: Digest
+        if: always()
+        shell: bash
+        run: |
+          python3 tools/ci_digest.py --log /tmp/gradle.log --root . --tasks scripts/unit-test-tasks.txt \
+            --run "${GITHUB_RUN_NUMBER}" --branch "${GITHUB_REF_NAME}" --sha "${GITHUB_SHA::7}" \
+            --outcome "${{ steps.tests.outcome }}" > /tmp/latest.md
+          {
+            echo
+            echo "## Style baseline (report only): $(grep -cE '\.kt:[0-9]+:[0-9]+' /tmp/quality.log || true) ktlint/detekt findings"
+            grep -E '\.kt:[0-9]+:[0-9]+' /tmp/quality.log | sed -E 's#^.*/work/[^/]+/[^/]+/##' | head -20 | cut -c1-200 | sed 's/^/- /'
+          } >> /tmp/latest.md
+          cat /tmp/latest.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports-${{ github.run_number }}
+          path: |
+            **/build/test-results/**/*.xml
+            **/build/reports/tests/**
+          retention-days: 7
+
+      - name: Publish the digest to the ci-results branch
+        if: always() && github.event_name == 'push'
+        shell: bash
+        run: |
+          set -e
+          git config user.name "ci-digest"
+          git config user.email "ci-digest@users.noreply.github.com"
+          git fetch origin ci-results || true
+          if git rev-parse --verify origin/ci-results >/dev/null 2>&1; then
+            git checkout -f -B ci-results origin/ci-results
+          else
+            git checkout --orphan ci-results
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+          mkdir -p runs
+          cp /tmp/latest.md latest.md
+          cp /tmp/latest.md "runs/${GITHUB_RUN_NUMBER}-${GITHUB_SHA::7}.md"
+          git add latest.md runs
+          git commit -m "ci digest: run ${GITHUB_RUN_NUMBER} (${GITHUB_SHA::7})" || exit 0
+          for attempt in 1 2 3; do
+            git push origin ci-results && exit 0
+            git pull --rebase origin ci-results || true
+          done
+          echo "::warning::could not push the digest to ci-results (repo Settings > Actions > General > Workflow permissions must allow read and write)"
+
+      - name: Fail the job if the tests failed
+        if: steps.tests.outcome == 'failure'
+        run: exit 1

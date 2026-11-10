@@ -8,7 +8,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.serialization.json.JsonObject
@@ -219,16 +218,20 @@ class FlowRuntimeProviderTest {
     }
 
     @Test
-    fun `run controls release the pause on resume`() = runBlocking {
+    fun `run controls release the pause on resume`() {
         val controls = RunControls()
         controls.requestPause()
-        scope.launch {
-            kotlinx.coroutines.delay(100) // let checkpoint() park first
+        // A real thread, not a coroutine: checkpoint() blocks the calling thread, and delay() on a
+        // TestDispatcher uses virtual time that never advances outside runTest (C-03).
+        val resumer = Thread {
+            Thread.sleep(100)
             controls.requestResume()
         }
+        resumer.start()
         val began = System.nanoTime()
         controls.checkpoint() // parks ~100ms, then resumes without throwing
         val waitedMs = (System.nanoTime() - began) / 1_000_000
+        resumer.join(2_000)
         assertTrue("expected the pause gate to hold ~100ms, took $waitedMs", waitedMs >= 50)
     }
 

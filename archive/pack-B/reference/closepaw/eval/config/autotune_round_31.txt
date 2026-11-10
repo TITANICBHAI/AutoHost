@@ -1,4 +1,0 @@
-AudioRecorderRecordAudioWithFileName
-ExpenseDeleteDuplicates2
-ExpenseAddMultipleFromGallery
-OsmAndMarker
