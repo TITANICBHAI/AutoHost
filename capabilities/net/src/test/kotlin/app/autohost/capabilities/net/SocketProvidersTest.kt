@@ -32,6 +32,7 @@ private class FakeTcpFactory : SocketSeams.TcpFactory {
     }
 }
 
+/** [scope] = one `domains` entry; use "*" for "any host". No scope = a grant that lists no domains. */
 private fun ctx(vararg grants: String, scope: String? = null) = CallContext(
     "r1", "t1", "p1",
     grants.associate { id ->
@@ -51,7 +52,7 @@ class SocketProviderTest {
     @Test fun `tcp connect opens a run-scoped handle`() = runBlocking {
         val factory = FakeTcpFactory()
         val provider = SocketProvider(factory)
-        val envelope = provider.invoke(ctx("net.socket"), "tcp_connect", buildJsonObject {
+        val envelope = provider.invoke(ctx("net.socket", scope = "*"), "tcp_connect", buildJsonObject {
             put("host", JsonPrimitive("example.com"))
             put("port", JsonPrimitive(443))
         })
@@ -67,7 +68,8 @@ class SocketProviderTest {
             put("port", JsonPrimitive(443))
         })
         assertEquals(ErrorCode.SCOPE_VIOLATION, ErrorCode.valueOf(denied.error!!.code))
-        val noGrant = provider.invoke(ctx(), "tcp_connect", buildJsonObject {
+        // A grant that names no domains is not a blank cheque: it fails closed (NoGrant) rather than allowing every host.
+        val noGrant = provider.invoke(ctx("net.socket"), "tcp_connect", buildJsonObject {
             put("host", JsonPrimitive("example.com"))
             put("port", JsonPrimitive(443))
         })
@@ -76,7 +78,7 @@ class SocketProviderTest {
 
     @Test fun `tcp handles cap at eight`() = runBlocking {
         val provider = SocketProvider(FakeTcpFactory())
-        val grants = ctx("net.socket")
+        val grants = ctx("net.socket", scope = "*")
         repeat(8) {
             assertTrue(provider.invoke(grants, "tcp_connect", buildJsonObject {
                 put("host", JsonPrimitive("example.com"))
@@ -93,7 +95,7 @@ class SocketProviderTest {
     @Test fun `connect failures are honest capability errors`() = runBlocking {
         val factory = FakeTcpFactory().apply { failHosts = setOf("down.example") }
         val provider = SocketProvider(factory)
-        val envelope = provider.invoke(ctx("net.socket"), "tcp_connect", buildJsonObject {
+        val envelope = provider.invoke(ctx("net.socket", scope = "*"), "tcp_connect", buildJsonObject {
             put("host", JsonPrimitive("down.example"))
             put("port", JsonPrimitive(80))
         })
@@ -103,7 +105,7 @@ class SocketProviderTest {
     @Test fun `closeAllForRun releases every handle`() = runBlocking {
         val factory = FakeTcpFactory()
         val provider = SocketProvider(factory)
-        val grants = ctx("net.socket")
+        val grants = ctx("net.socket", scope = "*")
         repeat(2) {
             provider.invoke(grants, "tcp_connect", buildJsonObject {
                 put("host", JsonPrimitive("example.com"))
@@ -117,7 +119,7 @@ class SocketProviderTest {
 
     @Test fun `udp payloads are capped at the datagram ceiling`() = runBlocking {
         val provider = SocketProvider(FakeTcpFactory())
-        val envelope = provider.invoke(ctx("net.socket"), "udp_send", buildJsonObject {
+        val envelope = provider.invoke(ctx("net.socket", scope = "*"), "udp_send", buildJsonObject {
             put("host", JsonPrimitive("example.com"))
             put("port", JsonPrimitive(5353))
             put("data_b64", JsonPrimitive(java.util.Base64.getEncoder().encodeToString(ByteArray(70_000))))

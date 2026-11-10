@@ -67,7 +67,8 @@ object DataPolicy {
         if (digits.startsWith("1900") || digits.startsWith("190") || digits.startsWith("09") && digits.length in 3..11 && digits.startsWith("0900")) {
             return NumberVerdict.Bad("premium-rate destinations are refused")
         }
-        return NumberVerdict.Ok(digits)
+        // Keep the leading "+": "+44 7..." and "44 7..." are different numbers to a dialler.
+        return NumberVerdict.Ok(if (trimmed.startsWith("+")) "+$digits" else digits)
     }
 
     fun smsBodyVerdict(body: String): String? = when {

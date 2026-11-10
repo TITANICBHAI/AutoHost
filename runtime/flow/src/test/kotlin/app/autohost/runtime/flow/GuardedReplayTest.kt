@@ -91,14 +91,20 @@ class GuardedReplayTest {
     }
 
     @Test
-    fun `package change pins the inclusive threshold boundary`() {
+    fun `losing the whole context pins the inclusive threshold boundary`() {
+        // The context term is half package, half activity (0.5 + 0.5, then x 0.15).
         val expected = expected("Button|a|OK|")
-        val verdict = StateMatcher.compare(expected, StateMatcher.LiveState("com.other.app", "Main", expected.keys))
-        assertEquals(0.85, verdict.score, 1e-9) // jaccard 1 but context 0
-        assertTrue("0.85 >= 0.85: the threshold is inclusive (documented)", verdict.matched)
-        // One step further — a different activity too — drops below and stops matching.
-        val worse = StateMatcher.compare(expected, StateMatcher.LiveState("com.other.app", "Other", expected.keys))
-        assertEquals(0.775, worse.score, 1e-9)
+        val allContextLost = StateMatcher.compare(expected, StateMatcher.LiveState("com.other.app", "Other", expected.keys))
+        assertEquals(0.85, allContextLost.score, 1e-9) // jaccard 1, context 0
+        assertTrue("0.85 >= 0.85: the threshold is inclusive (documented)", allContextLost.matched)
+        // A package change alone keeps the activity half: 0.85 + 0.15 * 0.5.
+        val packageOnly = StateMatcher.compare(expected, StateMatcher.LiveState("com.other.app", "Main", expected.keys))
+        assertEquals(0.925, packageOnly.score, 1e-9)
+        assertTrue(packageOnly.matched)
+        // Any missing node on top of a lost context drops below the threshold.
+        val twoNodes = expected("Button|a|OK|", "TextView||hello|")
+        val worse = StateMatcher.compare(twoNodes, StateMatcher.LiveState("com.other.app", "Other", listOf("Button|a|OK|")))
+        assertEquals(0.85 * 0.5, worse.score, 1e-9)
         assertFalse(worse.matched)
     }
 

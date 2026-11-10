@@ -4,7 +4,10 @@ import app.autohost.core.common.FakeClock
 import app.autohost.core.model.MisfirePolicy
 import app.autohost.core.model.ScheduleRule
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
@@ -53,10 +56,22 @@ class ScheduleFormGoldenTest {
             time = o["time"]?.jsonPrimitive?.content ?: defaults.time,
             from = o["from"]?.jsonPrimitive?.content ?: defaults.from,
             to = o["to"]?.jsonPrimitive?.content ?: defaults.to,
-            misfire = MisfirePolicy.fromJsonElement(o["misfire"]),
+            misfire = misfireOf(o["misfire"]),
             profileIds = o["profile_ids"]?.jsonArray?.map { it.jsonPrimitive.content } ?: defaults.profileIds,
             enabled = o["enabled"]?.jsonPrimitive?.booleanOrNull ?: defaults.enabled,
         )
+    }
+
+    /**
+     * Not [MisfirePolicy.fromJsonElement]: that rejects `catch_up: 0`, and the `catch_up_zero` vector must reach
+     * [ScheduleForm.validate] to be reported as `bad_misfire`.
+     */
+    private fun misfireOf(element: JsonElement?): MisfirePolicy = when {
+        element == null || element is JsonNull -> MisfirePolicy.Skip
+        element is JsonPrimitive && element.content == "skip" -> MisfirePolicy.Skip
+        element is JsonPrimitive && element.content == "run_once" -> MisfirePolicy.RunOnce
+        element is JsonObject -> MisfirePolicy.CatchUp(element.getValue("catch_up").jsonPrimitive.int)
+        else -> error("unknown misfire in vectors: $element")
     }
 
     @Test fun `the vectors file has cases`() {

@@ -74,7 +74,8 @@ class SocketProvider(
         else -> Envelope.err(ErrorCode.INVALID_ARGS, "unknown net.socket method '$method'")
     }
 
-    private fun domainGate(ctx: CallContext, host: String): Envelope? = when (val verdict = NetPolicy.domainVerdict(ctx.grants["net.socket"], "$host/")) {
+    // NetPolicy.hostOf only understands http(s)/ws(s) URLs; a bare "host/" has no scheme, so every socket call used to be denied.
+    private fun domainGate(ctx: CallContext, host: String): Envelope? = when (val verdict = NetPolicy.domainVerdict(ctx.grants["net.socket"], "https://$host/")) {
         is NetPolicy.DomainVerdict.Allowed -> null
         is NetPolicy.DomainVerdict.NoGrant -> Envelope.err(ErrorCode.PERMISSION_DENIED, "the run has no net.socket grant", fixAction = "OPEN_PERMISSION_REVIEW")
         is NetPolicy.DomainVerdict.Denied -> Envelope.err(ErrorCode.SCOPE_VIOLATION, "host \"$host\" is not in this run's net.socket domain allowlist", fixAction = "OPEN_PERMISSION_REVIEW")

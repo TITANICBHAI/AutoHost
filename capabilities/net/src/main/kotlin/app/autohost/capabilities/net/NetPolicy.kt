@@ -34,7 +34,8 @@ object NetPolicy {
             if (pattern == "*") return DomainVerdict.Allowed
             if (pattern.startsWith("*.")) {
                 val suffix = pattern.removePrefix("*.")
-                if (host == suffix || host.endsWith(".$suffix")) return DomainVerdict.Allowed
+                // "*.example.org" covers every deeper label but not "example.org" itself: list the bare domain too if wanted.
+                if (host.endsWith(".$suffix")) return DomainVerdict.Allowed
             } else if (host == pattern) {
                 return DomainVerdict.Allowed
             }

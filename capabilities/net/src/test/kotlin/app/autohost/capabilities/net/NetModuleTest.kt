@@ -68,11 +68,17 @@ class HttpProviderTest {
     private class FakeEngine(var status: Int = 200, var body: ByteArray = "ok".encodeToByteArray()) : HttpProvider.Engine {
         var lastUrl: String? = null
         var lastMethod: String? = null
+        var lastHeaders: Map<String, String> = emptyMap()
+        var lastBody: ByteArray? = null
         var truncated = false
         override fun request(method: String, url: String, headers: Map<String, String>, bodyBytes: ByteArray?, timeoutMs: Long, maxBytes: Int): HttpProvider.Engine.Response {
             lastUrl = url
             lastMethod = method
-            return HttpProvider.Engine.Response(status, mapOf("Content-Type" to "text/plain"), body, truncated)
+            lastHeaders = headers
+            lastBody = bodyBytes
+            return HttpProvider.Engine.Response(
+                status, mapOf("Content-Type" to "text/plain", "Set-Cookie" to "sid=abc"), body, truncated,
+            )
         }
     }
 
@@ -115,10 +121,13 @@ class HttpProviderTest {
         })
         assertEquals(true, result.ok)
         assertEquals("POST", engine.lastMethod)
-        assertEquals(
-            "«redacted»",
-            (result.result!!.jsonObject["headers"]!!.jsonObject["Authorization"] as JsonPrimitive).content,
-        )
+        // The request body reaches the engine as bytes and the caller's own header is passed through untouched ...
+        assertEquals("hello", engine.lastBody!!.decodeToString())
+        assertEquals("Bearer secret", engine.lastHeaders["Authorization"])
+        // ... while the headers echoed back to the script are redacted for secrets (Set-Cookie) and keep the rest.
+        val echoed = result.result!!.jsonObject["headers"]!!.jsonObject
+        assertEquals("«redacted»", (echoed["Set-Cookie"] as JsonPrimitive).content)
+        assertEquals("text/plain", (echoed["Content-Type"] as JsonPrimitive).content)
     }
 }
 

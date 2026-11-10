@@ -13,6 +13,12 @@ Updated: 2026-11-10 · by: Session 1 + early parts of S04/S05 (all unverified on
   `testing/golden/schedule_form_vectors.json`: valid cases give the exact reference rule AND the real `ScheduleEngine.nextFires` gives the reference next-5; invalid cases give exactly the listed
   error keys; form→rule→form→rule round-trips. The JUnit files (`ScheduleFormGoldenTest`, `ScheduleFormTest`) were NOT run by Gradle.
 - `NavStack` (S04 step 4, pure back-stack): same local compile + an equivalent check run. `NavStackTest` was not run by Gradle.
+- First CI test reports (owner uploaded `test-reports-1.zip`, `jvm-core-test-reports-90.zip`): 21 modules ran, 14 failing tests in 5 modules, listed below and all addressed in code this session (NOT re-run: wait for CI):
+  · `core/engine` 1: my own `ScheduleFormGoldenTest` parsed the `catch_up: 0` vector with a validating parser (test fixed to parse it raw).
+  · `runtime/flow` 7: test fixtures lacked the required `"schema": 1` (3 tests, fixed); nested-repeat error text expectation was stale vs the reference parser (fixed); `StateMatcher` boundary test used wrong arithmetic (fixed to the code: package-only change = 0.925, package+activity = 0.85); selector state-key order follows the reference `STATE_KEYS` (fixed test); **code bug** `Recorder` produced `${secret.INPUT_INPUT_1}` (fixed).
+  · `capabilities/data` 4: **code bug** `DataPolicy.numberVerdict` dropped the leading `+` from dial/SMS numbers (fixed); the contacts permission tests called the provider directly but the broker's `ProviderInterceptor` is the gate (tests now assert `permissionFor`); SMS budget test depended on a static per-run counter (reset added).
+  · `capabilities/net` 8: **code bug** every socket call was denied because the domain gate passed `host/` (no scheme) to `NetPolicy.hostOf` (fixed); `*.example.org` no longer matches the bare `example.org` (decision: matches the test and fails closed; list both to allow both); HTTP header-echo test checked the wrong side (fixed); socket tests used a grant with no `domains` list, which correctly fails closed (tests now pass `scope = "*"`).
+- Modules with NO report yet (not in the uploaded zips, status unknown): `app`, `runtime/python`, `runtime/agent`, `core/llm`, `plugin-sdk`, others. Ask for the next digest.
 - No CRLF text files found by `m0_reset.py --check-eol` (only a PNG false positive); golden vectors need no LF normalisation.
 - (Nothing is verified on Android yet. The app has never been launched on a device or emulator. D-24 / D-25.)
 

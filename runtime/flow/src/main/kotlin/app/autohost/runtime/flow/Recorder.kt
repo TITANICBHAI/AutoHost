@@ -79,7 +79,7 @@ data class RecorderResult(
 
 object Recorder {
 
-    const val SECRET_PLACEHOLDER_PREFIX = "\${secret.INPUT_"
+    const val SECRET_PLACEHOLDER_PREFIX = "\${secret."
 
     /** Converts a full session into steps. Events must be in chronological order. */
     fun record(events: List<RecordedEvent>): RecorderResult {

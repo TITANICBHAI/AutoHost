@@ -78,7 +78,7 @@ class FlowRuntimeProviderTest {
         try {
             val dir = tmp.newFolder("task")
             File(dir, "task.json").writeText("{}")
-            File(dir, "flow.json").writeText("""{"steps":[{"setResult":{"code":"pressed"}}]}""")
+            File(dir, "flow.json").writeText("""{"schema":1,"steps":[{"setResult":{"code":"pressed"}}]}""")
             val binder = FakeBinder()
             val handle = runBlocking { provider(binder).start(spec(dir)) }
             // Unconfined dispatchers: the interpreter ran to completion inside start().
@@ -117,7 +117,7 @@ class FlowRuntimeProviderTest {
         val tmp = TemporaryFolder().apply { create() }
         try {
             val dir = tmp.newFolder("task")
-            File(dir, "flow.json").writeText("""{"steps":[{"noSuchCommand":{}}]}""")
+            File(dir, "flow.json").writeText("""{"schema":1,"steps":[{"noSuchCommand":{}}]}""")
             val binder = FakeBinder()
             runBlocking {
                 try {
@@ -158,11 +158,12 @@ class FlowRuntimeProviderTest {
     fun `installed yaml plug parses flow yaml end to end`() {
         // The plug interface is what ships in v1; the real yamlkt plug lands on a Gradle machine
         // (ADR-052). This scripted plug asserts the exact text it was built for — no YAML grammar.
-        val sample = "steps:\n  - setResult:\n      code: pressed\n"
+        val sample = "schema: 1\nsteps:\n  - setResult:\n      code: pressed\n"
         YamlParserPlug.install(object : YamlParserPlug {
             override fun parseToJsonObject(text: String): JsonObject {
                 assertEquals(sample, text)
                 return buildJsonObject {
+                    put("schema", JsonPrimitive(1))
                     put("steps", AhJson.json.parseToJsonElement("""[{"setResult":{"code":"pressed"}}]"""))
                 }
             }
@@ -192,8 +193,8 @@ class FlowRuntimeProviderTest {
         try {
             val dir = tmp.newFolder("task")
             File(dir, "task.json").writeText("{}")
-            File(dir, "flow.json").writeText("""{"steps":[{"setResult":{"code":"main"}}]}""")
-            File(dir, "child.json").writeText("""{"steps":[{"setResult":{"code":"from-child"}}]}""")
+            File(dir, "flow.json").writeText("""{"schema":1,"steps":[{"setResult":{"code":"main"}}]}""")
+            File(dir, "child.json").writeText("""{"schema":1,"steps":[{"setResult":{"code":"from-child"}}]}""")
             val main = FlowSources.loadFlowDocument(File(dir, "flow.json"))
             val subflows = FlowSources.loadSubflows(dir, File(dir, "flow.json"))
             assertTrue(subflows.containsKey("child") && subflows.containsKey("child.json"))

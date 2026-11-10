@@ -11,6 +11,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
 /**
@@ -119,10 +120,11 @@ private fun ctx(vararg permissions: String) = CallContext(
 
 class PersonalDataProvidersTest {
 
-    @Test fun `contacts query needs the read permission`() = runBlocking {
+    // The broker's ProviderInterceptor enforces the grant before a provider runs, using permissionFor();
+    // a provider does not re-check it, so the provider-level contract is "which permission does each method need".
+    @Test fun `contacts query needs the read permission`() {
         val provider = ContactsProvider(FakeContacts())
-        val denied = provider.invoke(ctx(), "query", buildJsonObject { })
-        assertEquals(ErrorCode.PERMISSION_DENIED, ErrorCode.valueOf(denied.error!!.code))
+        assertEquals("contacts.read", provider.permissionFor("query", buildJsonObject { }))
     }
 
     @Test fun `contacts availability follows the lazy permission`() {
@@ -136,8 +138,7 @@ class PersonalDataProvidersTest {
     @Test fun `contacts insert requires write and returns an id`() = runBlocking {
         val store = FakeContacts()
         val provider = ContactsProvider(store)
-        val denied = provider.invoke(ctx("contacts.read"), "insert", buildJsonObject { put("name", JsonPrimitive("A")) })
-        assertEquals(ErrorCode.PERMISSION_DENIED, ErrorCode.valueOf(denied.error!!.code))
+        assertEquals("contacts.write", provider.permissionFor("insert", buildJsonObject { }))
         val ok = provider.invoke(ctx("contacts.read", "contacts.write"), "insert", buildJsonObject {
             put("name", JsonPrimitive("Ada"))
             put("phone", JsonPrimitive("+15550001"))
@@ -206,6 +207,10 @@ private class TestClock(var ms: Long = 0, private val stepMs: Long = 0) : app.au
 }
 
 class SmsTelephonyProvidersTest {
+
+    // SmsProvider keeps its per-run send counter in a static map; without this reset the budget test counts the
+    // sends of whichever test ran before it in the same class and fails depending on test order.
+    @Before fun resetRunBudget() = SmsProvider.clearRun("r1")
 
     @Test fun `sms send budget is per run and cleared on terminal`() = runBlocking {
         val store = FakeSms()

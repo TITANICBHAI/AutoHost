@@ -40,10 +40,11 @@ class SelectorResolverTest {
         assertEquals("pkg", (wire["terms"]!! as kotlinx.serialization.json.JsonArray)[0].jsonObject.keys.first())
     }
 
+    // Key order follows the reference parser's STATE_KEYS (enabled, checked, selected, focused, clickable, visible), not the input order.
     @Test fun `state keys fold into single state term`() {
         val wire = wire("""{"clickable": true, "enabled": false}""")
         assertEquals(
-            """{"op":"and","terms":[{"state":{"clickable":true,"enabled":false}}]}""",
+            """{"op":"and","terms":[{"state":{"enabled":false,"clickable":true}}]}""",
             wire.toString(),
         )
     }

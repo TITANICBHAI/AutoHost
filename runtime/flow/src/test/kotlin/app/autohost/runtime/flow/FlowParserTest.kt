@@ -103,7 +103,7 @@ class FlowParserTest {
         val e = assertThrows(FlowParseException::class.java) {
             parse("""{"schema": 1, "steps": [{"repeat": {"times": 2, "steps": [{"frob": {}}]}}]}""")
         }
-        assertTrue(e.message!!.contains("repeat: repeat steps[0]: unknown command"))
+        assertTrue(e.message!!.contains("steps[0]: repeat steps[0]: unknown command"))
     }
 
     @Test fun `timeout modifier converts seconds to milliseconds`() {
