@@ -42,7 +42,7 @@ class ReleaseHardeningTest {
     }
 
     @Test
-    fun `cleartext is off with the NSC attached (the W6.4 and X-14 fix)`() {
+    fun `cleartext is off with the NSC attached (the W6-4 and X-14 fix)`() {
         assertTrue(manifest.contains("android:usesCleartextTraffic=\"false\""))
         assertTrue(manifest.contains("android:networkSecurityConfig=\"@xml/network_security_config\""))
     }
