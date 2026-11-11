@@ -143,6 +143,7 @@ class AskSheetStateTest {
     fun `given a picker entry when toggled and started then it reaches the starter like a typed one`() = runBlocking {
         val starter = FakeStarter()
         val s = state(starter)
+        s.togglePackage("com.android.settings") // state() pre-selects Settings; deselect so only the picked entry remains
         s.hydrateApps(listOf(AskSheetState.AppEntry("com.example.calc", "Calculator")))
         s.togglePackage("com.example.calc")
         assertTrue(s.model.selectedPackages.contains("com.example.calc"))
