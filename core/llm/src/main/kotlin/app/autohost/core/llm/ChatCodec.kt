@@ -87,7 +87,7 @@ object ChatCodec {
     }
 
     private fun validateName(name: String, what: String) {
-        check(nameRegex.matches(name)) { "$what must match $LLM_NAME_PATTERN: \"$name\"" }
+        require(nameRegex.matches(name)) { "$what must match $LLM_NAME_PATTERN: \"$name\"" }
     }
 
     /**

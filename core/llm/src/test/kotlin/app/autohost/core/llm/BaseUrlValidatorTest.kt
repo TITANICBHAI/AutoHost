@@ -59,7 +59,10 @@ class BaseUrlValidatorTest {
         V("hTtPs://api.openai.com/v1", on, true), // uppercase scheme is legal
         V("https://api.openai.com/v1/", on, true), // trailing slash trimmed
         V("https://api.openai.com/v1//", on, true),
-        V("https://模型.example/v1", on, true), // punycode-capable host parses; accepted as https
+        V("https://xn--model.example/v1", on, true), // punycode (ASCII) form of an IDN host is a plain hostname
+        // A raw Unicode host is refused: java.net.URI cannot parse it as a server authority (host is
+        // null) and a lookalike (homograph) host must never be sent a key. Users paste the xn-- form.
+        V("https://模型.example/v1", on, false, Reason.MALFORMED),
     )
 
     @Test
