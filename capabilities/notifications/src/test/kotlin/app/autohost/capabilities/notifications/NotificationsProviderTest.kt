@@ -41,7 +41,9 @@ class NotificationAccessPolicyTest {
 /** Provider behaviour against a stubbed bridge (fake, not a mock of our own classes). */
 class NotificationsProviderTest {
 
-    private val clock = FakeClock()
+    // wait_for polls `clock.monotonicMs() < deadline`; a frozen clock never reaches the deadline and the test hangs
+    // (the C-02/C-03 lesson). Every reading moves this one forward, so the 400 ms timeout is reached in a few polls.
+    private val clock = FakeClock(autoAdvancePerReadMs = 100)
 
     private fun ctx(packages: Set<String>? = null) = CallContext(
         runId = "r", taskId = "t", profileId = null,
