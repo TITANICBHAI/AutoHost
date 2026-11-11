@@ -1,6 +1,7 @@
 package app.autohost.core.llm
 
 import com.sun.net.httpserver.HttpServer
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
@@ -98,7 +99,7 @@ class HttpUrlConnectionEngineTest {
         start { ex -> Thread.sleep(30_000) } // never answers
         val engine = engine()
         val done = kotlinx.coroutines.CompletableDeferred<Unit>()
-        val job = kotlinx.coroutines.launch {
+        val job = launch {
             try {
                 engine.post("http://127.0.0.1:$port/", emptyMap(), "{}".toByteArray(), 30_000)
                 done.complete(Unit)

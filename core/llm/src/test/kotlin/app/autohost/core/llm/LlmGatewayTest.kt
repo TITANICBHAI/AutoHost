@@ -34,11 +34,12 @@ class LlmGatewayTest {
             calls += 1
             seenUrls.add(url)
             seenAuthorization.add(headers["Authorization"])
-            return HttpResponse(status, emptyMap(), body)
+            return HttpResponse(status, emptyMap(), this.body) // `this.body`: the String the test configured, not the request bytes
         }
     }
 
-    private class FakeProfiles : ProfileStore {
+    // inner: it reads the outer test's `profile` and `key`
+    private inner class FakeProfiles : ProfileStore {
         var registered: MutableList<String> = mutableListOf()
         override fun load(): List<ProviderProfile> = listOf(profile)
         override fun save(profiles: List<ProviderProfile>) = Unit
@@ -55,7 +56,7 @@ class LlmGatewayTest {
         }
     }
 
-    private fun gateway(engine: FakeEngine, profiles: FakeProfiles = FakeProfiles(), now: Long = 1_000L): Pair<LlmGateway, RecordingAudit> {
+    private fun gateway(engine: FakeEngine, profiles: ProfileStore = FakeProfiles(), now: Long = 1_000L): Pair<LlmGateway, RecordingAudit> {
         val audit = RecordingAudit()
         return LlmGateway(profiles, engine, audit, nowMs = { now }, urlEnv = {
             BaseUrlValidator.UrlEnv(cleartextLoopbackEnabled = true, debugBuild = false)
