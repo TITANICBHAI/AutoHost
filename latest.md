@@ -1,77 +1,62 @@
-# CI digest - run 4 - branch work/s02-green - commit 49c7088
+# CI digest - run 5 - branch work/s02-green - commit e4f4380
 tests step outcome: failure
 
-## Verdict: RED - 877 tests ran, 0 failed, 151 Kotlin compile errors, 5 failed Gradle tasks, 9 modules with no results
-
-## Kotlin compile errors (first 40 of 151)
-- core/llm/src/test/kotlin/app/autohost/core/llm/ChatCodecTest.kt:33:92 Unresolved reference 'JsonObject'.
-- core/llm/src/test/kotlin/app/autohost/core/llm/ChatCodecTest.kt:33:103 Cannot infer type for type parameter 'K'. Specify it explicitly.
-- core/llm/src/test/kotlin/app/autohost/core/llm/ChatCodecTest.kt:33:103 Cannot infer type for type parameter 'V'. Specify it explicitly.
-- core/llm/src/test/kotlin/app/autohost/core/llm/ChatCodecTest.kt:64:103 Unresolved reference 'JsonObject'.
-- core/llm/src/test/kotlin/app/autohost/core/llm/ChatCodecTest.kt:64:114 Cannot infer type for type parameter 'K'. Specify it explicitly.
-- core/llm/src/test/kotlin/app/autohost/core/llm/ChatCodecTest.kt:64:114 Cannot infer type for type parameter 'V'. Specify it explicitly.
-- core/llm/src/test/kotlin/app/autohost/core/llm/HttpUrlConnectionEngineTest.kt:101:38 'fun launch(context: CoroutineContext = ..., start: CoroutineStart = ..., block: suspend CoroutineScope.() -> Unit): Job' is deprecate…
-- core/llm/src/test/kotlin/app/autohost/core/llm/LlmGatewayTest.kt:37:53 Argument type mismatch: actual type is 'ByteArray', but 'String' was expected.
-- core/llm/src/test/kotlin/app/autohost/core/llm/LlmGatewayTest.kt:43:61 Unresolved reference 'profile'.
-- core/llm/src/test/kotlin/app/autohost/core/llm/LlmGatewayTest.kt:45:90 Unresolved reference 'key'.
-- core/llm/src/test/kotlin/app/autohost/core/llm/LlmGatewayTest.kt:113:62 Argument type mismatch: actual type is '<anonymous>', but 'LlmGatewayTest.FakeProfiles' was expected.
-- core/llm/src/test/kotlin/app/autohost/core/llm/LlmGatewayTest.kt:124:51 Argument type mismatch: actual type is '<anonymous>', but 'LlmGatewayTest.FakeProfiles' was expected.
-- core/llm/src/test/kotlin/app/autohost/core/llm/LlmGatewayTest.kt:138:50 Argument type mismatch: actual type is '<anonymous>', but 'LlmGatewayTest.FakeProfiles' was expected.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentEvalHarnessTest.kt:96:47 Unresolved reference 'buildJsonObject'.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentEvalHarnessTest.kt:96:65 Unresolved reference 'put'.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentEvalHarnessTest.kt:124:30 Argument type mismatch: actual type is 'Function0<AgentLoop.FinishResult.Confirmed>', but 'AgentLoop.FinishVerifier' was expected.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentEvalHarnessTest.kt:190:41 No 'get' operator method providing array access.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentEvalHarnessTest.kt:194:41 No 'get' operator method providing array access.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentEvalHarnessTest.kt:198:41 No 'get' operator method providing array access.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentLoopTest.kt:168:9 Name contains illegal characters: ;.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentManifestsTest.kt:54:22 Unresolved reference 'pausible'.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentManifestsTest.kt:119:9 Name contains illegal characters: :.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentRuntimeProviderTest.kt:100:34 Argument type mismatch: actual type is 'Function0<AgentLoop.FinishResult.Confirmed>', but 'AgentLoop.FinishVerifier' was expect…
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentSectionBuilderTest.kt:19:83 Argument type mismatch: actual type is 'Any', but 'JsonElement' was expected.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentSectionBuilderTest.kt:65:9 Name contains illegal characters: ..
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentSecuritySuiteTest.kt:110:30 Argument type mismatch: actual type is 'Function0<AgentLoop.FinishResult.Confirmed>', but 'AgentLoop.FinishVerifier' was expected.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentSecuritySuiteTest.kt:226:30 Argument type mismatch: actual type is 'Function0<AgentLoop.FinishResult.Confirmed>', but 'AgentLoop.FinishVerifier' was expected.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentSecuritySuiteTest.kt:285:30 Argument type mismatch: actual type is 'Function0<AgentLoop.FinishResult.Confirmed>', but 'AgentLoop.FinishVerifier' was expected.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentSecuritySuiteTest.kt:313:28 Destructuring of type 'AgentLoop.Outcome' requires operator function 'component1()'.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentSecuritySuiteTest.kt:313:28 Destructuring of type 'AgentLoop.Outcome' requires operator function 'component2()'.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentViewTest.kt:80:28 Unresolved reference 'resolveForCall'.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentViewTest.kt:89:28 Unresolved reference 'resolveForCall'.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentViewTest.kt:97:28 Unresolved reference 'resolveForCall'.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentViewTest.kt:98:43 One type argument expected. Use class 'Ok' if you do not intend to pass type arguments.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AgentViewTest.kt:98:56 Unresolved reference 'value'.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AppSensitivityTest.kt:26:26 Cannot infer type for type parameter 'R'. Specify it explicitly.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AppSensitivityTest.kt:26:56 Unresolved reference 'jsonPrimitive'.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AppSensitivityTest.kt:26:80 Cannot infer type for type parameter 'T'. Specify it explicitly.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AppSensitivityTest.kt:35:35 Unresolved reference 'jsonPrimitive'.
-- runtime/agent/src/test/kotlin/app/autohost/runtime/agent/AppSensitivityTest.kt:35:85 Unresolved reference 'jsonPrimitive'.
+## Verdict: RED - 1247 tests ran, 38 failed, 0 Kotlin compile errors, 4 failed Gradle tasks, 4 modules with no results
 
 ## Failed Gradle tasks
-- :core:llm:compileTestKotlin
-- :runtime:agent:compileTestKotlin
-- :capabilities:shell:compileDebugUnitTestKotlin
-- :capabilities:notifications:testDebugUnitTest
-- :app:compileCorePyDebugUnitTestKotlin
+- :capabilities:shell:testDebugUnitTest
+- :runtime:agent:test
+- :core:llm:test
+- :app:testCorePyDebugUnitTest
 
-## A task TIMED OUT - the last tests that started (the last one is the hung test)
-- NotificationAccessPolicyTest > parses the system setting format STARTED
-- NotificationAccessPolicyTest > blank and malformed settings are disabled STARTED
-- NotificationsProviderTest > availability is honest about the listener connection STARTED
-- NotificationsProviderTest > press sends through the handler slot STARTED
-- NotificationsProviderTest > list returns scoped items only STARTED
-- NotificationsProviderTest > wait_for times out honestly when nothing matches STARTED
+## Failing tests (first 40 of 38)
+- [app] AskSheetStateTest.given a picker entry when toggled and started then it reaches the starter like a typed one - java.lang.AssertionError: expected:<[com.example.calc]> but was:<[com.android.settings, com.example.calc]>
+- [capabilities/shell] AdbClientTest.legacy adbd falls back to merged shell output with null exit code - app.autohost.capabilities.shell.AdbProtocol$AdbProtocolException: OPEN was not acknowledged with OKAY (CLSE)
+- [capabilities/shell] AdbClientTest.unauthorized device gets the public key offer and still completes after approval - app.autohost.capabilities.shell.AdbProtocol$AdbProtocolException: adbd closed during handshake: null
+- [capabilities/shell] LogcatOutputTest.missing pid parses as null and banners are skipped - java.lang.AssertionError: expected:<1> but was:<0>
+- [capabilities/shell] LogcatOutputTest.epoch stamps parse to millis - java.lang.AssertionError: expected:<3> but was:<2>
+- [capabilities/shell] LogcatOutputTest.filters apply level pid and text - java.lang.AssertionError: expected:<2> but was:<0>
+- [capabilities/shell] ShellUiAndScreenshotProviderTest.initializationError - org.junit.runners.model.InvalidTestClassError: Invalid test class 'app.autohost.capabilities.shell.ShellUiAndScreenshotProviderTest': 1. Method screencap writes a png into the evidence dir with IHDR dimensions() should …
+- [capabilities/shell] Spake2P256Test.two parties derive identical keys and confirm each other - java.lang.IllegalArgumentException: Empty key
+- [capabilities/shell] Spake2P256Test.a wrong password fails confirmation - java.lang.IllegalArgumentException: Empty key
+- [capabilities/shell] UiAutomationProviderTest.secret text is allowed on this provider (ADR-068) - java.lang.NullPointerException
+- [capabilities/shell] UiAutomationProviderTest.click verifies through the runner and the expect recheck - java.lang.NullPointerException
+- [capabilities/shell] UiAutomationProviderTest.out-of-scope act is refused before any runner traffic - java.lang.AssertionError: expected:<SCOPE_VIOLATION> but was:<NOT_FOUND>
+- [capabilities/shell] UiAutomationSessionClientTest.runner errors surface as typed RpcError - java.lang.AssertionError: expected RpcError
+- [capabilities/shell] UiautomatorDumpTest.escapes round-trip and nested structure keeps depth - java.lang.AssertionError: expected:<0> but was:<1>
+- [core/llm] BaseUrlValidatorTest.given the full vector table when validated then every verdict and reason holds - java.lang.AssertionError: vector failures: vector 34 expected ACCEPT: https://模型.example/v1
+- [core/llm] ChatCodecTest.given a bad tool name when encoded then the codec refuses it - java.lang.Exception: Unexpected exception, expected<java.lang.IllegalArgumentException> but was<java.lang.IllegalStateException>
+- [core/llm] HttpUrlConnectionEngineTest.given a hung server when the call is cancelled then it returns within about a second - kotlinx.coroutines.TimeoutCancellationException: Timed out waiting for 2000 ms
+- [core/llm] HttpUrlConnectionEngineTest.given a 429 with Retry-After when posted then the header surfaces for the retry policy - java.lang.AssertionError: expected:<7> but was:<null>
+- [core/llm] LlmGatewayTest.given a 429 then a success when called then the retry lands and the usage is audited - java.lang.AssertionError
+- [runtime/agent] AgentEventLogTest.agentSection carries goal, budgets, usage counters and the drop counter — never a key - java.lang.AssertionError: expected: java.lang.Boolean<false> but was: java.lang.String<false>
+- [runtime/agent] AgentLoopTest.given four turns when the last request is built then the stale screens are compacted to notes - java.lang.IndexOutOfBoundsException: Index 3 out of bounds for length 3
+- [runtime/agent] AgentLoopTest.given a turn without tool calls when run then the nudge is injected and the second empty turn counts as a failure - org.junit.ComparisonFailure: expected:<AGENT_[FAILURES]> but was:<AGENT_[STUCK]>
+- [runtime/agent] AgentLoopTest.given two tool calls in one message when run then the extra gets ONE_ACTION_PER_TURN and is never executed - java.lang.AssertionError
+- [runtime/agent] AgentRuntimeProviderTest.given a finishing loop when the run completes then SUCCEEDED with a finished event and heartbeats - java.lang.AssertionError
+- [runtime/agent] AgentRuntimeProviderTest.given a pause before the first turn when resumed then the run completes (pause is cooperative) - java.lang.AssertionError: a paused run starts no new turn expected null, but was:<{"type":"finished","data":{"status":"SUCCEEDED","message":"done"}}>
+- [runtime/agent] AgentRuntimeProviderTest.given a failing loop when the run completes then FAILED with the loop reason - java.lang.AssertionError
+- [runtime/agent] AgentSecuritySuiteTest.given a cancel while the model call is in flight when the job is cancelled then cancellation propagates uncaught - java.lang.AssertionError: a cancelled run must end CANCELLED, not with an Outcome (the exception was swallowed)
+- [runtime/agent] AgentSecuritySuiteTest.given a fully compromised model obeying the screen injection when run then EVERY attempt fails closed - java.lang.AssertionError
+- [runtime/agent] AgentViewTest.given a node id from the previous generation when resolved then STALE_OBSERVATION - java.lang.AssertionError
+- [runtime/agent] AgentViewTest.given only the focus moved when fingerprinted then the fingerprint is the same (focused excluded, the RM-A4 rule) - org.junit.ComparisonFailure: expected:<....widget.EditText|a||[clickable|40,812,1040,940 android.widget.EditText|b||]|40,812,1040,940> but was:<....widget.EditText|a||[|40,812,1040,940 android.widget.EditText|b||clickab…
+- [runtime/agent] CompletionVerifierTest.given an unknown answer shape when verified then Unverified (fail closed, never confirmed) - java.lang.AssertionError: expected:<Unverified> but was:<Rejected>
+- [runtime/agent] CompletionVerifierTest.given a finish when verified then the final observation is written as ui_snapshot evidence BEFORE the ask - java.lang.AssertionError: expected:<(ui.prompt, confirm)> but was:<(ui.prompt, ask)>
+- [runtime/agent] RunBudgetTest.given the token budget when the reserve does not fit then BUDGET_TOKENS - org.junit.ComparisonFailure: expected:<BUDGET_[TOKENS]> but was:<BUDGET_[CONTEXT]>
+- [runtime/agent] StuckDetectorTest.given three identical screens when observed then a factual warning, not a stop (ADR-091 12) - java.lang.AssertionError
+- [runtime/agent] StuckDetectorTest.given near-identical screens above the threshold when observed then they count as the same screen - java.lang.AssertionError: 40 shared + 1 varying ≈ 0.952 must count as the same screen
+- [runtime/agent] ToolCatalogTest.given the host tools when inspected then they declare no capability - java.lang.AssertionError: expected null, but was:<null>
+- [runtime/agent] ToolPipelineTest.given host tools when executed then ok with host=true and no budget or broker - java.lang.NullPointerException: null cannot be cast to non-null type kotlinx.serialization.json.JsonPrimitive
+- [runtime/agent] ToolPipelineTest.given the approved target gone when revalidated then STALE_NODE - java.lang.AssertionError: expected:<STALE_NODE> but was:<null>
 
 ## Modules that produced no test results (compile error, timeout, or no tests)
-- core/llm
 - runtime/api
-- runtime/agent
 - runtime/python
 - plugin-sdk
-- capabilities/notifications
-- capabilities/shell
 - testing/fixture-app
-- app
 
 ## Per module (tests / failed / skipped)
+- app: 93 / 1 / 0
 - capabilities/a11y: 114 / 0 / 0
 - capabilities/app: 32 / 0 / 0
 - capabilities/audio: 8 / 0 / 0
@@ -82,9 +67,11 @@ tests step outcome: failure
 - capabilities/ime: 3 / 0 / 0
 - capabilities/intents: 7 / 0 / 0
 - capabilities/net: 29 / 0 / 0
+- capabilities/notifications: 8 / 0 / 0
 - capabilities/projection: 4 / 0 / 0
 - capabilities/rawbridge: 2 / 0 / 0
 - capabilities/screen: 22 / 0 / 0
+- capabilities/shell: 58 / 13 / 0
 - capabilities/vision: 15 / 0 / 4
 - core/broker: 42 / 0 / 0
 - core/common: 21 / 0 / 0
@@ -92,28 +79,30 @@ tests step outcome: failure
 - core/designsystem: 6 / 0 / 0
 - core/devapi: 26 / 0 / 2
 - core/engine: 296 / 0 / 2
+- core/llm: 36 / 5 / 0
 - core/model: 47 / 0 / 0
+- runtime/agent: 175 / 19 / 0
 - runtime/flow: 93 / 0 / 24
 - runtime/js: 41 / 0 / 0
 
-## Style baseline (report only): 18586 ktlint/detekt findings
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:3:1 Imports must be ordered in lexicographic order without any empty lines in-between with "java", 
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:21:1 Class body should not start with blank line
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:22:25 A multiline expression should start on a new line
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:24:9 Expected a blank line for this declaration
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:29:28 A multiline expression should start on a new line
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:39:23 A multiline expression should start on a new line
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:43:18 A multiline expression should start on a new line
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:44:60 A comment in a 'value_argument_list' is only allowed when placed on a separate line (cannot b
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:51:1 Exceeded max line length (120) (cannot be auto-corrected)
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:51:29 Argument should be on a separate line (unless all arguments can fit a single line)
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:51:49 Argument should be on a separate line (unless all arguments can fit a single line)
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:51:59 Argument should be on a separate line (unless all arguments can fit a single line)
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:51:85 Missing newline before ")"
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:51:86 Missing newline before ")"
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:51:97 Argument should be on a separate line (unless all arguments can fit a single line)
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:51:126 Missing newline before ")"
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:57:22 Newline expected after opening parenthesis
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:57:38 Parameter should start on a newline
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:57:54 Newline expected before closing parenthesis
-- capabilities/a11y/src/androidTest/kotlin/app/autohost/capabilities/a11y/A11yUiProviderTestHarness.kt:69:1 Exceeded max line length (120) (cannot be auto-corrected)
+## Style baseline (report only): 18966 ktlint/detekt findings
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:6:1 Unused import
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:11:1 Unused import
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:12:1 Unused import
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:32:1 Class body should not start with blank line
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:35:32 Newline expected after opening parenthesis
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:35:48 Parameter should start on a newline
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:35:62 Newline expected before closing parenthesis
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:54:61 A multiline expression should start on a new line
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:54:61 Newline expected before expression body
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:56:24 A multiline expression should start on a new line
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:66:1 Exceeded max line length (120) (cannot be auto-corrected)
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:68:22 A multiline expression should start on a new line
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:91:65 A multiline expression should start on a new line
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:91:65 Newline expected before expression body
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:93:24 A multiline expression should start on a new line
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:100:1 Exceeded max line length (120) (cannot be auto-corrected)
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:102:22 A multiline expression should start on a new line
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:123:39 Newline expected after opening parenthesis
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:123:56 Parameter should start on a newline
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:123:71 Parameter should start on a newline
