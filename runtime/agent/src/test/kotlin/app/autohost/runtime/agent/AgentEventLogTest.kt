@@ -136,7 +136,7 @@ class AgentEventLogTest {
         assertEquals(100L, (usage["tokens"] as JsonPrimitive).content.toLong())
         val trace = section["trace"] as JsonObject
         assertTrue((trace["dropped"] as JsonPrimitive).content.toInt() >= 1)
-        assertEquals(false, (trace["keep_transcript"] as JsonPrimitive).content)
+        assertEquals("false", (trace["keep_transcript"] as JsonPrimitive).content)
         val stop = section["stop"] as JsonObject
         assertEquals("AGENT_STUCK", (stop["reason"] as JsonPrimitive).content)
         assertTrue(!section.toString().contains("sk-") ) // no key-shaped material

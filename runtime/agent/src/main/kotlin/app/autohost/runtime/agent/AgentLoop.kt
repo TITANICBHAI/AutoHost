@@ -218,7 +218,8 @@ class AgentLoop(
                     history.add(ChatMessage.User(NUDGE))
                     continue
                 }
-                consecutiveEmpty = 0
+                // nudge ONCE (§7.1): every further consecutive empty turn is a failure — the
+                // counter is not reset here, so the nudge is never re-injected on alternate turns
                 consecutiveFailures++
                 if (consecutiveFailures >= config.maxConsecutiveFailures) {
                     return Outcome.Failed(

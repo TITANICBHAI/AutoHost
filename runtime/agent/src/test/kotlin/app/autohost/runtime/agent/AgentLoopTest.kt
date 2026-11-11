@@ -159,9 +159,12 @@ class AgentLoopTest {
         assertEquals("ui_click", pipeline.calls[0].first.name)
         // the second request's history holds BOTH tool results; the extra's says ONE_ACTION_PER_TURN
         val turn2Messages = llm.requests[1].messages
-        val toolContents = turn2Messages.filterIsInstance<ChatMessage.Tool>().map { it.content }
-        assertEquals(2, toolContents.size)
-        assertTrue(toolContents[1].contains("ONE_ACTION_PER_TURN"))
+        val toolMessages = turn2Messages.filterIsInstance<ChatMessage.Tool>()
+        assertEquals(2, toolMessages.size)
+        // matched by call id (the order of tool messages is not part of the contract)
+        val extraResult = toolMessages.single { it.toolCallId == "b" }
+        assertTrue(extraResult.content.contains("ONE_ACTION_PER_TURN"))
+        assertTrue(!toolMessages.single { it.toolCallId == "a" }.content.contains("ONE_ACTION_PER_TURN"))
     }
 
     @Test
@@ -267,9 +270,10 @@ class AgentLoopTest {
         val observer = FakeObserver(snapshot("v1"), snapshot("v2"), snapshot("v3"), snapshot("v4"))
         val llm = FakeLlm(
             listOf(
-                FakeTurn.Resp(calls = listOf(call("ui_click", id = "c1"))),
-                FakeTurn.Resp(calls = listOf(call("ui_click", id = "c2"))),
-                FakeTurn.Resp(calls = listOf(call("ui_click", id = "c3"))),
+                // distinct args per click: three IDENTICAL clicks would stop the run (AGENT_STUCK)
+                FakeTurn.Resp(calls = listOf(call("ui_click", """{"ref":"[1]","n":"1"}""", id = "c1"))),
+                FakeTurn.Resp(calls = listOf(call("ui_click", """{"ref":"[1]","n":"2"}""", id = "c2"))),
+                FakeTurn.Resp(calls = listOf(call("ui_click", """{"ref":"[1]","n":"3"}""", id = "c3"))),
                 FakeTurn.Resp(calls = listOf(call("finish", """{"summary":"done"}"""))),
             ),
         )

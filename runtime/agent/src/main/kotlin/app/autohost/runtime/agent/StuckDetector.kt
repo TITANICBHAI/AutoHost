@@ -50,7 +50,6 @@ class StuckDetector(
     fun observe(fingerprint: String): Verdict {
         fingerprints.addLast(fingerprint)
         while (fingerprints.size > stopAfterSameObservation) fingerprints.removeFirst()
-        if (fingerprints.size < stopAfterSameObservation) return sameActionsVerdict()
         // The trailing window counts CONSECUTIVE same (by equality or near-similarity).
         var run = 1
         for (i in fingerprints.size - 1 downTo 1) {
