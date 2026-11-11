@@ -1,8 +1,9 @@
-# CI details - 0 distinct Kotlin compile errors, 38 failing tests
+# CI details - 0 distinct Kotlin compile errors, 39 failing tests
 
 ## All Kotlin compile errors (sorted, de-duplicated)
 
 ## All failing tests
+- [app] AskSheetStateTest.given a picker entry when toggled and started then it reaches the starter like a typed one - java.lang.AssertionError: expected:<[com.example.calc]> but was:<[com.android.settings, com.example.calc]>
 - [app] AskSheetStateTest.given a picker entry when toggled and started then it reaches the starter like a typed one - java.lang.AssertionError: expected:<[com.example.calc]> but was:<[com.android.settings, com.example.calc]>
 - [capabilities/shell] AdbClientTest.legacy adbd falls back to merged shell output with null exit code - app.autohost.capabilities.shell.AdbProtocol$AdbProtocolException: OPEN was not acknowledged with OKAY (CLSE)
 - [capabilities/shell] AdbClientTest.unauthorized device gets the public key offer and still completes after approval - app.autohost.capabilities.shell.AdbProtocol$AdbProtocolException: adbd closed during handshake: null
@@ -44,14 +45,17 @@
 
 ## Gradle 'What went wrong' blocks
 ### 1
-    Execution failed for task ':capabilities:shell:testDebugUnitTest'.
-    > There were failing tests. See the report at: file:///home/runner/work/AutoHost/AutoHost/capabilities/shell/build/reports/tests/testDebugUnitTest/index.html
+    Execution failed for task ':core:llm:test'.
+    > There were failing tests. See the report at: file:///home/runner/work/AutoHost/AutoHost/core/llm/build/reports/tests/test/index.html
 ### 2
     Execution failed for task ':runtime:agent:test'.
     > There were failing tests. See the report at: file:///home/runner/work/AutoHost/AutoHost/runtime/agent/build/reports/tests/test/index.html
 ### 3
-    Execution failed for task ':core:llm:test'.
-    > There were failing tests. See the report at: file:///home/runner/work/AutoHost/AutoHost/core/llm/build/reports/tests/test/index.html
+    Execution failed for task ':capabilities:shell:testDebugUnitTest'.
+    > There were failing tests. See the report at: file:///home/runner/work/AutoHost/AutoHost/capabilities/shell/build/reports/tests/testDebugUnitTest/index.html
 ### 4
     Execution failed for task ':app:testCorePyDebugUnitTest'.
     > There were failing tests. See the report at: file:///home/runner/work/AutoHost/AutoHost/app/build/reports/tests/testCorePyDebugUnitTest/index.html
+### 5
+    Execution failed for task ':app:testCoreLiteDebugUnitTest'.
+    > There were failing tests. See the report at: file:///home/runner/work/AutoHost/AutoHost/app/build/reports/tests/testCoreLiteDebugUnitTest/index.html

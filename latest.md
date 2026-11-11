@@ -1,15 +1,17 @@
-# CI digest - run 5 - branch work/s02-green - commit e4f4380
+# CI digest - run 6 - branch work/s02-green - commit e3e8278
 tests step outcome: failure
 
-## Verdict: RED - 1247 tests ran, 38 failed, 0 Kotlin compile errors, 4 failed Gradle tasks, 4 modules with no results
+## Verdict: RED - 1342 tests ran, 39 failed, 0 Kotlin compile errors, 5 failed Gradle tasks, 4 modules with no results
 
 ## Failed Gradle tasks
-- :capabilities:shell:testDebugUnitTest
-- :runtime:agent:test
 - :core:llm:test
+- :runtime:agent:test
+- :capabilities:shell:testDebugUnitTest
 - :app:testCorePyDebugUnitTest
+- :app:testCoreLiteDebugUnitTest
 
-## Failing tests (first 40 of 38)
+## Failing tests (first 40 of 39)
+- [app] AskSheetStateTest.given a picker entry when toggled and started then it reaches the starter like a typed one - java.lang.AssertionError: expected:<[com.example.calc]> but was:<[com.android.settings, com.example.calc]>
 - [app] AskSheetStateTest.given a picker entry when toggled and started then it reaches the starter like a typed one - java.lang.AssertionError: expected:<[com.example.calc]> but was:<[com.android.settings, com.example.calc]>
 - [capabilities/shell] AdbClientTest.legacy adbd falls back to merged shell output with null exit code - app.autohost.capabilities.shell.AdbProtocol$AdbProtocolException: OPEN was not acknowledged with OKAY (CLSE)
 - [capabilities/shell] AdbClientTest.unauthorized device gets the public key offer and still completes after approval - app.autohost.capabilities.shell.AdbProtocol$AdbProtocolException: adbd closed during handshake: null
@@ -56,7 +58,7 @@ tests step outcome: failure
 - testing/fixture-app
 
 ## Per module (tests / failed / skipped)
-- app: 93 / 1 / 0
+- app: 188 / 2 / 0
 - capabilities/a11y: 114 / 0 / 0
 - capabilities/app: 32 / 0 / 0
 - capabilities/audio: 8 / 0 / 0
@@ -85,7 +87,7 @@ tests step outcome: failure
 - runtime/flow: 93 / 0 / 24
 - runtime/js: 41 / 0 / 0
 
-## Style baseline (report only): 18966 ktlint/detekt findings
+## Style baseline (report only): 18967 ktlint/detekt findings
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:6:1 Unused import
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:11:1 Unused import
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:12:1 Unused import
