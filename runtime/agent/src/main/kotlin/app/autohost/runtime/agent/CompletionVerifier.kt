@@ -105,10 +105,13 @@ class CompletionVerifier(
         }
         // 4: the verdict is the USER's answer — the claim is only evidence
         val answered = answer.str("answered")?.toBooleanStrictOrNull() == true
+        val confirmed = answer.str("confirmed")?.toBooleanStrictOrNull()
         return when {
-            answered && answer.str("confirmed")?.toBooleanStrictOrNull() == true -> AgentLoop.FinishResult.Confirmed
-            answered -> AgentLoop.FinishResult.Rejected // answered with confirmed:false
-            else -> AgentLoop.FinishResult.Unverified // timeout / dismissed / kill-switch cancelled
+            answered && confirmed == true -> AgentLoop.FinishResult.Confirmed
+            answered && confirmed == false -> AgentLoop.FinishResult.Rejected // an explicit "no" from the user
+            // timeout / dismissed / kill-switch cancelled / an answer without a readable `confirmed` field:
+            // never confirmed, and not claimed to be a rejection either (fail closed)
+            else -> AgentLoop.FinishResult.Unverified
         }
     }
 

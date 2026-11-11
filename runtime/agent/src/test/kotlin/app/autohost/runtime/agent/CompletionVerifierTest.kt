@@ -114,7 +114,7 @@ class CompletionVerifierTest {
         assertEquals("ui_snapshot", (data["kind"] as JsonPrimitive).content)
         // the ask came AFTER the evidence write (transport order: ask is the only call)
         assertEquals(1, transport.calls.size)
-        assertEquals("ui.prompt" to "confirm", transport.calls[0].first to transport.calls[0].second)
+        assertEquals("ui.prompt" to "ask", transport.calls[0].first to transport.calls[0].second) // kind=confirm rides in the args
     }
 
     @Test
