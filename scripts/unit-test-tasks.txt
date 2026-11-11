@@ -30,3 +30,4 @@
 :capabilities:vision:testDebugUnitTest
 :testing:fixture-app:testDebugUnitTest
 :app:testCorePyDebugUnitTest
+:app:testCoreLiteDebugUnitTest
