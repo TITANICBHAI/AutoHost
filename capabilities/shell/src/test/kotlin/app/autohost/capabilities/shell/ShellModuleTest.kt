@@ -379,7 +379,7 @@ class ShellUiAndScreenshotProviderTest {
         )
     }
 
-    @Test fun `screencap writes a png into the evidence dir with IHDR dimensions`() = runBlocking {
+    @Test fun `screencap writes a png into the evidence dir with IHDR dimensions`() = runBlocking<Unit> {
         val dir = File(java.lang.System.getProperty("java.io.tmpdir"), "shell-evidence-${System.nanoTime()}")
         val png = pngBytes(64, 32)
         val transport = FakeTransport(result = ShellResult("", "", 0, "shell_v2", stdoutBytes = png))

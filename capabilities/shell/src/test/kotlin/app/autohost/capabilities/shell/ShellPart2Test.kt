@@ -20,7 +20,7 @@ import org.junit.Test
 class LogcatOutputTest {
 
     private val sample = listOf(
-        "10-26 12:00:00.000  1000  1234 D AutoHost: starting",
+        "10-26 12:00:00.000  1000  1234 D AutoHost: starting", // threadtime format, not epoch: skipped
         "1761460800.123 I/ActivityManager(  543): start proc",
         "1761460800.456 E/AutoHost(1234): boom",
         "--------- beginning of main", // banner: skipped
@@ -29,7 +29,7 @@ class LogcatOutputTest {
 
     @Test fun `epoch stamps parse to millis`() {
         val entries = LogcatOutput.parse(sample)
-        assertEquals(3, entries.size)
+        assertEquals(2, entries.size)
         assertEquals(1_761_460_800_123L, entries[0].tsMs)
         assertEquals("I", entries[0].level)
         assertEquals("ActivityManager", entries[0].tag)
@@ -47,7 +47,9 @@ class LogcatOutputTest {
     @Test fun `filters apply level pid and text`() {
         val entries = LogcatOutput.parse(sample)
         assertEquals(1, LogcatOutput.filter(entries, minLevel = "E").size)
-        assertEquals(2, LogcatOutput.filter(entries, pid = 42).size)
+        assertEquals(1, LogcatOutput.filter(entries, pid = 1234).size)
+        assertEquals(1, LogcatOutput.filter(entries, pid = 543).size)
+        assertEquals(0, LogcatOutput.filter(entries, pid = 42).size)
         assertEquals(1, LogcatOutput.filter(entries, contains = "boom").size)
         assertTrue(LogcatOutput.filter(entries, levels = setOf("W")).isEmpty())
     }

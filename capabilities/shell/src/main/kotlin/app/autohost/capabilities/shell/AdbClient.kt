@@ -57,17 +57,11 @@ class AdbClient(
                 }
                 AdbProtocol.A_AUTH -> when (message.arg0) {
                     AdbProtocol.AUTH_TOKEN -> {
-                        // Sign the challenge; if adbd does not know us it re-challenges, and on the
-                        // second loop we offer the public key for the user to approve (the same
-                        // "allow USB debugging?" dialog a PC's first connect raises).
-                        val signature = AdbProtocol.AUTH_SIGNATURE
-                        AdbProtocol.write(
-                            writer,
-                            AdbProtocol.Message(
-                                AdbProtocol.A_AUTH, signature, 0, keys.signToken(message.payload),
-                            ),
-                        )
-                        if (!pubkeySent && sawSecondChallenge()) {
+                        // First challenge: answer with a signature. If adbd does not know our key it
+                        // re-challenges, and that second challenge is answered with the public key
+                        // (instead of another signature) for the user to approve — the same "allow
+                        // USB debugging?" dialog a PC's first connect raises (AOSP adb auth order).
+                        if (pubkeyOffers == 0 && sawSecondChallenge()) {
                             pubkeyOffers++
                             AdbProtocol.write(
                                 writer,
@@ -76,6 +70,13 @@ class AdbClient(
                                 ),
                             )
                             pubkeySent = true
+                        } else {
+                            AdbProtocol.write(
+                                writer,
+                                AdbProtocol.Message(
+                                    AdbProtocol.A_AUTH, AdbProtocol.AUTH_SIGNATURE, 0, keys.signToken(message.payload),
+                                ),
+                            )
                         }
                     }
                     else -> throw AdbProtocol.AdbProtocolException(
@@ -107,6 +108,11 @@ class AdbClient(
         val localId = LOCAL_STREAM_ID
         AdbProtocol.write(writer, AdbProtocol.Message(AdbProtocol.A_OPEN, localId, 0, "shell,v2:$command".encodeToByteArray()))
         val openAck = AdbProtocol.read(reader)
+        // adbd answers an OPEN for a service it does not implement (no shell_v2) with CLSE; that is
+        // the documented cue for the caller to retry through execLegacy, not a protocol violation.
+        if (openAck.cmd == AdbProtocol.A_CLSE) {
+            throw ShellV2Unavailable("shell,v2 service rejected by adbd")
+        }
         if (openAck.cmd != AdbProtocol.A_OKAY || openAck.arg1 != localId) {
             throw AdbProtocol.AdbProtocolException("OPEN was not acknowledged with OKAY (${AdbProtocol.name(openAck.cmd)})")
         }
