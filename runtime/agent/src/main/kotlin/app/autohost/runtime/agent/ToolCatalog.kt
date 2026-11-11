@@ -70,14 +70,21 @@ class ToolCatalog private constructor(private val tools: Map<String, Tool>) {
                 map[name] = Tool(
                     name = name,
                     description = obj["description"]!!.jsonPrimitive.content,
-                    capability = obj["capability"]?.jsonPrimitive?.content,
-                    method = obj["method"]?.jsonPrimitive?.content,
-                    permission = obj["permission"]?.jsonPrimitive?.content,
+                    capability = optionalString(obj["capability"]),
+                    method = optionalString(obj["method"]),
+                    permission = optionalString(obj["permission"]),
                     args = obj["args"]?.jsonObject ?: JsonObject(emptyMap()),
-                    specRisk = obj["spec_risk"]?.jsonPrimitive?.content,
+                    specRisk = optionalString(obj["spec_risk"]),
                 )
             }
             return ToolCatalog(map)
         }
+
+        /**
+         * A JSON `null` is a [JsonNull] primitive whose `.content` is the STRING "null"; reading it that way gave host
+         * tools (finish/todo_write/wait, `"capability": null`) the capability "null" instead of none.
+         */
+        private fun optionalString(element: kotlinx.serialization.json.JsonElement?): String? =
+            if (element == null || element is kotlinx.serialization.json.JsonNull) null else element.jsonPrimitive.content
     }
 }
