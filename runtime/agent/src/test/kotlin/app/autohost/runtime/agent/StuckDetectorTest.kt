@@ -100,7 +100,7 @@ class StuckDetectorTest {
     }
 
     @Test
-    fun `given actions that differ in target when recorded then no stop (the upstream lesson: repetition alone is not stuck)`() {
+    fun `given actions that differ in target when recorded then no stop (the upstream lesson - repetition alone is not stuck)`() {
         val detector = StuckDetector()
         for (n in 1..3) {
             assertEquals(StuckDetector.Verdict.None, detector.recordAction("ui_scroll_until", """{"n":"$n"}""", null))

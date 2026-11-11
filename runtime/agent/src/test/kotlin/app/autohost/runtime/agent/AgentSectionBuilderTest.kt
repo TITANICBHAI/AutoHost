@@ -16,7 +16,17 @@ class AgentSectionBuilderTest {
     private fun log(kind: String, vararg pairs: Pair<String, Any>) = BrokerEvent(
         type = "log",
         ts = 1L,
-        data = buildJsonObject { put("kind", kind); pairs.forEach { put(it.first, it.second) } },
+        data = buildJsonObject {
+            put("kind", kind)
+            pairs.forEach { (key, value) ->
+                when (value) {
+                    is String -> put(key, value)
+                    is Boolean -> put(key, value)
+                    is Number -> put(key, value)
+                    else -> error("unsupported test value for $key: ${value::class}")
+                }
+            }
+        },
     )
 
     @Test
@@ -62,7 +72,7 @@ class AgentSectionBuilderTest {
     }
 
     @Test
-    fun `given a non-agent run when built then null (no agent.json in the bundle)`() {
+    fun `given a non-agent run when built then null (no agent json in the bundle)`() {
         val events = listOf(BrokerEvent(type = "heartbeat", ts = 1L), BrokerEvent(type = "stage_begin", ts = 1L, stage = "setup"))
         assertNull(AgentSectionBuilder.fromEvents(events, redact))
     }

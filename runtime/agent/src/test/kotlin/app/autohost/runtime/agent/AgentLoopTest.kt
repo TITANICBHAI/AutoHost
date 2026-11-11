@@ -165,7 +165,7 @@ class AgentLoopTest {
     }
 
     @Test
-    fun `given a turn without tool calls when run then the nudge is injected; the second empty turn counts as a failure`() = runBlocking {
+    fun `given a turn without tool calls when run then the nudge is injected and the second empty turn counts as a failure`() = runBlocking {
         val llm = FakeLlm(
             listOf(
                 FakeTurn.Resp(text = "let me think"),

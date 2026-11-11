@@ -77,7 +77,7 @@ class AgentLoop(
     }
 
     /** The §9 completion-protocol seam (P13-14). */
-    interface FinishVerifier {
+    fun interface FinishVerifier {
         suspend fun verify(summary: String?): FinishResult
     }
 

@@ -77,7 +77,7 @@ class AgentViewTest {
     fun `given a node id from the previous generation when resolved then STALE_OBSERVATION`() {
         val gen1 = view.render(snapshot(node("ref-1", "Button", "b", "Go")), generation = 1).index
         val gen2 = view.render(snapshot(node("ref-9", "Button", "b2", "Other")), generation = 2).index
-        val verdict = view.resolveForCall(gen2, gen1, 1)
+        val verdict = AgentView.resolveForCall(gen2, gen1, 1)
         assertTrue(verdict is AhResult.Err)
         assertEquals("STALE_OBSERVATION", (verdict as AhResult.Err).error.reason)
     }
@@ -86,7 +86,7 @@ class AgentViewTest {
     fun `given an id that never existed when resolved then INVALID_ARGS (never a guess)`() {
         val gen1 = view.render(snapshot(node("ref-1", "Button", "b", "Go")), generation = 1).index
         val gen2 = view.render(snapshot(node("ref-9", "Button", "b2", "Other")), generation = 2).index
-        val verdict = view.resolveForCall(gen2, gen1, 5)
+        val verdict = AgentView.resolveForCall(gen2, gen1, 5)
         assertTrue(verdict is AhResult.Err)
         assertEquals("INVALID_ARGS", (verdict as AhResult.Err).error.code)
     }
@@ -94,8 +94,9 @@ class AgentViewTest {
     @Test
     fun `given the current generation when resolved then the entry resolves`() {
         val gen2 = view.render(snapshot(node("ref-9", "Button", "b2", "Other")), generation = 2).index
-        val verdict = view.resolveForCall(gen2, null, 1)
-        assertEquals("ref-9", (verdict as AhResult.Ok).value.ref)
+        val verdict = AgentView.resolveForCall(gen2, null, 1)
+        assertTrue(verdict is AhResult.Ok)
+        assertEquals("ref-9", verdict.getOrNull()!!.ref)
     }
 
     @Test

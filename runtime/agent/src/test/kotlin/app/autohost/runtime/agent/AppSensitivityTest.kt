@@ -3,6 +3,7 @@ package app.autohost.runtime.agent
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -16,7 +17,7 @@ import org.junit.Test
  */
 class AppSensitivityTest {
 
-    private fun sensitivity(user: Map<String, AppTier> = emptyMap()) = AppSensitivity(user)
+    private fun sensitivity(userAdded: Map<String, AppTier> = emptyMap()) = AppSensitivity(userAdded)
 
     @Test
     fun `given the bundled resource when loaded then the floor has BLOCKED and CAUTIOUS entries`() {

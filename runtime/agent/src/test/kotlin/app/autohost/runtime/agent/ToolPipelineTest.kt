@@ -44,7 +44,7 @@ class ToolPipelineTest {
             ToolPipeline.Revalidator.Revalidation("com.normal.test", "com.normal.test", true),
     ) : ToolPipeline.Revalidator {
         val asked = mutableListOf<String>()
-        override suspend fun revalidate(tool: ToolCatalog.Tool, target: ToolPipeline.TargetInfo?): Revalidation {
+        override suspend fun revalidate(tool: ToolCatalog.Tool, target: ToolPipeline.TargetInfo?): ToolPipeline.Revalidator.Revalidation {
             asked.add(tool.name)
             return re
         }

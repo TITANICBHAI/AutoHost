@@ -51,7 +51,7 @@ class AgentManifestsTest {
         val e = manifest.execution
         assertTrue(e.uiExclusive)
         assertTrue(e.needsUnlockedScreen)
-        assertTrue(e.pausible)
+        assertTrue(e.pausable)
         assertEquals(10, e.timeoutMinutes) // ceil(600 / 60)
         assertEquals(AgentManifests.IDLE_TIMEOUT_SECONDS, e.idleTimeoutSeconds)
         assertEquals(180, e.idleTimeoutSeconds)
@@ -116,7 +116,7 @@ class AgentManifestsTest {
     }
 
     @Test
-    fun `a secret pasted into config agent never travels (the X-12 boundary: the parse drops unknown keys)`() {
+    fun `a secret pasted into config agent never travels (the X-12 boundary - the parse drops unknown keys)`() {
         val config: JsonObject = buildJsonObject {
             put("agent", buildJsonObject {
                 put("goal", "x")

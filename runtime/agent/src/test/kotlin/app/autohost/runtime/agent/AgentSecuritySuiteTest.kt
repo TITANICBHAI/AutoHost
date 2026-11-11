@@ -310,7 +310,7 @@ class AgentSecuritySuiteTest {
         )
         val transport = RecordingTransport()
         transport.askAnswer = buildJsonObject { put("answered", false); put("reason", "timeout") }
-        val (outcome, _) = runLoop(llm, pipeline(transport))
+        val outcome = runLoop(llm, pipeline(transport))
         assertEquals("APPROVAL_TIMEOUT", (outcome as AgentLoop.Outcome.Failed).reason)
         assertEquals(0, transport.brokerCalls())
     }
