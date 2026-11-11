@@ -8,9 +8,12 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -76,7 +79,7 @@ class CommandAllowlistTest {
 }
 
 /** Fake transport (repo rule: fakes, not mocks — plain data recording). */
-private class FakeTransport(
+internal class FakeTransport(
     override val transportId: String = "fake",
     private var state: TransportStatus = TransportStatus.Live,
     private val result: ShellResult? = null,
@@ -318,7 +321,7 @@ class ShellUiAndScreenshotProviderTest {
         assertEquals("com.fixture:id/login", node["id"]!!.jsonPrimitive.content)
     }
 
-    @Test fun `acts scope by the device.ui.act grant`() = runBlocking {
+    @Test fun `acts scope by the device ui act grant`() = runBlocking {
         val transport = transport()
         val provider = ShellUiProvider(ShellTransports(listOf(transport)))
         val inScope = context(

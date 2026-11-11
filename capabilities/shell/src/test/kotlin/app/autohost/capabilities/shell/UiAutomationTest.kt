@@ -211,7 +211,8 @@ class UiAutomationProviderTest {
     @Test fun `out-of-scope act is refused before any runner traffic`() = runBlocking {
         val harness = Harness()
         harness.connection.replies.addLast(
-            dumpReply("harmless").replace("\"package=\\"com.fixture\\"\"", "\"package=\\"com.other\\"\""),
+            // the only place "com.fixture" appears is the package attribute of the dumped node
+            dumpReply("harmless").replace("com.fixture", "com.other"),
         )
         val envelope = harness.call(
             "click",
