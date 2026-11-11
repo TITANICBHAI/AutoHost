@@ -92,6 +92,27 @@ def modules_expected(tasks_file: Path | None) -> list:
     return modules
 
 
+def went_wrong_blocks(log: str, max_lines: int = 14) -> list:
+    """Gradle's own '* What went wrong:' text for every failed task (the reason a task failed or timed out)."""
+    blocks = []
+    for m in re.finditer(r"^\* What went wrong:\n(.*?)(?=^\* Try:|^\* Exception is:|\Z)", log, re.MULTILINE | re.DOTALL):
+        text = [ln.rstrip() for ln in m.group(1).strip().splitlines() if ln.strip()]
+        blocks.append(text[:max_lines])
+    return blocks
+
+
+def render_details(log: str, per_module: dict, failing: list) -> str:
+    """The long form that does not fit the 150-line digest: EVERY compile error, every failing test, every Gradle reason."""
+    errors = sorted(set(kotlin_errors(log)))
+    lines = [f"# CI details - {len(errors)} distinct Kotlin compile errors, {len(failing)} failing tests", ""]
+    lines += ["## All Kotlin compile errors (sorted, de-duplicated)"] + [f"- {e}" for e in errors]
+    lines += ["", "## All failing tests"] + [f"- [{m}] {name} - {short(msg, 400)}" for m, name, msg in failing]
+    lines += ["", "## Gradle 'What went wrong' blocks"]
+    for i, block in enumerate(went_wrong_blocks(log), 1):
+        lines += [f"### {i}"] + [f"    {ln}" for ln in block]
+    return "\n".join(lines) + "\n"
+
+
 def render(log: str, per_module: dict, failing: list, expected: list, header: dict) -> str:
     errors = kotlin_errors(log)
     tasks = failed_tasks(log)
@@ -138,11 +159,14 @@ def main(argv=None) -> int:
     p.add_argument("--branch", default="?")
     p.add_argument("--sha", default="?")
     p.add_argument("--outcome", default="?")
+    p.add_argument("--details-out", default="", help="also write the long form (all errors, all failing tests) here")
     args = p.parse_args(argv)
     log = Path(args.log).read_text(encoding="utf-8", errors="replace") if args.log and Path(args.log).exists() else ""
     root = Path(args.root).resolve()
     per_module, failing = parse_reports(root)
     expected = modules_expected(Path(args.tasks) if args.tasks else None)
+    if args.details_out:
+        Path(args.details_out).write_text(render_details(log, per_module, failing), encoding="utf-8")
     sys.stdout.write(render(log, per_module, failing, expected,
                             {"run": args.run, "branch": args.branch, "sha": args.sha, "outcome": args.outcome}))
     return 0

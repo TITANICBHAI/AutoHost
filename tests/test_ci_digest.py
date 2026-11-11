@@ -92,6 +92,16 @@ class CiDigestTest(unittest.TestCase):
         text = self.digest({}, outcome="failure")
         self.assertIn("RED", text)
 
+    def test_details_list_every_error_and_the_gradle_reason(self):
+        many = "\n".join(f"e: file:///home/runner/work/R/R/x/F{i}.kt:1:1 boom {i}" for i in range(300))
+        log = many + "\n> Task :a:test FAILED\n* What went wrong:\nExecution failed for task ':a:test'.\n> Timeout has been exceeded\n* Try:\n> Run with --stacktrace\n"
+        details = ci_digest.render_details(log, {}, [("m", "C.t", "msg")])
+        self.assertIn("300 distinct Kotlin compile errors", details)
+        self.assertIn("x/F299.kt:1:1 boom 299", details)
+        self.assertIn("Execution failed for task ':a:test'.", details)
+        self.assertNotIn("Run with --stacktrace", details)
+        self.assertIn("[m] C.t - msg", details)
+
 
 if __name__ == "__main__":
     unittest.main()

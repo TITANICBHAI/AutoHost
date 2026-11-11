@@ -57,7 +57,7 @@ jobs:
         run: |
           python3 tools/ci_digest.py --log /tmp/gradle.log --root . --tasks scripts/unit-test-tasks.txt \
             --run "${GITHUB_RUN_NUMBER}" --branch "${GITHUB_REF_NAME}" --sha "${GITHUB_SHA::7}" \
-            --outcome "${{ steps.tests.outcome }}" > /tmp/latest.md
+            --outcome "${{ steps.tests.outcome }}" --details-out /tmp/details.md > /tmp/latest.md
           {
             echo
             echo "## Style baseline (report only): $(grep -cE '\.kt:[0-9]+:[0-9]+' /tmp/quality.log || true) ktlint/detekt findings"
@@ -90,8 +90,9 @@ jobs:
           fi
           mkdir -p runs
           cp /tmp/latest.md latest.md
+          cp /tmp/details.md details.md
           cp /tmp/latest.md "runs/${GITHUB_RUN_NUMBER}-${GITHUB_SHA::7}.md"
-          git add latest.md runs
+          git add latest.md details.md runs
           git commit -m "ci digest: run ${GITHUB_RUN_NUMBER} (${GITHUB_SHA::7})" || exit 0
           for attempt in 1 2 3; do
             git push origin ci-results && exit 0
