@@ -248,7 +248,7 @@ class ToolPipelineTest {
             null,
         )
         val result = pipeline(transport, revalidator = revalidator).execute(call("ui_click", """{"id":"[1]"}"""), unknownCtx)
-        assertEquals("STALE_NODE", errOf(result).second)
+        assertEquals("STALE_NODE", errOf(result).first) // STALE_NODE is an error code; it carries no reason
     }
 
     // --- budget and caps -------------------------------------------------------------------------

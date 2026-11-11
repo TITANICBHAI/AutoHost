@@ -9,7 +9,6 @@ import app.autohost.core.llm.LlmResult
 import app.autohost.core.llm.LlmResults
 import app.autohost.core.llm.ToolCall
 import app.autohost.core.llm.Usage
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -21,8 +20,8 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
 import org.junit.Test
 
 /**
@@ -100,8 +99,14 @@ class AgentSecuritySuiteTest {
         ToolCall("c${argsJson.hashCode()}", name, argsJson, runCatching { Json.parseToJsonElement(argsJson) as JsonObject }.getOrNull())
 
     /** The loop over the REAL pipeline; returns the outcome. */
-    private fun runLoop(llm: CompromisedLlm, pipeline: ToolPipeline, budget: RunBudget = defaultBudget()): AgentLoop.Outcome {
+    private fun runLoop(
+        llm: CompromisedLlm,
+        pipeline: ToolPipeline,
+        budget: RunBudget = defaultBudget(),
+        config: AgentLoop.Config = AgentLoop.Config(),
+    ): AgentLoop.Outcome {
         val loop = AgentLoop(
+            config = config,
             client = llm,
             catalog = ToolCatalog.load(),
             pipeline = pipeline,
@@ -132,7 +137,10 @@ class AgentSecuritySuiteTest {
             ),
         )
         val transport = RecordingTransport()
-        val outcome = runLoop(llm, pipeline(transport))
+        // Four refusals come before the approved click. The default cap (3 consecutive tool failures) would stop the
+        // run first (also fail-closed, and covered by the AgentLoop tests); this test is about EACH attempt being
+        // refused, so the cap is raised here.
+        val outcome = runLoop(llm, pipeline(transport), config = AgentLoop.Config(maxConsecutiveFailures = 10))
         // the model BELIEVES it succeeded; exactly ONE broker call happened — the user-approved
         // click on the in-scope (CAUTIOUS) node; everything else failed closed
         assertTrue(outcome is AgentLoop.Outcome.Succeeded)
@@ -286,16 +294,17 @@ class AgentSecuritySuiteTest {
             budget = defaultBudget(),
             view = view(),
         )
-        val job = launch(start = CoroutineStart.UNDISPATCHED) { loop.run("goal") }
+        // Job.join() returns normally for a cancelled job (it only throws if the CALLER is cancelled), so the
+        // property is observed through a captured result: a swallowed CancellationException would let run()
+        // return an Outcome; a propagated one leaves it unset and the job cancelled — ADR-091 (9).
+        var outcome: AgentLoop.Outcome? = null
+        val job = launch(start = CoroutineStart.UNDISPATCHED) { outcome = loop.run("goal") }
         runCurrent()
         assertTrue("the run is parked inside the model call", job.isActive)
         job.cancel()
-        try {
-            job.join()
-            fail("a cancelled run must end CANCELLED, not with an Outcome (the exception was swallowed)")
-        } catch (e: CancellationException) {
-            // the exception PROPAGATED — ADR-091 (9)
-        }
+        job.join()
+        assertTrue("a cancelled run must end CANCELLED", job.isCancelled)
+        assertNull("a cancelled run must not produce an Outcome (the exception was swallowed)", outcome)
     }
 
     // 6: the approval timeout stops the whole run through the loop --------------------------------

@@ -34,10 +34,17 @@ import org.junit.Test
  */
 class AgentRuntimeProviderTest {
 
-    private class ScriptedClient(private val calls: List<ToolCall>) : AgentLoop.ModelClient {
-        override suspend fun chat(request: ChatRequest): LlmResult<ChatResponse> = LlmResults.ok(
-            ChatResponse(null, calls, FinishReason.TOOL_CALLS, Usage(20, 10, 30, false), 5, 1),
-        )
+    /** [thinkMs] > 0 makes the model call SUSPEND (virtual time), like a real HTTP call would. */
+    private class ScriptedClient(
+        private val calls: List<ToolCall>,
+        private val thinkMs: Long = 0,
+    ) : AgentLoop.ModelClient {
+        override suspend fun chat(request: ChatRequest): LlmResult<ChatResponse> {
+            if (thinkMs > 0) kotlinx.coroutines.delay(thinkMs)
+            return LlmResults.ok(
+                ChatResponse(null, calls, FinishReason.TOOL_CALLS, Usage(20, 10, 30, false), 5, 1),
+            )
+        }
     }
 
     private class ScriptedPipeline : AgentLoop.ToolExecutor {
@@ -82,27 +89,33 @@ class AgentRuntimeProviderTest {
         emitted: Emitted,
         client: AgentLoop.ModelClient,
         deathLog: MutableList<String> = mutableListOf(),
-    ): AgentRuntimeProvider = AgentRuntimeProvider(
-        dispatchers = app.autohost.core.common.AppDispatchers(
-            main = kotlinx.coroutines.Dispatchers.Unconfined,
-            io = kotlinx.coroutines.Dispatchers.Unconfined,
-            default = kotlinx.coroutines.Dispatchers.Unconfined,
-        ),
-        scope = scope,
-        emit = { _, json -> emitted.events.add(Json.parseToJsonElement(json) as JsonObject) },
-        loopFactory = { _, _, _ ->
-            AgentLoop(
-                client = client,
-                catalog = ToolCatalog.load(),
-                pipeline = ScriptedPipeline(),
-                observer = { staticSnapshot },
-                preflight = { AhResult.ok(Unit) },
-                finishVerifier = { AgentLoop.FinishResult.Confirmed },
-                budget = RunBudget(AgentManifests.DEFAULT_BUDGETS.toLimits()) { 0 },
-                view = AgentView(1080, 2400),
-            )
-        },
-    ).also { it.setDeathListener { runId -> deathLog.add(runId) } }
+    ): AgentRuntimeProvider {
+        // The run must live on the TEST dispatcher: with Dispatchers.Unconfined a loop whose fakes never suspend
+        // finishes inside start() (so requestPause() comes too late and the heartbeat child is cancelled before it
+        // ever runs), and delay() would use real time instead of the test clock.
+        val testDispatcher = scope.coroutineContext[kotlin.coroutines.ContinuationInterceptor] as kotlinx.coroutines.CoroutineDispatcher
+        return AgentRuntimeProvider(
+            dispatchers = app.autohost.core.common.AppDispatchers(
+                main = testDispatcher,
+                io = testDispatcher,
+                default = testDispatcher,
+            ),
+            scope = scope,
+            emit = { _, json -> emitted.events.add(Json.parseToJsonElement(json) as JsonObject) },
+            loopFactory = { _, _, _ ->
+                AgentLoop(
+                    client = client,
+                    catalog = ToolCatalog.load(),
+                    pipeline = ScriptedPipeline(),
+                    observer = { staticSnapshot },
+                    preflight = { AhResult.ok(Unit) },
+                    finishVerifier = { AgentLoop.FinishResult.Confirmed },
+                    budget = RunBudget(AgentManifests.DEFAULT_BUDGETS.toLimits()) { 0 },
+                    view = AgentView(1080, 2400),
+                )
+            },
+        ).also { it.setDeathListener { runId -> deathLog.add(runId) } }
+    }
 
     @Test
     fun `given a finishing loop when the run completes then SUCCEEDED with a finished event and heartbeats`() = runTest {
@@ -110,7 +123,11 @@ class AgentRuntimeProviderTest {
         val deathLog = mutableListOf<String>()
         val provider = provider(
             backgroundScope, emitted,
-            ScriptedClient(listOf(ToolCall("c1", "finish", """{"summary":"done"}""", buildJsonObject { put("summary", "done") }))),
+            // the call suspends 10 ms (virtual): that is when the heartbeat coroutine gets its first turn
+            ScriptedClient(
+                listOf(ToolCall("c1", "finish", """{"summary":"done"}""", buildJsonObject { put("summary", "done") })),
+                thinkMs = 10,
+            ),
             deathLog,
         )
         val handle = provider.start(spec()) as app.autohost.runtime.api.RunHandle
@@ -124,10 +141,10 @@ class AgentRuntimeProviderTest {
     @Test
     fun `given a failing loop when the run completes then FAILED with the loop reason`() = runTest {
         val emitted = Emitted()
-        val provider = provider(backgroundScope, emitted, ScriptedClient(emptyList())) // no calls → AGENT_FAILURES eventually? no: budget stops it
-        // with an EMPTY tool-call script every turn nudges and finally fails on consecutive
-        // empties — but the turn budget (30) runs out first? The nudge costs a turn each;
-        // maxTurns 30 → BUDGET_TURNS after 30 turns. Either way the run fails with a reason.
+        val provider = provider(backgroundScope, emitted, ScriptedClient(emptyList()))
+        // An EMPTY tool-call script: turn 1 gets the one free nudge, every further empty turn is a failure, and the
+        // third consecutive failure ends the run with AGENT_FAILURES (turn 4) — before the stuck detector (5 identical
+        // screens) or the 30-turn budget could.
         provider.start(spec())
         advanceUntilIdle()
         assertEquals("FAILED", emitted.status())

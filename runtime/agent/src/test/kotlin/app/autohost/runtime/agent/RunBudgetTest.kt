@@ -66,9 +66,12 @@ class RunBudgetTest {
     fun `given the token budget when the reserve does not fit then BUDGET_TOKENS`() {
         val b = budget(limits = limits.copy(tokenBudget = 1_000, maxOutputTokens = 200))
         b.start()
-        // turn 1: reserve = estimate(6_400 chars)=1600 + 200 = 1800 <= 1000? No — 1800 > 1000 →
-        // BUDGET_TOKENS on the FIRST call (used 0, reserve alone busts it).
-        val verdict = b.beforeModelCall(6_400)
+        // one call fits alone: reserve = estimate(2_000 chars)=500 + 200 = 700 <= 1000. (A reserve that busts the
+        // budget even with nothing used is BUDGET_CONTEXT, covered by the next test.)
+        assertEquals(RunBudget.Verdict.Ok, b.beforeModelCall(2_000))
+        b.accountModelCall(null, promptChars = 2_000) // unknown usage is estimated: +500 used
+        // 500 used + 700 reserved = 1200 > 1000, but a single call still fits alone → TOKENS, not CONTEXT
+        val verdict = b.beforeModelCall(2_000)
         assertEquals("BUDGET_TOKENS", (verdict as RunBudget.Verdict.Exhausted).reason)
     }
 

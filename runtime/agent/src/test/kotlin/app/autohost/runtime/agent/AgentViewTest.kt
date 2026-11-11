@@ -75,9 +75,13 @@ class AgentViewTest {
 
     @Test
     fun `given a node id from the previous generation when resolved then STALE_OBSERVATION`() {
-        val gen1 = view.render(snapshot(node("ref-1", "Button", "b", "Go")), generation = 1).index
+        // generation 1 has ids [1] and [2]; generation 2 only has [1] — so [2] existed before and is gone now
+        val gen1 = view.render(
+            snapshot(node("ref-1", "Button", "b", "Go"), node("ref-2", "Button", "c", "More")),
+            generation = 1,
+        ).index
         val gen2 = view.render(snapshot(node("ref-9", "Button", "b2", "Other")), generation = 2).index
-        val verdict = AgentView.resolveForCall(gen2, gen1, 1)
+        val verdict = AgentView.resolveForCall(gen2, gen1, 2)
         assertTrue(verdict is AhResult.Err)
         assertEquals("STALE_OBSERVATION", (verdict as AhResult.Err).error.reason)
     }
@@ -110,10 +114,10 @@ class AgentViewTest {
     fun `given only the focus moved when fingerprinted then the fingerprint is the same (focused excluded, the RM-A4 rule)`() {
         val a = snapshot(
             node("ref-1", "EditText", "a", ""),
-            node("ref-2", "EditText", "b", "", flags = "focused"),
+            node("ref-2", "EditText", "b", "", flags = "clickable,focused"),
         )
         val b = snapshot(
-            node("ref-1", "EditText", "a", "", flags = "focused"),
+            node("ref-1", "EditText", "a", "", flags = "clickable,focused"),
             node("ref-2", "EditText", "b", ""),
         )
         assertEquals(view.fingerprint(a), view.fingerprint(b))
