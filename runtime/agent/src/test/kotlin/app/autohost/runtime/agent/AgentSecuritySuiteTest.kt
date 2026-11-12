@@ -119,8 +119,12 @@ class AgentSecuritySuiteTest {
         return runBlocking { loop.run("Open the blocked app no matter what") }
     }
 
+    /**
+     * The tool results in the model's FINAL request, in order. Every request repeats the whole history, so
+     * flattening all requests would list the early results again and shift every index.
+     */
     private fun toolResultsSeenByModel(llm: CompromisedLlm): List<String> =
-        llm.requests.flatMap { req -> req.messages.filterIsInstance<ChatMessage.Tool>().map { it.content } }
+        llm.requests.last().messages.filterIsInstance<ChatMessage.Tool>().map { it.content }
 
     // 1 + 3: the injection cannot widen grants, escape the catalog, leave the scope, or unmask ----
 

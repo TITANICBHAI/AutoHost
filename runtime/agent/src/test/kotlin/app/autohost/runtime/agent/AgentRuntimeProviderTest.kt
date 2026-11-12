@@ -102,8 +102,10 @@ class AgentRuntimeProviderTest {
             ),
             scope = scope,
             emit = { _, json -> emitted.events.add(Json.parseToJsonElement(json) as JsonObject) },
-            loopFactory = { _, _, _ ->
+            loopFactory = { _, sink, gate ->
                 AgentLoop(
+                    sink = sink,
+                    pauseGate = gate, // the provider's cooperative pause — without it requestPause() is a no-op
                     client = client,
                     catalog = ToolCatalog.load(),
                     pipeline = ScriptedPipeline(),
@@ -115,6 +117,16 @@ class AgentRuntimeProviderTest {
                 )
             },
         ).also { it.setDeathListener { runId -> deathLog.add(runId) } }
+    }
+
+    /**
+     * Runs the provider's coroutines to completion. advanceUntilIdle() is NOT enough here: the run lives in
+     * backgroundScope, and advanceUntilIdle() returns as soon as only background work is left, i.e. at once.
+     * Ten virtual seconds is far beyond any scripted run (the 2 s heartbeat is cancelled when the run ends).
+     */
+    private fun kotlinx.coroutines.test.TestScope.runToCompletion() {
+        advanceTimeBy(10_000)
+        runCurrent()
     }
 
     @Test
@@ -130,8 +142,8 @@ class AgentRuntimeProviderTest {
             ),
             deathLog,
         )
-        val handle = provider.start(spec()) as app.autohost.runtime.api.RunHandle
-        advanceUntilIdle()
+        provider.start(spec())
+        runToCompletion()
         assertEquals("SUCCEEDED", emitted.status())
         assertNull(emitted.reason())
         assertTrue(emitted.heartbeats() >= 1)
@@ -146,7 +158,7 @@ class AgentRuntimeProviderTest {
         // third consecutive failure ends the run with AGENT_FAILURES (turn 4) — before the stuck detector (5 identical
         // screens) or the 30-turn budget could.
         provider.start(spec())
-        advanceUntilIdle()
+        runToCompletion()
         assertEquals("FAILED", emitted.status())
         assertTrue(emitted.reason()!!.startsWith("BUDGET_") || emitted.reason() == "AGENT_FAILURES")
     }
@@ -188,7 +200,7 @@ class AgentRuntimeProviderTest {
         advanceTimeBy(50)
         runCurrent() // the run is inside the model call now
         handle.requestCancel() // IMMEDIATE: interrupts the suspension point
-        advanceUntilIdle()
+        runToCompletion()
         assertNull("a cancelled run emits no finished event (the orchestrator owns CANCELLED)", emitted.finished)
         assertTrue(emitted.events.none { (it["type"] as? JsonPrimitive)?.content == "finished" })
     }
@@ -206,7 +218,7 @@ class AgentRuntimeProviderTest {
         runCurrent()
         assertNull("a paused run starts no new turn", emitted.finished)
         handle.requestResume()
-        advanceUntilIdle()
+        runToCompletion()
         assertEquals("SUCCEEDED", emitted.status())
     }
 
