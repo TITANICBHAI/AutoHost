@@ -61,7 +61,7 @@ jobs:
           {
             echo
             echo "## Style baseline (report only): $(grep -cE '\.kt:[0-9]+:[0-9]+' /tmp/quality.log || true) ktlint/detekt findings"
-            grep -E '\.kt:[0-9]+:[0-9]+' /tmp/quality.log | sed -E 's#^.*/work/[^/]+/[^/]+/##' | head -20 | cut -c1-200 | sed 's/^/- /'
+            grep -E '\.kt:[0-9]+:[0-9]+' /tmp/quality.log | sed -E 's#^.*/work/[^/]+/[^/]+/##' | head -20 | cut -c1-200 | sed 's/^/- /' || true # pipefail: no findings (grep 1) or head closing the pipe (SIGPIPE) must not fail the step
           } >> /tmp/latest.md
           cat /tmp/latest.md >> "$GITHUB_STEP_SUMMARY"
 
