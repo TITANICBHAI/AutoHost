@@ -28,6 +28,7 @@ ALLOWLIST: dict[str, str] = {
     "androidx.": "Jetpack/AndroidX family — Apache-2.0 (Google's licence header ships in every artifact); a per-artifact report via licensee is the upgrade path (docs/RELEASE.md)",
     "androidx.compose:compose-bom": "Google Maven BOM (versions only, no code) — Apache-2.0 umbrella",
     "junit:junit": "test-only (JVM unit tests), EPL-1.0 — not shipped",
+    "org.robolectric:robolectric": "test-only (JVM launch smoke test, S03), MIT licence as far as known — not shipped; owner to confirm against the upstream LICENSE",
     "androidx.test.ext:junit": "test-only (instrumented runners), Apache-2.0 — not shipped",
     "androidx.test.core": "test-only (instrumented core), Apache-2.0 — not shipped",
     "com.android.tools.build": "build tooling (AGP) — not a runtime dependency",
