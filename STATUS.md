@@ -1,51 +1,54 @@
 # STATUS — rewrite this file at the end of every session (do not append). Keep it under 150 lines.
 
-Updated: 2026-11-10 · by: Session 1 + early parts of S04/S05 (all unverified on CI) · branch: work/s01-pack
+Updated: 2026-11-12 · by: Session 2 (+ S03 smoke test) · branch: work/s02-green · last pushed commit: dc45104
 
 ## Now
-**Push this branch, read the first CI digest, then Session 2 — fix what it lists** (`work/plan/S02_fix_what_ci_shows.md`). Session 1 is done locally (pack applied); it needs a push, a PR and the first `jvm-tests` run, which has not happened yet.
+**S04: one honest task list, Back stack, Setup scroll** (`work/plan/S04_task_list_back_setup.md`). The code for steps 1, 4 and the Setup scroll was written in Session 1 and now COMPILES and passes its unit tests on CI,
+but nobody has seen it run. Next: finish S04 steps 2 and 3 (Surfaces/Studio lists, Library chips/search/Labs switch), then S05 (schedule form screen).
+Owner: please open a pull request from `work/s02-green` into main (the API token here cannot create one).
 
-## Works (evidence required: CI run link, test names, or owner screenshot)
-- Python side, after the reset and all six patches (sandbox run 2026-11-10, `scripts/test-python.sh`): SDK + simulator suite 436 tests OK,
-  root suite 69 tests OK, `gen_artifacts --check`, `sync_sdk --check`, flow/schedule golden drift checks, `licence_check`, `mcp_eval` all OK.
-- All six patches passed `git apply --check` and applied in order on the repo as uploaded.
-- `ScheduleForm` (core/engine, S05 step 1): compiled with Kotlin 2.2.21 (same version as the repo) against copies of the model/engine sources and run on all 30 cases of
-  `testing/golden/schedule_form_vectors.json`: valid cases give the exact reference rule AND the real `ScheduleEngine.nextFires` gives the reference next-5; invalid cases give exactly the listed
-  error keys; form→rule→form→rule round-trips. The JUnit files (`ScheduleFormGoldenTest`, `ScheduleFormTest`) were NOT run by Gradle.
-- `NavStack` (S04 step 4, pure back-stack): same local compile + an equivalent check run. `NavStackTest` was not run by Gradle.
-- First CI test reports (owner uploaded `test-reports-1.zip`, `jvm-core-test-reports-90.zip`): 21 modules ran, 14 failing tests in 5 modules, listed below and all addressed in code this session (NOT re-run: wait for CI):
-  · `core/engine` 1: my own `ScheduleFormGoldenTest` parsed the `catch_up: 0` vector with a validating parser (test fixed to parse it raw).
-  · `runtime/flow` 7: test fixtures lacked the required `"schema": 1` (3 tests, fixed); nested-repeat error text expectation was stale vs the reference parser (fixed); `StateMatcher` boundary test used wrong arithmetic (fixed to the code: package-only change = 0.925, package+activity = 0.85); selector state-key order follows the reference `STATE_KEYS` (fixed test); **code bug** `Recorder` produced `${secret.INPUT_INPUT_1}` (fixed).
-  · `capabilities/data` 4: **code bug** `DataPolicy.numberVerdict` dropped the leading `+` from dial/SMS numbers (fixed); the contacts permission tests called the provider directly but the broker's `ProviderInterceptor` is the gate (tests now assert `permissionFor`); SMS budget test depended on a static per-run counter (reset added).
-  · `capabilities/net` 8: **code bug** every socket call was denied because the domain gate passed `host/` (no scheme) to `NetPolicy.hostOf` (fixed); `*.example.org` no longer matches the bare `example.org` (decision: matches the test and fails closed; list both to allow both); HTTP header-echo test checked the wrong side (fixed); socket tests used a grant with no `domains` list, which correctly fails closed (tests now pass `scope = "*"`).
-- Modules with NO report yet (not in the uploaded zips, status unknown): `app`, `runtime/python`, `runtime/agent`, `core/llm`, `plugin-sdk`, others. Ask for the next digest.
-- No CRLF text files found by `m0_reset.py --check-eol` (only a PNG false positive); golden vectors need no LF normalisation.
-- (Nothing is verified on Android yet. The app has never been launched on a device or emulator. D-24 / D-25.)
+## Works (evidence: CI run 11, commit dc45104 — all five workflows green: jvm-tests, jvm-core, jvm-capabilities, Android debug APK, ci)
+- **1349 JVM tests, 0 failed, 0 Kotlin compile errors** in 29 modules (`ci-results` branch, `latest.md`, run 11). Python root suite 70 tests OK (`ci` workflow).
+- **The app starts on the JVM**: `app/src/testCoreLite/.../LaunchSmokeTest.kt` (Robolectric, SDK 35) builds the app graph and the first screen without a crash. `:app` 188 tests, 0 failed.
+  This is a JVM simulation, NOT a phone: nothing here proves a real device launch, permissions, the accessibility service, or the UI looking right.
+- Debug APK builds on CI (artifact of the `Android debug APK` workflow). Not installed or run anywhere by me.
+- Real product bugs found by the tests and fixed in Session 2 (each has its own commit, `S02-…`):
+  · model gateway never retried: every 429/5xx returned at once (`core/llm` LlmGateway).
+  · wireless pairing crashed: HKDF with an empty salt → "Empty key" (`capabilities/shell` WirelessPairing).
+  · tool catalog read JSON `null` as the string "null" (host tools had capability "null") (`runtime/agent` ToolCatalog).
+  · agent completion treated an answer without a readable `confirmed` field as a user rejection; now Unverified (fail closed).
+  · logcat line regex, ADB auth order (signature, then public key), `shell,v2` CLSE fallback, HTTP engine watcher/headers, no-tool nudge counting, stuck-warning at 3 screens (earlier S02 commits).
+- Earlier session facts still true: Python SDK/simulator suites pass; `ScheduleForm` + `NavStack` logic verified by the golden vectors and unit tests (now also run by Gradle on CI).
 
-## Broken or unverified (item ids from work/plan)
-- C-01 CI ran the wrong Gradle tasks (all variants) and never ran `:runtime:agent` / `:core:llm` → fixed by `jvm-tests.yml`, unverified until it runs.
-- C-02 `:capabilities:data` test hang · C-03 `:runtime:flow` test hang · C-04 manifest lacked backup rules · C-05 FileProvider exposed `files/`
-  → patches applied in Session 1, unverified until CI runs.
-- Unknown: the other failing `:app` unit tests (see the digest).
-- Written but never compiled by Gradle (Compose and Android-module code; CI is the judge): `TaskCatalog` + Library list showing installed AND dev-folder tasks (U-01; installed tasks open their detail page),
-  `NavStack` wired into `MainActivity` (U-02: BackHandler, state survives rotation), Setup screen scrolls + Always-on recipe collapsed, debug-only StrictMode (log only). Android API calls were type-checked against android-34 `android.jar`.
-- Not done yet: `SurfacesScreen` and the Studio lists still read the dev folder only (S04 step 2); Library card status chips / last result / search / Labs switch (S04 step 3); the Schedule *screen* (form UI, Schedule tab, Developer switch: S05 steps 2–4);
-  S03 launch smoke test; S02 (needs the first CI digest).
-- S-01 schedules need JSON on screen → the pure form logic exists, the screen still shows the JSON editor.
+## Broken or unverified
+- **Never run on a device or emulator** (D-24/D-25). Everything above the JVM line is unverified: Compose screens, back handling, rotation, Setup scrolling, StrictMode, permissions.
+- 4 modules produce no test results because they have no tests (`runtime/api`, `runtime/python`, `plugin-sdk`, `testing/fixture-app`); not an error, but also not covered.
+- Style baseline: 18963 ktlint/detekt findings (report only, never fails the job). Not addressed.
+- Robolectric is in the licence allowlist as MIT "as far as known" — owner should confirm against the upstream LICENSE.
+- Written, compiled, unit-tested, not yet visible to a user: `TaskCatalog` + Library (installed AND dev-folder tasks), `NavStack` in `MainActivity`, Setup scroll, debug StrictMode.
+- Not done: `SurfacesScreen` and Studio lists still read the dev folder only (S04 step 2); Library status chips / last result / search / Labs switch (S04 step 3); the Schedule screen (S05 steps 2–4: schedules still need JSON on screen, S-01).
+- Release signing (S06) needs owner steps (key + secrets); a phone session (S07/S08) needs the owner.
+
+## Needs you (owner decisions, still open)
+1. Open a pull request `work/s02-green` → main (or tell me to merge differently).
+2. A phone session: install the debug APK from the `Android debug APK` run and tell me what you see (Setup, Library, Back button).
+3. Labs switch default (on/off), FileProvider removal, signing key/secrets, naming "Tasks" vs "Automations".
 
 ## Frozen (Labs)
-Ask/agent runtime, Task Studio, Recorder, plugins/app packs, webhooks, Dev API/MCP, reverse bridge, browser, vision, `full` flavor.
+Ask/agent runtime, Task Studio, Recorder, plugins/app packs, webhooks, Dev API/MCP, reverse bridge, browser, vision, `full` flavor. Kept compiling and tested; not extended.
 
 ## Next 5
-1. Session 1: apply the pack (docs reset, CI, test fixes, Python runner fixes). Push; read the first digest.
-2. Session 2: fix what the digest lists, one module per push.
-3. Session 3: Robolectric launch smoke (prove the app starts).
-4. Session 4: one task list everywhere (E-01), Back stack, Setup scroll, StrictMode.
-5. Session 5: schedule form without JSON (S-01) using `testing/golden/schedule_form_vectors.json`.
+1. S04 steps 2–3: one task list everywhere; Library chips/search/Labs switch.
+2. S05: schedule form screen without JSON (uses `testing/golden/schedule_form_vectors.json`).
+3. S06: stable signing (owner steps first).
+4. S07: first run on a phone (owner).
+5. S08: fix what the phone shows.
 
-## Lessons (from the repo's own history)
-- Heredoc edits half-persist; use exact find/replace and re-read the file.
-- A new interface method breaks every fake: search all implementers first.
-- A new parameter must be threaded through every call site.
-- Int × Double is Double in Kotlin; missing imports are only found by the compiler (CI).
-- A test that waits on a clock needs a clock that moves; a test that blocks a thread needs a real thread, not a virtual-time coroutine.
+## Lessons (from this and earlier sessions)
+- Read the digest's `details.md` (all errors and failing tests) before touching code; the 150-line digest hides most of it.
+- Most remaining "failures" after the compile errors were wrong TESTS, not wrong code: `Job.join()` does not throw for a cancelled job; `advanceUntilIdle()` returns at once when only `backgroundScope` work is left; a stuck detector stops 5 identical screens; an empty `packages` grant means "nothing"; the selector mode is `eq`.
+- But four were real product bugs (list above). Check which it is by reading the code, not by making the test pass.
+- Heredoc edits half-persist; use exact find/replace and re-read the file. Keep CRLF as found.
+- A new interface method breaks every fake; a new parameter must reach every call site.
+- A test that waits on a clock needs a clock that moves (`FakeClock(autoAdvancePerReadMs=…)`).
+- Robolectric 4.16.1 supports SDK 36 only on JDK 21; CI uses JDK 17, so tests pin SDK 35.
