@@ -182,7 +182,9 @@ object Spake2P256 {
 
     /** RFC 5869 HKDF-SHA256. */
     fun hkdf(ikm: ByteArray, salt: ByteArray, info: ByteArray, length: Int): ByteArray {
-        val prk = hmac(salt, ikm)
+        // RFC 5869 §2.2: an absent salt is HashLen zero bytes. HMAC pads a short key with zeros, so this is the same
+        // value as an empty key, but SecretKeySpec refuses an empty key ("Empty key") — pairing would crash.
+        val prk = hmac(if (salt.isEmpty()) ByteArray(32) else salt, ikm)
         val okm = java.io.ByteArrayOutputStream()
         var t = ByteArray(0)
         var counter = 1
