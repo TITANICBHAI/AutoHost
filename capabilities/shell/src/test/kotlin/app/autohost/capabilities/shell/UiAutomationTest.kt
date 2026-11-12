@@ -97,7 +97,7 @@ class UiAutomationSessionClientTest {
         val connection = FakeConnection(mutableListOf("{\"ok\":false,\"error\":\"SESSION_CLOSED\",\"detail\":\"gone\"}"))
         val client = UiAutomationSessionClient(connection)
         try {
-            client.ping()
+            client.dump() // ping() is a health probe that answers false instead of throwing; the ops surface RpcError
             throw AssertionError("expected RpcError")
         } catch (e: UiAutomationSessionClient.RpcError) {
             assertEquals("SESSION_CLOSED", e.code)
@@ -146,7 +146,9 @@ class UiAutomationProviderTest {
             taskId = "t1",
             profileId = null,
             grants = mapOf(
-                "device.ui.observe" to buildJsonObject { put("packages", kotlinx.serialization.json.JsonArray(emptyList())) },
+                // observation unrestricted (no "packages" key). An EMPTY array means "no package at all" and
+                // fails closed: every node is filtered out and nothing can resolve.
+                "device.ui.observe" to buildJsonObject { },
                 "device.ui.act" to buildJsonObject {
                     put(
                         "packages",
@@ -195,7 +197,7 @@ class UiAutomationProviderTest {
                     buildJsonObject {
                         put(
                             "selector",
-                            buildJsonObject { put("text", JsonPrimitive("Buy now")) },
+                            textEquals("Buy now"),
                         )
                     },
                 )
@@ -222,7 +224,7 @@ class UiAutomationProviderTest {
                     buildJsonObject {
                         put(
                             "selector",
-                            buildJsonObject { put("text", JsonPrimitive("harmless")) },
+                            textEquals("harmless"),
                         )
                     },
                 )
@@ -246,7 +248,7 @@ class UiAutomationProviderTest {
                     buildJsonObject {
                         put(
                             "selector",
-                            buildJsonObject { put("text", JsonPrimitive("password")) },
+                            textEquals("password"),
                         )
                     },
                 )
@@ -258,6 +260,26 @@ class UiAutomationProviderTest {
     }
 
     private val DeviceEnvStub: DeviceEnv = DeviceEnv(sdkInt = 29)
+}
+
+/** The wire form of a selector (schemas/broker.schema.json#/$defs/Selector): one `text` term matched with `eq`. */
+private fun textEquals(label: String): JsonObject = buildJsonObject {
+    put(
+        "terms",
+        kotlinx.serialization.json.JsonArray(
+            listOf(
+                buildJsonObject {
+                    put(
+                        "text",
+                        buildJsonObject {
+                            put("labels", kotlinx.serialization.json.JsonArray(listOf(JsonPrimitive(label))))
+                            put("mode", "eq")
+                        },
+                    )
+                },
+            ),
+        ),
+    )
 }
 
 private fun Envelope.errorOrNull() = error

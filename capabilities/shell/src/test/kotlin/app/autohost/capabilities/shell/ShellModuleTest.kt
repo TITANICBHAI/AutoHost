@@ -260,7 +260,7 @@ class UiautomatorDumpTest {
         assertEquals("a&b", nodes[0].text)
         assertEquals("<inner>", nodes[1].text)
         assertEquals(2, nodes[2].depth)
-        assertEquals(0, nodes[2].parent)
+        assertEquals(1, nodes[2].parent) // `parent` is the flat index of the direct parent: "deep" sits inside the second node
     }
 
     @Test fun `corrupt input fails with a typed parse error`() {
@@ -311,7 +311,7 @@ class ShellUiAndScreenshotProviderTest {
                 "terms",
                 JsonArray(listOf(buildJsonObject { put("text", buildJsonObject {
                     put("labels", JsonArray(listOf(JsonPrimitive("Sign in"))))
-                    put("mode", "equals")
+                    put("mode", "eq")
                 }) })),
             )
         }
@@ -333,7 +333,7 @@ class ShellUiAndScreenshotProviderTest {
         val target = buildJsonObject { put("selector", buildJsonObject {
             put("terms", JsonArray(listOf(buildJsonObject { put("id", buildJsonObject {
                 put("labels", JsonArray(listOf(JsonPrimitive("com.fixture:id/login"))))
-                put("mode", "equals")
+                put("mode", "eq")
             }) })))
         }) }
         assertEquals(true, provider.invoke(inScope, "click", buildJsonObject { put("target", target) }).ok)
