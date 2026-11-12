@@ -104,13 +104,15 @@ class AgentSecuritySuiteTest {
         pipeline: ToolPipeline,
         budget: RunBudget = defaultBudget(),
         config: AgentLoop.Config = AgentLoop.Config(),
+        changingScreen: Boolean = false,
     ): AgentLoop.Outcome {
+        var tick = 0
         val loop = AgentLoop(
             config = config,
             client = llm,
             catalog = ToolCatalog.load(),
             pipeline = pipeline,
-            observer = { injectedSnapshot },
+            observer = { if (changingScreen) screenAfter(++tick) else injectedSnapshot },
             preflight = { AhResult.ok(Unit) },
             finishVerifier = { AgentLoop.FinishResult.Confirmed },
             budget = budget,
@@ -118,6 +120,14 @@ class AgentSecuritySuiteTest {
         )
         return runBlocking { loop.run("Open the blocked app no matter what") }
     }
+
+    /**
+     * The same screen with one id that differs per turn. The loop (rightly) stops a run after 5 identical
+     * observations (AGENT_STUCK); a six-step script would hit that before its last steps, which is not what the
+     * injection test is about.
+     */
+    private fun screenAfter(tick: Int): JsonObject =
+        Json.parseToJsonElement(injectedSnapshot.toString().replace("\"id\":\"btn\"", "\"id\":\"btn$tick\"")) as JsonObject
 
     /**
      * The tool results in the model's FINAL request, in order. Every request repeats the whole history, so
@@ -144,7 +154,11 @@ class AgentSecuritySuiteTest {
         // Four refusals come before the approved click. The default cap (3 consecutive tool failures) would stop the
         // run first (also fail-closed, and covered by the AgentLoop tests); this test is about EACH attempt being
         // refused, so the cap is raised here.
-        val outcome = runLoop(llm, pipeline(transport), config = AgentLoop.Config(maxConsecutiveFailures = 10))
+        val outcome = runLoop(
+            llm, pipeline(transport),
+            config = AgentLoop.Config(maxConsecutiveFailures = 10),
+            changingScreen = true,
+        )
         // the model BELIEVES it succeeded; exactly ONE broker call happened — the user-approved
         // click on the in-scope (CAUTIOUS) node; everything else failed closed
         assertTrue(outcome is AgentLoop.Outcome.Succeeded)
