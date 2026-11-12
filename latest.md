@@ -1,13 +1,7 @@
-# CI digest - run 9 - branch work/s02-green - commit 963cbf9
-tests step outcome: failure
+# CI digest - run 10 - branch work/s02-green - commit cb939d7
+tests step outcome: success
 
-## Verdict: RED - 1349 tests ran, 1 failed, 0 Kotlin compile errors, 1 failed Gradle tasks, 4 modules with no results
-
-## Failed Gradle tasks
-- :runtime:agent:test
-
-## Failing tests (first 40 of 1)
-- [runtime/agent] AgentSecuritySuiteTest.given a fully compromised model obeying the screen injection when run then EVERY attempt fails closed - java.lang.AssertionError
+## Verdict: GREEN - 1349 tests ran, 0 failed, 0 Kotlin compile errors, 0 failed Gradle tasks, 4 modules with no results
 
 ## Modules that produced no test results (compile error, timeout, or no tests)
 - runtime/api
@@ -41,28 +35,28 @@ tests step outcome: failure
 - core/engine: 296 / 0 / 2
 - core/llm: 36 / 0 / 0
 - core/model: 47 / 0 / 0
-- runtime/agent: 175 / 1 / 0
+- runtime/agent: 175 / 0 / 0
 - runtime/flow: 93 / 0 / 24
 - runtime/js: 41 / 0 / 0
 
-## Style baseline (report only): 18954 ktlint/detekt findings
-- app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:14:1 Class body should not start with blank line
-- app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:32 Newline expected after opening parenthesis
-- app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:50 Parameter should start on a newline
-- app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:81 Newline expected before closing parenthesis
-- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:37:1 Class body should not start with blank line
-- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:47:27 Newline expected after opening parenthesis
-- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:47:47 Parameter should start on a newline
-- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:47:70 Parameter should start on a newline
-- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:47:91 Parameter should start on a newline
-- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:47:118 Newline expected before closing parenthesis
-- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:48:21 A multiline expression should start on a new line
-- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:69:26 A multiline expression should start on a new line
-- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:71:9 Expected a blank line for this declaration
-- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:72:9 Expected a blank line for this declaration
-- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:73:9 Expected a blank line for this declaration
-- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:83:57 A multiline expression should start on a new line
-- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:83:57 Newline expected before expression body
-- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:91:63 First line of body expression fits on same line as function signature
-- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:95:31 Newline expected after opening parenthesis
-- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:95:45 Parameter should start on a newline
+## Style baseline (report only): 18963 ktlint/detekt findings
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:6:1 Unused import
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:11:1 Unused import
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:12:1 Unused import
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:32:1 Class body should not start with blank line
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:35:32 Newline expected after opening parenthesis
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:35:48 Parameter should start on a newline
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:35:62 Newline expected before closing parenthesis
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:54:61 A multiline expression should start on a new line
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:54:61 Newline expected before expression body
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:56:24 A multiline expression should start on a new line
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:66:1 Exceeded max line length (120) (cannot be auto-corrected)
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:68:22 A multiline expression should start on a new line
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:91:65 A multiline expression should start on a new line
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:91:65 Newline expected before expression body
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:93:24 A multiline expression should start on a new line
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:100:1 Exceeded max line length (120) (cannot be auto-corrected)
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:102:22 A multiline expression should start on a new line
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:123:39 Newline expected after opening parenthesis
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:123:56 Parameter should start on a newline
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:123:71 Parameter should start on a newline
