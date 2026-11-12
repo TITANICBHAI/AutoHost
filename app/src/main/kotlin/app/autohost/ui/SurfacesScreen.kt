@@ -47,7 +47,10 @@ import app.autohost.core.engine.surfaces.TileBindings
 fun SurfacesScreen(graph: AppGraph, onBack: () -> Unit) {
     val prefs = graph.surfacesPrefs
     val clipboard = LocalClipboardManager.current
-    val tasks by graph.devTasks.tasks.collectAsState()
+    // U-01: the same combined list as the Library (installed AND dev-folder tasks), not the dev folder alone.
+    val tasks by remember(graph) {
+        TaskCatalog.observe(graph.data.tasks.observeActive(), graph.devTasks.tasks)
+    }.collectAsState(initial = emptyList())
 
     Column(
         modifier = Modifier.fillMaxWidth().padding(16.dp).verticalScroll(rememberScrollState()),
@@ -123,7 +126,7 @@ fun SurfacesScreen(graph: AppGraph, onBack: () -> Unit) {
                                         Text((if (binding?.taskId == task.taskId) "● " else "") + task.name)
                                     }
                                 }
-                                if (tasks.isEmpty()) Text("No dev-folder tasks yet.", style = MaterialTheme.typography.bodySmall)
+                                if (tasks.isEmpty()) Text("No automations yet. Add one from the Tasks tab.", style = MaterialTheme.typography.bodySmall)
                             }
                         }
                     }
@@ -289,7 +292,7 @@ fun SurfacesScreen(graph: AppGraph, onBack: () -> Unit) {
                         }) { Text("Pin") }
                     }
                 }
-                if (tasks.isEmpty()) Text("No dev-folder tasks yet.", style = MaterialTheme.typography.bodySmall)
+                if (tasks.isEmpty()) Text("No automations yet. Add one from the Tasks tab.", style = MaterialTheme.typography.bodySmall)
             }
         }
     }
