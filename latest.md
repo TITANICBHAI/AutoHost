@@ -1,39 +1,16 @@
-# CI digest - run 13 - branch work/s02-green - commit d093095
-tests step outcome: failure
+# CI digest - run 14 - branch work/s02-green - commit bf14f3e
+tests step outcome: success
 
-## Verdict: RED - 1161 tests ran, 0 failed, 16 Kotlin compile errors, 2 failed Gradle tasks, 6 modules with no results
-
-## Kotlin compile errors (first 40 of 16)
-- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:32:33 Unresolved reference 'rememberSaveable'.
-- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:174:22 Unresolved reference 'rememberSaveable'.
-- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:175:18 Unresolved reference 'rememberSaveable'.
-- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:210:33 Unresolved reference 'not' for operator '!'.
-- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:211:25 Unresolved reference 'not' for operator '!'.
-- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:289:43 Unresolved reference 'it'.
-- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:291:33 @Composable invocations can only happen from the context of a @Composable function
-- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:291:38 @Composable invocations can only happen from the context of a @Composable function
-- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:32:33 Unresolved reference 'rememberSaveable'.
-- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:174:22 Unresolved reference 'rememberSaveable'.
-- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:175:18 Unresolved reference 'rememberSaveable'.
-- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:210:33 Unresolved reference 'not' for operator '!'.
-- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:211:25 Unresolved reference 'not' for operator '!'.
-- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:289:43 Unresolved reference 'it'.
-- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:291:33 @Composable invocations can only happen from the context of a @Composable function
-- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:291:38 @Composable invocations can only happen from the context of a @Composable function
-
-## Failed Gradle tasks
-- :app:compileCorePyDebugKotlin
-- :app:compileCoreLiteDebugKotlin
+## Verdict: GREEN - 1365 tests ran, 0 failed, 0 Kotlin compile errors, 0 failed Gradle tasks, 4 modules with no results
 
 ## Modules that produced no test results (compile error, timeout, or no tests)
 - runtime/api
 - runtime/python
 - plugin-sdk
 - testing/fixture-app
-- app
-- app
 
 ## Per module (tests / failed / skipped)
+- app: 204 / 0 / 0
 - capabilities/a11y: 114 / 0 / 0
 - capabilities/app: 32 / 0 / 0
 - capabilities/audio: 8 / 0 / 0
