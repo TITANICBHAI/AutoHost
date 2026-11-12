@@ -60,6 +60,7 @@ class LlmGateway(
         }
 
         var attempt = 0
+        var lastHttpError: LlmError? = null // the decoded error of the last retryable HTTP status, for the give-up
         while (true) {
             attempt += 1
             val remaining = deadlineMs - nowMs()
@@ -94,7 +95,14 @@ class LlmGateway(
                 val retryAfter = ChatCodec.parseRetryAfterMs(response.headers)
                 val error = ChatCodec.decodeError(response.status, response.body, retryAfter)
                 audit(profile, url, request, wireBytes, latency, attempt, error.javaClass.simpleName, response.body.length)
-                LlmResults.err(error)
+                if (response.status == 429 || response.status == 408 || response.status == 425 || response.status >= 500) {
+                    // retryable (MODEL_GATEWAY §5): fall through to the RetryPolicy below. Returning the error here
+                    // made every 429/5xx final and the whole retry path unreachable.
+                    lastHttpError = error
+                    null
+                } else {
+                    LlmResults.err(error)
+                }
             }
             if (terminal != null) return terminal
 
@@ -109,7 +117,7 @@ class LlmGateway(
                 else -> RetryPolicy.Outcome(RetryPolicy.OutcomeKind.INVALID, attempt)
             }
             when (val decision = RetryPolicy.plan(outcome, deadlineMs - nowMs())) {
-                is RetryPolicy.Decision.GiveUp -> return LlmResults.err(mapOutcome(outcome))
+                is RetryPolicy.Decision.GiveUp -> return LlmResults.err(lastHttpError ?: mapOutcome(outcome))
                 is RetryPolicy.Decision.Retry -> delay(decision.delayMs) // cancellable suspend — Stop cancels it
             }
         }
