@@ -1641,6 +1641,18 @@ class AppGraph(val application: Application) {
 
     fun refreshDevTasks() = devTasks.refresh()
 
+    /** S04: Record, Studio and Ask stay hidden until the person turns on "Labs" in Settings. Default off. */
+    val labsEnabled = kotlinx.coroutines.flow.MutableStateFlow(false)
+
+    suspend fun loadLabsEnabled() {
+        labsEnabled.value = data.settings.bool(SETTING_LABS, false)
+    }
+
+    suspend fun setLabsEnabled(on: Boolean) {
+        labsEnabled.value = on
+        data.settings.setBool(SETTING_LABS, on)
+    }
+
     /**
      * Crash-fix 1.3: runs one startup step so that a failure is logged and kept for the in-app crash report instead of
      * killing the process or skipping every step after it. Cancellation and out-of-memory still propagate.
@@ -1752,6 +1764,9 @@ class AppGraph(val application: Application) {
 
         /** P4-13: persisted scheduler backend preference (`auto`|`alarm`|`work`|`job`). */
         const val SETTING_SCHEDULER_BACKEND = "scheduler.backend"
+
+        /** S04: the Labs switch (Record, Studio, Ask). Default off. */
+        const val SETTING_LABS = "ui.labs.enabled"
 
         /** P9-08: the experimental exclusive UiAutomation provider toggle (default off). */
         const val SETTING_UI_AUTOMATION = "ui.automation.experimental"

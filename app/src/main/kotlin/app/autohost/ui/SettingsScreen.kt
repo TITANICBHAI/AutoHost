@@ -16,6 +16,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +46,8 @@ fun SettingsScreen(
     val clipboard = LocalClipboardManager.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var backend by remember { mutableStateOf(graph.schedulerBackendPreference) }
+    val labs by graph.labsEnabled.collectAsState()
+    androidx.compose.runtime.LaunchedEffect(Unit) { graph.loadLabsEnabled() }
     var switchState by remember {
         mutableStateOf<InsecureFeatures.State>(graph.insecureSwitches.state)
     }
@@ -60,6 +63,23 @@ fun SettingsScreen(
                 Text("Setup & Health", style = MaterialTheme.typography.titleSmall)
                 Text("Accessibility, notifications, alarms, battery, Dev API — all checks in one place.", style = MaterialTheme.typography.bodySmall)
                 Button(onClick = onOpenHealth, modifier = Modifier.padding(top = 8.dp)) { Text("Open") }
+            }
+        }
+        SectionHeader(androidx.compose.ui.res.stringResource(app.autohost.R.string.labs_title))
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(androidx.compose.ui.res.stringResource(app.autohost.R.string.labs_title), style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        androidx.compose.ui.res.stringResource(app.autohost.R.string.labs_body),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Switch(checked = labs, onCheckedChange = { scope.launch { graph.setLabsEnabled(it) } })
             }
         }
         SectionHeader("Scheduler")
