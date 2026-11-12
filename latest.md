@@ -1,16 +1,39 @@
-# CI digest - run 12 - branch work/s02-green - commit d5c35d8
-tests step outcome: success
+# CI digest - run 13 - branch work/s02-green - commit d093095
+tests step outcome: failure
 
-## Verdict: GREEN - 1349 tests ran, 0 failed, 0 Kotlin compile errors, 0 failed Gradle tasks, 4 modules with no results
+## Verdict: RED - 1161 tests ran, 0 failed, 16 Kotlin compile errors, 2 failed Gradle tasks, 6 modules with no results
+
+## Kotlin compile errors (first 40 of 16)
+- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:32:33 Unresolved reference 'rememberSaveable'.
+- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:174:22 Unresolved reference 'rememberSaveable'.
+- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:175:18 Unresolved reference 'rememberSaveable'.
+- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:210:33 Unresolved reference 'not' for operator '!'.
+- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:211:25 Unresolved reference 'not' for operator '!'.
+- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:289:43 Unresolved reference 'it'.
+- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:291:33 @Composable invocations can only happen from the context of a @Composable function
+- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:291:38 @Composable invocations can only happen from the context of a @Composable function
+- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:32:33 Unresolved reference 'rememberSaveable'.
+- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:174:22 Unresolved reference 'rememberSaveable'.
+- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:175:18 Unresolved reference 'rememberSaveable'.
+- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:210:33 Unresolved reference 'not' for operator '!'.
+- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:211:25 Unresolved reference 'not' for operator '!'.
+- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:289:43 Unresolved reference 'it'.
+- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:291:33 @Composable invocations can only happen from the context of a @Composable function
+- app/src/main/kotlin/app/autohost/ui/AppNavHost.kt:291:38 @Composable invocations can only happen from the context of a @Composable function
+
+## Failed Gradle tasks
+- :app:compileCorePyDebugKotlin
+- :app:compileCoreLiteDebugKotlin
 
 ## Modules that produced no test results (compile error, timeout, or no tests)
 - runtime/api
 - runtime/python
 - plugin-sdk
 - testing/fixture-app
+- app
+- app
 
 ## Per module (tests / failed / skipped)
-- app: 188 / 0 / 0
 - capabilities/a11y: 114 / 0 / 0
 - capabilities/app: 32 / 0 / 0
 - capabilities/audio: 8 / 0 / 0
@@ -39,11 +62,18 @@ tests step outcome: success
 - runtime/flow: 93 / 0 / 24
 - runtime/js: 41 / 0 / 0
 
-## Style baseline (report only): 18963 ktlint/detekt findings
+## Style baseline (report only): 19035 ktlint/detekt findings
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:14:1 Class body should not start with blank line
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:32 Newline expected after opening parenthesis
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:50 Parameter should start on a newline
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:81 Newline expected before closing parenthesis
+- app/src/py/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:12:1 Class body should not start with blank line
+- app/src/py/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:13:32 Newline expected after opening parenthesis
+- app/src/py/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:13:50 Parameter should start on a newline
+- app/src/py/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:13:81 Newline expected before closing parenthesis
+- app/src/py/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:13:101 First line of body expression fits on same line as function signature
+- app/src/py/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:16:68 First line of body expression fits on same line as function signature
+- app/src/testCoreLite/kotlin/app/autohost/LaunchSmokeTest.kt:20:1 Class body should not start with blank line
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:6:1 Unused import
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:11:1 Unused import
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:12:1 Unused import
@@ -53,10 +83,3 @@ tests step outcome: success
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:35:62 Newline expected before closing parenthesis
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:54:61 A multiline expression should start on a new line
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:54:61 Newline expected before expression body
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:56:24 A multiline expression should start on a new line
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:66:1 Exceeded max line length (120) (cannot be auto-corrected)
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:68:22 A multiline expression should start on a new line
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:91:65 A multiline expression should start on a new line
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:91:65 Newline expected before expression body
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:93:24 A multiline expression should start on a new line
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:100:1 Exceeded max line length (120) (cannot be auto-corrected)
