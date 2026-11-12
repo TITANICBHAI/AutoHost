@@ -1,10 +1,10 @@
 # STATUS — rewrite this file at the end of every session (do not append). Keep it under 150 lines.
 
-Updated: 2026-11-12 · by: Session 2 (+ S03 smoke test) · branch: work/s02-green · last pushed commit: dc45104
+Updated: 2026-11-12 · by: Session 2 (+ S03 smoke test) · branch: work/s02-green · last pushed commit: bf14f3e
 
 ## Now
-**S04: one honest task list, Back stack, Setup scroll** (`work/plan/S04_task_list_back_setup.md`). The code for steps 1, 4 and the Setup scroll was written in Session 1 and now COMPILES and passes its unit tests on CI,
-but nobody has seen it run. Next: finish S04 steps 2 and 3 (Surfaces/Studio lists, Library chips/search/Labs switch), then S05 (schedule form screen).
+**S04 (`work/plan/S04_task_list_back_setup.md`)**: steps 1–6 are written, compile and pass unit tests on CI (run 14, commit bf14f3e), but nobody has seen them run.
+Left in S04: step 7 (Robolectric test that a freshly installed task shows up in Library) and the Studio task list (`TaskStudioScreen` still lists the dev folder only). Then S05 (schedule form screen).
 Owner: please open a pull request from `work/s02-green` into main (the API token here cannot create one).
 
 ## Works (evidence: CI run 11, commit dc45104 — all five workflows green: jvm-tests, jvm-core, jvm-capabilities, Android debug APK, ci)
@@ -25,8 +25,9 @@ Owner: please open a pull request from `work/s02-green` into main (the API token
 - 4 modules produce no test results because they have no tests (`runtime/api`, `runtime/python`, `plugin-sdk`, `testing/fixture-app`); not an error, but also not covered.
 - Style baseline: 18963 ktlint/detekt findings (report only, never fails the job). Not addressed.
 - Robolectric is in the licence allowlist as MIT "as far as known" — owner should confirm against the upstream LICENSE.
-- Written, compiled, unit-tested, not yet visible to a user: `TaskCatalog` + Library (installed AND dev-folder tasks), `NavStack` in `MainActivity`, Setup scroll, debug StrictMode.
-- Not done: `SurfacesScreen` and Studio lists still read the dev folder only (S04 step 2); Library status chips / last result / search / Labs switch (S04 step 3); the Schedule screen (S05 steps 2–4: schedules still need JSON on screen, S-01).
+- Written, compiled, unit-tested, not yet seen on a screen: `TaskCatalog`, the new Library (cards with Ready/Running chip, last result, search, + and ⋮ menu; Record/Studio/Ask behind the Labs switch in Settings, default off), Surfaces pickers on the combined list, `NavStack` in `MainActivity`, Setup scroll, debug StrictMode. 16 new tests (`TaskListModelTest`).
+- Library gaps: no "Needs setup" chip yet (no cheap data source); Settings is reached from the ⋮ menu or Setup; the Labs switch is only in Settings.
+- Not done: the Studio task list still reads the dev folder only; the Schedule screen (S05 steps 2–4: schedules still need JSON on screen, S-01).
 - Release signing (S06) needs owner steps (key + secrets); a phone session (S07/S08) needs the owner.
 
 ## Needs you (owner decisions, still open)
@@ -38,7 +39,7 @@ Owner: please open a pull request from `work/s02-green` into main (the API token
 Ask/agent runtime, Task Studio, Recorder, plugins/app packs, webhooks, Dev API/MCP, reverse bridge, browser, vision, `full` flavor. Kept compiling and tested; not extended.
 
 ## Next 5
-1. S04 steps 2–3: one task list everywhere; Library chips/search/Labs switch.
+1. S04 leftovers: Studio list, Robolectric Library test.
 2. S05: schedule form screen without JSON (uses `testing/golden/schedule_form_vectors.json`).
 3. S06: stable signing (owner steps first).
 4. S07: first run on a phone (owner).
