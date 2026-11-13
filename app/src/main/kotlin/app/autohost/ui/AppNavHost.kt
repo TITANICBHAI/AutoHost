@@ -146,12 +146,12 @@ private fun MainTabs(activity: MainActivity, onNavigate: (Routes, String?) -> Un
         Column(Modifier.padding(padding).fillMaxSize()) {
             TabRow(selectedTabIndex = tab) {
                 Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(stringResource(R.string.tab_tasks)) })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(R.string.tab_setup)) })
+                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Phone") })
                 Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Schedules") })
             }
             when (tab) {
                 0 -> LibraryScreen(activity, onNavigate)
-                1 -> SetupScreen(activity)
+                1 -> app.autohost.ui2.PhoneScreen(activity, onNavigate)
                 else -> {
                     val graph = (activity.application as app.autohost.AutoHostApp).graph
                     app.autohost.ui.ScheduleScreen(graph)

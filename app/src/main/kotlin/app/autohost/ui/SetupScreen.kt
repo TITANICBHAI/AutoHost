@@ -100,7 +100,7 @@ fun SetupScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit = 
  * because it needs the same plain-language honesty.
  */
 @Composable
-private fun AlwaysOnChecklist(activity: MainActivity) {
+internal fun AlwaysOnChecklist(activity: MainActivity) {
     val graph = (activity.application as AutoHostApp).graph
     var open by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     OutlinedButton(onClick = { open = !open }) {
