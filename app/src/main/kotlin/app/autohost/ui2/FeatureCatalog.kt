@@ -50,6 +50,7 @@ data class CapabilityNeed(val capabilityId: String, val group: FeatureGroup, val
 object FeatureCatalog {
 
     val all: List<CapabilityNeed> = listOf(
+        CapabilityNeed("device.intent", FeatureGroup.CONTROL_APPS, "Open links, settings and screens", Need.READY),
         CapabilityNeed("device.ui", FeatureGroup.CONTROL_APPS, "See and tap other apps", Need.TOGGLE),
         CapabilityNeed("device.screenshot", FeatureGroup.CONTROL_APPS, "Take screenshots", Need.TOGGLE),
         CapabilityNeed("device.app", FeatureGroup.CONTROL_APPS, "Open, list and stop apps", Need.READY),

@@ -8,12 +8,14 @@ import org.junit.Test
 
 class AccessPlanTest {
 
-    @Test fun `routes without a computer come first`() {
+    @Test fun `working routes without a computer come first, routes that do not work yet come last`() {
         for (sdk in listOf(29, 30, 34, 36)) {
             val routes = AccessPlan.routes(sdk)
-            val firstComputer = routes.indexOfFirst { it.needsComputer }
-            val lastFree = routes.indexOfLast { !it.needsComputer }
+            val working = routes.filter { it.implemented }
+            val firstComputer = working.indexOfFirst { it.needsComputer }
+            val lastFree = working.indexOfLast { !it.needsComputer }
             assertTrue("sdk $sdk: $routes", firstComputer == -1 || lastFree < firstComputer)
+            assertEquals("sdk $sdk: unfinished routes last", routes.takeLast(routes.count { !it.implemented }), routes.filter { !it.implemented })
         }
     }
 

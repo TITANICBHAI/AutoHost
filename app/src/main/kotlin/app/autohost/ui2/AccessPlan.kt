@@ -32,7 +32,16 @@ data class RouteInfo(
  */
 object AccessPlan {
 
-    fun routes(sdkInt: Int): List<RouteInfo> = listOf(
+    /** Working computer-free routes first, then working routes that need a computer, then routes that do not work yet. */
+    fun routes(sdkInt: Int): List<RouteInfo> = all(sdkInt).sortedBy { r ->
+        when {
+            !r.implemented -> 2
+            r.needsComputer -> 1
+            else -> 0
+        }
+    }
+
+    private fun all(sdkInt: Int): List<RouteInfo> = listOf(
         RouteInfo(AccessRoute.ROOT, needsComputer = false, implemented = true, note = "Only if the phone is rooted."),
         RouteInfo(
             AccessRoute.SHIZUKU,
