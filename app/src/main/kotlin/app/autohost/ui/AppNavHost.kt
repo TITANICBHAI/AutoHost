@@ -51,7 +51,7 @@ fun AppNavHost(
 ) {
     when (route) {
         Routes.LIBRARY -> MainTabs(activity, onNavigate, initialTab = 0)
-        Routes.SETUP -> MainTabs(activity, onNavigate, initialTab = 1)
+        Routes.SETUP -> MainTabs(activity, onNavigate, initialTab = 3)
         Routes.SCHEDULES -> MainTabs(activity, onNavigate, initialTab = 2)
         Routes.RUN -> RunScreen(activity, runId = runId, onBack = { onNavigate(Routes.LIBRARY, null) })
         Routes.RUNS_HISTORY -> RunsHistoryScreen(
@@ -145,17 +145,19 @@ private fun MainTabs(activity: MainActivity, onNavigate: (Routes, String?) -> Un
     Scaffold { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
             TabRow(selectedTabIndex = tab) {
-                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(stringResource(R.string.tab_tasks)) })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Phone") })
-                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Schedules") })
+                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Today") })
+                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(R.string.tab_tasks)) })
+                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("When") })
+                Tab(selected = tab == 3, onClick = { tab = 3 }, text = { Text("Phone") })
             }
             when (tab) {
-                0 -> LibraryScreen(activity, onNavigate)
-                1 -> app.autohost.ui2.PhoneScreen(activity, onNavigate)
-                else -> {
+                0 -> app.autohost.ui2.TodayScreen(activity, onNavigate, onOpenPhone = { tab = 3 })
+                1 -> LibraryScreen(activity, onNavigate)
+                2 -> {
                     val graph = (activity.application as app.autohost.AutoHostApp).graph
                     app.autohost.ui.ScheduleScreen(graph)
                 }
+                else -> app.autohost.ui2.PhoneScreen(activity, onNavigate)
             }
         }
     }
