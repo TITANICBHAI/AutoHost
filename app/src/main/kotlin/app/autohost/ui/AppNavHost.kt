@@ -177,6 +177,7 @@ fun LibraryScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit)
     var query by rememberSaveable { mutableStateOf("") }
     var menuOpen by remember { mutableStateOf(false) }
     var showTemplates by remember { mutableStateOf(false) }
+    var showMacro by remember { mutableStateOf(false) }
     val visible = remember(rows, query) { TaskListModel.search(rows, query) }
 
     LaunchedEffect(Unit) {
@@ -200,6 +201,18 @@ fun LibraryScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit)
         return
     }
 
+    if (showMacro) {
+        app.autohost.ui2.macro.MacroEditorScreen(
+            graph = graph,
+            devRoot = activity.getExternalFilesDir("dev"),
+            onDone = { taskId ->
+                showMacro = false
+                if (taskId != null) onNavigate(Routes.TASK_DETAIL, taskId)
+            },
+        )
+        return
+    }
+
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Row(
             Modifier.fillMaxWidth(),
@@ -216,6 +229,13 @@ fun LibraryScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit)
                 Box {
                     IconButton(onClick = { menuOpen = true }) { Text("\u22EE") }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Quick macro") },
+                            onClick = {
+                                menuOpen = false
+                                showMacro = true
+                            },
+                        )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_refresh)) },
                             onClick = {

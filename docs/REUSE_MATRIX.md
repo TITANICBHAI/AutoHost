@@ -175,3 +175,9 @@ The second planning pack (`autohost-planning-pack`, kept verbatim under `archive
 | The other pack's component matrix and integration procedure | `archive/pack-B/docs/REUSE_MATRIX.md` | historical; where it disagrees with sections A–H, **this file wins** |
 | Complete ARIA and ClosePaw snapshots | `archive/pack-B/reference/` | provenance only; ARIA has no LICENSE, so never copy from it; delete `archive/` before any public release |
 | Rows on ARIA's RL/IRL/LoRA training, orchestration layer, foreground service and build files | — | **do not adopt** (section H and §0); also listed in `THIRD_PARTY_NOTICES.md` under "Not used, by decision" |
+
+## H. Added 2026-11-13 — OpenTasker and Brahma-Echo
+| ID | Unit | Upstream | Disposition | Task | Test | Licence |
+|---|---|---|---|---|---|---|
+| RM-H1 | Macro = context + task, compact editor, template variables | OpenTasker `app/src/main/java/com/opentasker/core/{engine,expressions,contexts}` (not copied) | **reference only (concept)** — AutoHost compiles a macro to its flow runtime + trigger rules (`ui2/macro/MacroCompiler.kt`), so no second engine; `TemplateExpressionEngine.kt` (766 lines) is a candidate to adapt later for `${…}` text templates | UI2 macros | `MacroCompilerTest` | MIT (SysAdminDoc) |
+| RM-H2 | Brahma-Echo (Windows desktop assistant) | `Brahma-Echo-main` | **do not adopt** — source-available licence forbids reuse under another identity; different platform | — | — | source-available |

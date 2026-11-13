@@ -82,3 +82,10 @@ Project tags: **CP** = ClosePaw, **OD** = opendroid.
 **opendroid** — Apache-2.0 text with one word changed in §4(d) ("if provided" → "if distributed"), a header "OpenDroid Contributors", no `NOTICE`; the repository is a fork. Treated as Apache-2.0 at low risk; adaptations are kept small and each keeps its upstream header. Re-check the licence text before the first adaptation.
 
 **Not eligible:** android-agent (no `LICENSE` in the archive), sannabotapp (README says "MIT" but no `LICENSE` file; proprietary Picovoice wake-word dependency), ARIA (no `LICENSE`; owner UNVERIFIED). `tools/licence_check.py` is extended by X-11 to fail on an upstream-path header with no row here.
+
+## Inspiration, no code taken (added 2026-11-13)
+
+| Project | Licence | What we took | Where |
+|---|---|---|---|
+| OpenTasker (SysAdminDoc) | MIT, "Copyright (c) 2026 SysAdminDoc" | The idea of a small profile (context) + task (steps) split and a compact editor. **No code copied**: macros compile to AutoHost's own flow runtime and trigger rules. If code is ever adapted, it gets the §0 header and a row above and this MIT notice is reproduced. | `app/src/main/kotlin/app/autohost/ui2/macro/` |
+| Brahma-Echo | Source-available; forbids rebranding and publishing modified versions under another identity | Nothing. Read for ideas only; it is a Windows desktop assistant, a different product. | — |
