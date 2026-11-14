@@ -1,25 +1,24 @@
-# CI digest - run 22 - branch work/s02-green - commit 90333ae
+# CI digest - run 23 - branch work/s02-green - commit 37bf9fa
 tests step outcome: failure
 
-## Verdict: RED - 1161 tests ran, 0 failed, 2 Kotlin compile errors, 2 failed Gradle tasks, 6 modules with no results
-
-## Kotlin compile errors (first 40 of 2)
-- app/src/main/kotlin/app/autohost/ui2/AddTaskDialog.kt:65:65 Unresolved reference 'dp'.
-- app/src/main/kotlin/app/autohost/ui2/AddTaskDialog.kt:65:65 Unresolved reference 'dp'.
+## Verdict: RED - 1451 tests ran, 2 failed, 0 Kotlin compile errors, 2 failed Gradle tasks, 4 modules with no results
 
 ## Failed Gradle tasks
-- :app:compileCorePyDebugKotlin
-- :app:compileCoreLiteDebugKotlin
+- :app:testCorePyDebugUnitTest
+- :app:testCoreLiteDebugUnitTest
+
+## Failing tests (first 40 of 2)
+- [app] GetStartedTest.no step asks for a computer - java.lang.AssertionError: FIRST_TASK
+- [app] GetStartedTest.no step asks for a computer - java.lang.AssertionError: FIRST_TASK
 
 ## Modules that produced no test results (compile error, timeout, or no tests)
 - runtime/api
 - runtime/python
 - plugin-sdk
 - testing/fixture-app
-- app
-- app
 
 ## Per module (tests / failed / skipped)
+- app: 290 / 2 / 0
 - capabilities/a11y: 114 / 0 / 0
 - capabilities/app: 32 / 0 / 0
 - capabilities/audio: 8 / 0 / 0

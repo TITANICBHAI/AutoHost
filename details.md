@@ -1,16 +1,15 @@
-# CI details - 1 distinct Kotlin compile errors, 0 failing tests
+# CI details - 0 distinct Kotlin compile errors, 2 failing tests
 
 ## All Kotlin compile errors (sorted, de-duplicated)
-- app/src/main/kotlin/app/autohost/ui2/AddTaskDialog.kt:65:65 Unresolved reference 'dp'.
 
 ## All failing tests
+- [app] GetStartedTest.no step asks for a computer - java.lang.AssertionError: FIRST_TASK
+- [app] GetStartedTest.no step asks for a computer - java.lang.AssertionError: FIRST_TASK
 
 ## Gradle 'What went wrong' blocks
 ### 1
-    Execution failed for task ':app:compileCorePyDebugKotlin'.
-    > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
-       > Compilation error. See log for more details
+    Execution failed for task ':app:testCorePyDebugUnitTest'.
+    > There were failing tests. See the report at: file:///home/runner/work/AutoHost/AutoHost/app/build/reports/tests/testCorePyDebugUnitTest/index.html
 ### 2
-    Execution failed for task ':app:compileCoreLiteDebugKotlin'.
-    > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
-       > Compilation error. See log for more details
+    Execution failed for task ':app:testCoreLiteDebugUnitTest'.
+    > There were failing tests. See the report at: file:///home/runner/work/AutoHost/AutoHost/app/build/reports/tests/testCoreLiteDebugUnitTest/index.html
