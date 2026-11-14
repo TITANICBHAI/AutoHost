@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- AutoHost mark: a phone with a circuit trace ending in one amber action dot. Kept inside the 66 dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path
+        android:strokeColor="#FFF4F1FF" android:strokeWidth="3.4"
+        android:pathData="M45,26 H63 A8,8 0 0 1 71,34 V74 A8,8 0 0 1 63,82 H45 A8,8 0 0 1 37,74 V34 A8,8 0 0 1 45,26 Z" />
+    <path
+        android:strokeColor="#FFF4F1FF" android:strokeWidth="2.4" android:strokeLineCap="round"
+        android:pathData="M48.5,32 H59.5" />
+    <path
+        android:strokeColor="#FFF4F1FF" android:strokeWidth="3" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M46,70 V58 H62 V45" />
+    <path android:fillColor="#FFF4F1FF" android:pathData="M42,70 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 z" />
+    <path android:fillColor="#FFFFB020" android:pathData="M56.6,43 a5.4,5.4 0 1,0 10.8,0 a5.4,5.4 0 1,0 -10.8,0 z" />
+</vector>

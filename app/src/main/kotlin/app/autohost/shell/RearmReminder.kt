@@ -63,7 +63,7 @@ class RearmReminder(private val context: Context, private val transports: ShellT
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
             val notification = android.app.Notification.Builder(context, CHANNEL_REMINDERS)
-                .setSmallIcon(context.resources.getIdentifier("ic_autohost", "drawable", context.packageName))
+                .setSmallIcon(context.resources.getIdentifier("ic_stat", "drawable", context.packageName))
                 .setContentTitle("Shell tier needs re-arming")
                 .setContentText("ADB-over-TCP resets at reboot — run \"adb tcpip 5555\" on the PC, then check Setup.")
                 .setContentIntent(openSetup)

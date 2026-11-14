@@ -30,7 +30,7 @@ class AndroidNotificationSink(private val context: Context) : NotificationSink {
             }
         }
         val builder = android.app.Notification.Builder(context, CHANNEL_ALERTS)
-            .setSmallIcon(context.resources.getIdentifier("ic_autohost", "drawable", context.packageName))
+            .setSmallIcon(context.resources.getIdentifier("ic_stat", "drawable", context.packageName))
             .setContentTitle(request.title)
             .setContentText(request.text)
             .setAutoCancel(true)

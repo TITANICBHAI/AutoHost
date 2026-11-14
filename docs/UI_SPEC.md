@@ -14,7 +14,7 @@ Compose + Material 3, single activity. Calm utility tool: status first, dense bu
 Material 3 with a fixed semantic palette (dynamic colour may theme surfaces on API 31+, **status colours never change**).
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `primary` | `#0E7C86` | `#4FD1D9` | actions, selected |
+| `primary` | `#4B3FD8` | `#C6BFFF` | actions, selected (brand indigo; amber `#FFB020` is the logo accent) |
 | `onPrimary` | `#FFFFFF` | `#00363A` | |
 | `surface` / `surfaceVariant` | `#FAFCFC` / `#E3EBEC` | `#101414` / `#2B3335` | cards |
 | `outline` | `#6F7B7D` | `#8A9698` | borders |

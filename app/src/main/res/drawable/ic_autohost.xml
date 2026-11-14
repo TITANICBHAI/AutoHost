@@ -1,8 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Temporary wave-1 app icon: a calm teal dot on dark. Replaced with brand assets later. -->
+<!-- AutoHost logo as a plain tile (shortcuts, in-app use). The launcher uses mipmap/ic_launcher; notifications use ic_stat. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="48dp" android:height="48dp"
-    android:viewportWidth="48" android:viewportHeight="48">
-    <path android:fillColor="#101414" android:pathData="M0,0h48v48h-48z" />
-    <path android:fillColor="#0E7C86" android:pathData="M24,10a14,14 0 1,0 0.001,0z M24,18a6,6 0 1,1 0,12a6,6 0 1,1 0,-12z" />
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="96dp" android:height="96dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M24,0 H84 A24,24 0 0 1 108,24 V84 A24,24 0 0 1 84,108 H24 A24,24 0 0 1 0,84 V24 A24,24 0 0 1 24,0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="0" android:startY="0" android:endX="108" android:endY="108">
+                <item android:offset="0" android:color="#FF6A55FF" />
+                <item android:offset="1" android:color="#FF2B1F9C" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:strokeColor="#FFF4F1FF" android:strokeWidth="3.4"
+        android:pathData="M45,26 H63 A8,8 0 0 1 71,34 V74 A8,8 0 0 1 63,82 H45 A8,8 0 0 1 37,74 V34 A8,8 0 0 1 45,26 Z" />
+    <path
+        android:strokeColor="#FFF4F1FF" android:strokeWidth="2.4" android:strokeLineCap="round"
+        android:pathData="M48.5,32 H59.5" />
+    <path
+        android:strokeColor="#FFF4F1FF" android:strokeWidth="3" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M46,70 V58 H62 V45" />
+    <path android:fillColor="#FFF4F1FF" android:pathData="M42,70 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 z" />
+    <path android:fillColor="#FFFFB020" android:pathData="M56.6,43 a5.4,5.4 0 1,0 10.8,0 a5.4,5.4 0 1,0 -10.8,0 z" />
 </vector>

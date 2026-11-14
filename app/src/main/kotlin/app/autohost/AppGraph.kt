@@ -796,7 +796,7 @@ class AppGraph(val application: Application) {
                 )
             }
             val notification = android.app.Notification.Builder(application, "needs_user")
-                .setSmallIcon(app.autohost.R.drawable.ic_autohost)
+                .setSmallIcon(app.autohost.R.drawable.ic_stat)
                 .setContentTitle("Task needs you")
                 .setContentText("Unlock the phone to run $taskId ($reason)")
                 .setAutoCancel(true)

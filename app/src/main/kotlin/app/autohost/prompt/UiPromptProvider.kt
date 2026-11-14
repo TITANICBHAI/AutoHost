@@ -226,7 +226,7 @@ class UiPromptProvider(
                 (if (android.os.Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
             val contentIntent = android.app.PendingIntent.getActivity(context, prompt.promptId.hashCode(), intent, flags)
             val notification: Notification = android.app.Notification.Builder(context, NotificationChannelHelper.CHANNEL_ID)
-                .setSmallIcon(context.resources.getIdentifier("ic_autohost", "drawable", context.packageName))
+                .setSmallIcon(context.resources.getIdentifier("ic_stat", "drawable", context.packageName))
                 .setContentTitle(prompt.title)
                 .setContentText(prompt.message)
                 .setPriority(Notification.PRIORITY_HIGH)
