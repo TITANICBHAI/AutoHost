@@ -26,8 +26,8 @@ Evidence level per claim: **[code]** read in AutoHost's repo; **[ref-code]** see
 **Caveats.** "Covers" means a wrapper exists; whether each call works on a device is unverified. ClosePaw's `browser_script` runs JS through Chrome DevTools; our `browser.cdp` needs the shell tier and is marked draft/unverified [code].
 
 ## Q4 — What to build next (ranked by value for effort)
-1. **Agent screenshot tool** (+ coordinate tap/swipe tools): the capabilities exist; add catalog entries. Small.
-2. **Python `llm` module** over the existing gateway. Small.
+1. **Agent screenshot tool** (+ coordinate tap/swipe tools): **not small, and an owner decision.** The capabilities exist, but `ChatMessage.User` carries text only [code: `core/llm/LlmTypes.kt`], so images need a codec change; `docs/AGENT_RUNTIME.md` §6 and ADR-091 (10) say screenshots are off by default per provider and new tools need the Stage-B allowlist, an insecure switch and per-call approval; and the agent runtime is frozen (Labs) per `AGENTS.md`. It also sends screen pixels to your model provider, so it needs your explicit yes.
+2. **Python `llm` module**: **not small, and an owner decision.** `docs/MODEL_GATEWAY.md` says scripts cannot call a model in Stage A and that a later `ai.llm` capability needs its own ADR (capability spec, permission, budget, kill switch, AI-off-by-default).
 3. **Quick macros** (OpenTasker-inspired "when → do"): compiled to the existing flow runtime and trigger rules, so no second engine. Medium. (In progress.)
 4. **More trigger events**: location/geofence, Bluetooth, calendar, call state. Medium each; each needs a permission screen.
 5. **Agent scratchpad/memory and `delegate_task`** (ClosePaw, Apache-2.0, adapt with header + notice). Medium–large.

@@ -228,6 +228,7 @@ fun LibraryScreen(
     var query by rememberSaveable { mutableStateOf("") }
     var menuOpen by remember { mutableStateOf(false) }
     val visible = remember(rows, query) { TaskListModel.search(rows, query) }
+    val readiness = app.autohost.ui2.rememberTaskReadiness(activity, graph, entries)
 
     LaunchedEffect(Unit) {
         graph.loadLabsEnabled()
@@ -360,7 +361,7 @@ fun LibraryScreen(
                 val nowMs = remember(rows) { graph.clock.nowMs() }
                 LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(visible, key = { it.entry.taskId }) { row ->
-                        TaskCard(graph, row, nowMs, onNavigate)
+                        TaskCard(graph, row, nowMs, onNavigate, readiness[row.entry.taskId], onOpenSetup)
                     }
                 }
             }
@@ -375,6 +376,8 @@ private fun TaskCard(
     row: TaskRow,
     nowMs: Long,
     onNavigate: (Routes, String?) -> Unit,
+    readiness: app.autohost.ui2.TaskReadiness.Result? = null,
+    onOpenSetup: () -> Unit = {},
 ) {
     val entry = row.entry
     val devTask = entry.dev
@@ -410,6 +413,17 @@ private fun TaskCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp),
             )
+            if (readiness != null && !readiness.ready) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        readiness.line(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = onOpenSetup) { Text("Set up") }
+                }
+            }
             if (devTask != null) {
                 Button(
                     onClick = {
