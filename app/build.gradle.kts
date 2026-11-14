@@ -158,6 +158,8 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.core) // the tests use runBlocking
     testImplementation(libs.robolectric) // S03: JVM launch smoke test (src/testCoreLite); 4.16 needs JDK 21 for SDK 36, so the test pins SDK 35
     testImplementation(libs.androidx.test.core)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4) // UiJourneyTest: composes the real screens on the JVM so a layout-time crash fails CI, not a phone
     androidTestImplementation(libs.junit)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation("androidx.test:runner:1.6.2")
