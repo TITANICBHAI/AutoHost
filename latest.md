@@ -1,15 +1,7 @@
-# CI digest - run 23 - branch work/s02-green - commit 37bf9fa
-tests step outcome: failure
+# CI digest - run 24 - branch work/s02-green - commit 14561e8
+tests step outcome: success
 
-## Verdict: RED - 1451 tests ran, 2 failed, 0 Kotlin compile errors, 2 failed Gradle tasks, 4 modules with no results
-
-## Failed Gradle tasks
-- :app:testCorePyDebugUnitTest
-- :app:testCoreLiteDebugUnitTest
-
-## Failing tests (first 40 of 2)
-- [app] GetStartedTest.no step asks for a computer - java.lang.AssertionError: FIRST_TASK
-- [app] GetStartedTest.no step asks for a computer - java.lang.AssertionError: FIRST_TASK
+## Verdict: GREEN - 1451 tests ran, 0 failed, 0 Kotlin compile errors, 0 failed Gradle tasks, 4 modules with no results
 
 ## Modules that produced no test results (compile error, timeout, or no tests)
 - runtime/api
@@ -18,7 +10,7 @@ tests step outcome: failure
 - testing/fixture-app
 
 ## Per module (tests / failed / skipped)
-- app: 290 / 2 / 0
+- app: 290 / 0 / 0
 - capabilities/a11y: 114 / 0 / 0
 - capabilities/app: 32 / 0 / 0
 - capabilities/audio: 8 / 0 / 0
@@ -47,11 +39,7 @@ tests step outcome: failure
 - runtime/flow: 93 / 0 / 24
 - runtime/js: 41 / 0 / 0
 
-## Style baseline (report only): 20022 ktlint/detekt findings
-- app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:14:1 Class body should not start with blank line
-- app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:32 Newline expected after opening parenthesis
-- app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:50 Parameter should start on a newline
-- app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:81 Newline expected before closing parenthesis
+## Style baseline (report only): 20037 ktlint/detekt findings
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:6:1 Unused import
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:11:1 Unused import
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:12:1 Unused import
@@ -68,3 +56,7 @@ tests step outcome: failure
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:91:65 Newline expected before expression body
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:93:24 A multiline expression should start on a new line
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:100:1 Exceeded max line length (120) (cannot be auto-corrected)
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:102:22 A multiline expression should start on a new line
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:123:39 Newline expected after opening parenthesis
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:123:56 Parameter should start on a newline
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:123:71 Parameter should start on a newline
