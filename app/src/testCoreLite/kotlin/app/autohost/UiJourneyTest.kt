@@ -6,6 +6,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.test.core.app.ActivityScenario
@@ -42,12 +43,12 @@ class UiJourneyTest {
         compose.onAllNodes(hasText(text) and hasClickAction()).onFirst().performClick()
     }
 
-    /** Swipes the first scrollable list up until [text] is on screen (a lazy list only composes what is visible). */
+    /**
+     * Scrolls the first scrollable list until the node with [text] is fully in view. Stopping at the first sighting is not
+     * enough: a row that is only a sliver above the bottom bar would be tapped at its centre, which is the bar, not the row.
+     */
     private fun scrollUntilShown(text: String) {
-        var guard = 0
-        while (!shown(text) && guard++ < 20) {
-            compose.onAllNodes(hasScrollAction()).onFirst().performTouchInput { swipeUp() }
-        }
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText(text))
         waitForText(text)
     }
 
