@@ -104,7 +104,7 @@ fun PhoneScreen(
             val (done, total) = GetStarted.counts(started)
             SectionHeader("Get started ($done of $total)")
         }
-        items(started, key = { it.id.name }) { step ->
+        items(started, key = { ListKeys.step(it.id) }) { step ->
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -140,7 +140,7 @@ fun PhoneScreen(
             }
         }
         item { SectionHeader("What your tasks can do") }
-        items(plan.groups, key = { it.group.name }) { card ->
+        items(plan.groups, key = { ListKeys.group(it.group) }) { card ->
             val open = expanded[card.group] == true
             Card(Modifier.fillMaxWidth().clickable { expanded[card.group] = !open }) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
