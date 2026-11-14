@@ -1,25 +1,22 @@
-# CI digest - run 30 - branch work/s02-green - commit e5a65d9
+# CI digest - run 31 - branch work/s02-green - commit f0d9f86
 tests step outcome: failure
 
-## Verdict: RED - 1161 tests ran, 0 failed, 2 Kotlin compile errors, 2 failed Gradle tasks, 6 modules with no results
-
-## Kotlin compile errors (first 40 of 2)
-- app/src/main/kotlin/app/autohost/ui2/BuildScreen.kt:53:40 'when' expression must be exhaustive. Add the 'Welcome' branch or an 'else' branch.
-- app/src/main/kotlin/app/autohost/ui2/BuildScreen.kt:53:40 'when' expression must be exhaustive. Add the 'Welcome' branch or an 'else' branch.
+## Verdict: RED - 1493 tests ran, 1 failed, 0 Kotlin compile errors, 1 failed Gradle tasks, 4 modules with no results
 
 ## Failed Gradle tasks
-- :app:compileCoreLiteDebugKotlin
-- :app:compileCorePyDebugKotlin
+- :app:testCoreLiteDebugUnitTest
+
+## Failing tests (first 40 of 1)
+- [app] UiJourneyTest.the welcome can be replayed from settings - androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 40000 ms
 
 ## Modules that produced no test results (compile error, timeout, or no tests)
 - runtime/api
 - runtime/python
 - plugin-sdk
 - testing/fixture-app
-- app
-- app
 
 ## Per module (tests / failed / skipped)
+- app: 332 / 1 / 0
 - capabilities/a11y: 114 / 0 / 0
 - capabilities/app: 32 / 0 / 0
 - capabilities/audio: 8 / 0 / 0
@@ -53,12 +50,6 @@ tests step outcome: failure
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:32 Newline expected after opening parenthesis
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:50 Parameter should start on a newline
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:81 Newline expected before closing parenthesis
-- app/src/py/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:12:1 Class body should not start with blank line
-- app/src/py/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:13:32 Newline expected after opening parenthesis
-- app/src/py/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:13:50 Parameter should start on a newline
-- app/src/py/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:13:81 Newline expected before closing parenthesis
-- app/src/py/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:13:101 First line of body expression fits on same line as function signature
-- app/src/py/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:16:68 First line of body expression fits on same line as function signature
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:6:1 Unused import
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:11:1 Unused import
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:12:1 Unused import
@@ -69,3 +60,9 @@ tests step outcome: failure
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:54:61 A multiline expression should start on a new line
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:54:61 Newline expected before expression body
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:56:24 A multiline expression should start on a new line
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:66:1 Exceeded max line length (120) (cannot be auto-corrected)
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:68:22 A multiline expression should start on a new line
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:91:65 A multiline expression should start on a new line
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:91:65 Newline expected before expression body
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:93:24 A multiline expression should start on a new line
+- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:100:1 Exceeded max line length (120) (cannot be auto-corrected)
