@@ -17,10 +17,11 @@ class GetStartedTest {
         assertTrue(GetStarted.needsAttention(steps, SetupFacts()))
     }
 
-    @Test fun `no step asks for a computer`() {
+    @Test fun `no step asks for a computer or cable`() {
         GetStarted.steps(LiveAccess(), SetupFacts()).forEach {
             val text = (it.title + it.why + it.button).lowercase()
-            assertFalse(it.id.name, text.contains("computer") || text.contains("adb") || text.contains("usb"))
+            // "No computer needed" is allowed; asking for one (adb, usb, plug in, from a computer, pc) is not.
+            assertFalse(it.id.name, listOf("adb", "usb", "plug", "from a computer", "your pc", "connect to a computer").any { bad -> text.contains(bad) })
         }
     }
 
