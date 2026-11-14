@@ -34,6 +34,7 @@ data class HubRow(val title: String, val line: String, val target: HubTarget?)
 sealed interface HubTarget {
     data class Go(val route: Routes) : HubTarget
     data object AddTask : HubTarget
+    data object Welcome : HubTarget
 }
 
 data class HubSection(val title: String, val rows: List<HubRow>)
@@ -82,8 +83,10 @@ object SettingsHubModel {
         HubSection(
             "Safety and system",
             listOf(
+                HubRow("What this phone allows", "Which abilities work, what each one needs, and any optional advanced access.", HubTarget.Go(Routes.SETUP)),
                 HubRow("Health check", "What is working, what is not, and how to fix it.", HubTarget.Go(Routes.HEALTH)),
                 HubRow("Security, backup and developer", "Risky-feature switches, backup and restore, packs, webhooks, shell access, developer tools.", HubTarget.Go(Routes.SETTINGS)),
+                HubRow("Replay the welcome steps", "Walk through the first-run steps again.", HubTarget.Welcome),
             ),
         ),
     )
@@ -113,9 +116,10 @@ fun SettingsHub(activity: MainActivity, onNavigate: (Routes, String?) -> Unit, o
                     Column {
                         section.rows.forEachIndexed { i, row ->
                             if (i > 0) HorizontalDivider()
-                            val click = when (val t = row.target) {
+                            val click: (() -> Unit)? = when (val t = row.target) {
                                 is HubTarget.Go -> ({ onNavigate(t.route, null) })
                                 HubTarget.AddTask -> onAddTask
+                                HubTarget.Welcome -> ({ scope.launch { graph.setOnboarded(false) } })
                                 null -> null
                             }
                             Column(

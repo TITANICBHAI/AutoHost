@@ -40,6 +40,8 @@ fun AskSheetScreen(
     model: AskSheetState.Model,
     onBack: () -> Unit,
     onOpenRun: (String) -> Unit,
+    simple: Boolean = false,
+    onOpenAiSettings: (() -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     var packageInput by remember { mutableStateOf("") }
@@ -70,7 +72,11 @@ fun AskSheetScreen(
         Text("Target apps (required — the agent cannot leave these)", style = MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             model.selectedPackages.sorted().forEach { pkg ->
-                FilterChip(selected = true, onClick = { state.togglePackage(pkg) }, label = { Text(pkg) })
+                FilterChip(
+                    selected = true,
+                    onClick = { state.togglePackage(pkg) },
+                    label = { Text(model.availableApps.firstOrNull { it.pkg == pkg }?.label ?: pkg) },
+                )
             }
         }
         // R4: the app picker — launchable installed apps, filtered as you type. The list is the
@@ -99,8 +105,8 @@ fun AskSheetScreen(
                 )
             }
         }
-        // the manual fallback stays: a target app need not be launchable
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        // the manual fallback stays in the full form: a target app need not be launchable
+        if (!simple) Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = packageInput,
                 onValueChange = { packageInput = it },
@@ -119,7 +125,15 @@ fun AskSheetScreen(
 
         Text("Provider", style = MaterialTheme.typography.titleMedium)
         if (model.profiles.isEmpty()) {
-            Text("no profiles — add one in Settings → AI features", style = MaterialTheme.typography.bodySmall)
+            if (simple && onOpenAiSettings != null) {
+                Text(
+                    "Add an AI model first. You bring your own key; nothing is sent until you turn it on.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Button(onClick = onOpenAiSettings) { Text("Set up an AI model") }
+            } else {
+                Text("no profiles — add one in Settings → AI features", style = MaterialTheme.typography.bodySmall)
+            }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             model.profiles.forEach { profile ->
@@ -131,6 +145,7 @@ fun AskSheetScreen(
             }
         }
 
+        if (!simple) {
         Text("Budgets (optional — may only tighten)", style = MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
@@ -147,6 +162,7 @@ fun AskSheetScreen(
                 modifier = Modifier.weight(1f),
                 singleLine = true,
             )
+        }
         }
 
         model.refusal?.let {
@@ -165,13 +181,19 @@ fun AskSheetScreen(
                 Text("open the run")
             }
         }
-        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("back") }
+        if (!simple) OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text("back") }
     }
 }
 
 /** The wiring host: the state over the real [AgentRunStarter]; the AI facts hydrate the gate. */
 @Composable
-fun AskSheetHost(graph: app.autohost.AppGraph, onBack: () -> Unit, onOpenRun: (String) -> Unit) {
+fun AskSheetHost(
+    graph: app.autohost.AppGraph,
+    onBack: () -> Unit,
+    onOpenRun: (String) -> Unit,
+    simple: Boolean = false,
+    onOpenAiSettings: (() -> Unit)? = null,
+) {
     val state = remember { AskSheetState(AskSheetState.Starter { goal, packages, profileId, override ->
         graph.agentRunStarter.start(goal, packages, profileId, override)
     }) }
@@ -198,5 +220,8 @@ fun AskSheetHost(graph: app.autohost.AppGraph, onBack: () -> Unit, onOpenRun: (S
         model = state.model
     }
     androidx.compose.runtime.LaunchedEffect(state.model) { model = state.model }
-    AskSheetScreen(state = state, model = model, onBack = onBack, onOpenRun = onOpenRun)
+    AskSheetScreen(
+        state = state, model = model, onBack = onBack, onOpenRun = onOpenRun,
+        simple = simple, onOpenAiSettings = onOpenAiSettings,
+    )
 }

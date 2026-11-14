@@ -49,12 +49,10 @@ fun PhoneScreen(
     activity: MainActivity,
     onNavigate: (Routes, String?) -> Unit,
     onAddTask: () -> Unit = {},
-    onFinish: () -> Unit = {},
 ) {
     val graph = (activity.application as AutoHostApp).graph
     var live by remember { mutableStateOf(LiveAccess()) }
     var facts by remember { mutableStateOf(SetupFacts()) }
-    val onboarded by graph.onboarded.collectAsState()
     var tick by remember { mutableIntStateOf(0) }
     val service by app.autohost.capabilities.a11y.A11yBridge.service.collectAsState()
     val expanded = remember { mutableStateMapOf<FeatureGroup, Boolean>() }
@@ -91,20 +89,18 @@ fun PhoneScreen(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
-            Text(if (onboarded) "Setup" else "Welcome to AutoHost", style = MaterialTheme.typography.headlineSmall)
+            Text("What this phone allows", style = MaterialTheme.typography.headlineSmall)
             Text(
-                if (onboarded) "${plan.readyCount} of ${plan.totalCount} abilities work now. No computer needed for any of these."
-                else "AutoHost runs tasks on this phone: it taps, types, reads and schedules. Nothing here needs a computer. " +
-                    "Only the first step is required; the rest can wait.",
+                "${plan.readyCount} of ${plan.totalCount} abilities work now. No computer needed for any of these.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        item {
+        if (started.any { !it.done }) item {
             val (done, total) = GetStarted.counts(started)
-            SectionHeader("Get started ($done of $total)")
+            SectionHeader("Still to do ($done of $total done)")
         }
-        items(started, key = { ListKeys.step(it.id) }) { step ->
+        items(started.filter { !it.done }, key = { ListKeys.step(it.id) }) { step ->
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -129,14 +125,6 @@ fun PhoneScreen(
                         }
                     }
                 }
-            }
-        }
-        if (!onboarded) {
-            item {
-                Button(
-                    onClick = { scope.launch { graph.setOnboarded(true); onFinish() } },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text(if (GetStarted.requiredLeft(started) > 0) "Skip for now" else "Finish and go to my tasks") }
             }
         }
         item { SectionHeader("What your tasks can do") }

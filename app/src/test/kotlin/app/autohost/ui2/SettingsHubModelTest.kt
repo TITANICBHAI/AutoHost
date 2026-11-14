@@ -20,9 +20,10 @@ class SettingsHubModelTest {
 
     @Test fun `the features that used to hide are reachable from the hub`() {
         val targets = sections.flatMap { it.rows }.mapNotNull { (it.target as? HubTarget.Go)?.route }.toSet()
-        listOf(Routes.AI_SETTINGS, Routes.ASK, Routes.MACRO, Routes.SCHEDULES, Routes.SURFACES, Routes.HEALTH, Routes.SETTINGS, Routes.RUNS_HISTORY)
+        listOf(Routes.AI_SETTINGS, Routes.ASK, Routes.MACRO, Routes.SCHEDULES, Routes.SURFACES, Routes.HEALTH, Routes.SETTINGS, Routes.RUNS_HISTORY, Routes.SETUP)
             .forEach { assertTrue(it.name, it in targets) }
         assertTrue(sections.flatMap { it.rows }.any { it.target == HubTarget.AddTask })
+        assertTrue("the welcome can be replayed", sections.flatMap { it.rows }.any { it.target == HubTarget.Welcome })
     }
 
     @Test fun `python row tells the truth about the build`() {

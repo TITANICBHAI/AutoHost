@@ -32,7 +32,7 @@ object GetStarted {
         ),
         GetStartedStep(
             StepId.KEEP_ALIVE, "Let AutoHost run in the background",
-            "Stops Android from putting scheduled and triggered tasks to sleep. Some phone brands need extra steps; the tips below list them.",
+            "Stops Android from putting scheduled and triggered tasks to sleep. Some phone brands need extra steps; Settings, then What this phone allows, lists them.",
             Level.RECOMMENDED, live.batteryExempt, "BATTERY_EXEMPTION", "Allow",
         ),
         GetStartedStep(

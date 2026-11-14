@@ -14,13 +14,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -33,6 +34,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.autohost.MainActivity
@@ -40,6 +42,7 @@ import app.autohost.Routes
 import app.autohost.R
 import app.autohost.core.designsystem.components.EmptyState
 import app.autohost.core.designsystem.components.SectionHeader
+import kotlinx.coroutines.launch
 
 /** Wave-1 shell: Tasks + Setup tabs, hand-rolled navigation into the Run screen. */
 @Composable
@@ -51,7 +54,15 @@ fun AppNavHost(
 ) {
     when (route) {
         Routes.LIBRARY -> MainTabs(activity, onNavigate, initialTab = 0)
-        Routes.SETUP -> MainTabs(activity, onNavigate, initialTab = 1)
+        Routes.SETUP -> {
+            // "What this phone allows": reached from Settings and from a task that needs something. Not a tab, not onboarding.
+            androidx.compose.material3.Surface {
+                Column(Modifier.fillMaxSize()) {
+                    TextButton(onClick = { onNavigate(Routes.LIBRARY, null) }) { Text("\u2190 Back") }
+                    app.autohost.ui2.PhoneScreen(activity, onNavigate, onAddTask = { onNavigate(Routes.TEMPLATES, null) })
+                }
+            }
+        }
         Routes.SCHEDULES -> {
             val graph = (activity.application as app.autohost.AutoHostApp).graph
             androidx.compose.material3.Surface {
@@ -169,16 +180,32 @@ fun AppNavHost(
     }
 }
 
+private data class TabSpec(val labelRes: Int, val iconRes: Int)
+
+private val MAIN_TABS = listOf(
+    TabSpec(R.string.tab_tasks, R.drawable.ic_nav_tasks),
+    TabSpec(R.string.tab_agent, R.drawable.ic_nav_agent),
+    TabSpec(R.string.tab_build, R.drawable.ic_nav_build),
+    TabSpec(R.string.tab_activity, R.drawable.ic_nav_activity),
+    TabSpec(R.string.tab_settings, R.drawable.ic_nav_settings),
+)
+
+/**
+ * The shell (UI v3): first run shows the full-screen onboarding, never a tab; after that a bottom bar with five icons:
+ * Tasks, Agent, Build, Activity, Settings. What each tab shows comes from the ui2 models.
+ */
 @Composable
 private fun MainTabs(activity: MainActivity, onNavigate: (Routes, String?) -> Unit, initialTab: Int) {
     val graph = (activity.application as app.autohost.AutoHostApp).graph
     var tab by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(initialTab) }
     var addOpen by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var loaded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     val onboarded by graph.onboarded.collectAsState()
-    // First launch: open on Setup instead of an empty task list (owner feedback 2026-11-14).
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    // Read the saved flag before drawing anything, so a returning person never sees the welcome flash by.
     LaunchedEffect(Unit) {
         graph.loadOnboarded()
-        if (!graph.onboarded.value && initialTab == 0) tab = 1
+        loaded = true
     }
     if (addOpen) {
         app.autohost.ui2.AddTaskDialog(
@@ -189,21 +216,48 @@ private fun MainTabs(activity: MainActivity, onNavigate: (Routes, String?) -> Un
             onDismiss = { addOpen = false },
         )
     }
-    Scaffold { padding ->
-        Column(Modifier.padding(padding).fillMaxSize()) {
-            TabRow(selectedTabIndex = tab) {
-                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(stringResource(R.string.tab_tasks)) })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(if (onboarded) "Setup" else "Start here") })
-                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Settings") })
-            }
-            when (tab) {
-                0 -> LibraryScreen(activity, onNavigate, onAddTask = { addOpen = true }, onOpenSetup = { tab = 1 })
-                1 -> app.autohost.ui2.PhoneScreen(
-                    activity, onNavigate,
-                    onAddTask = { addOpen = true },
-                    onFinish = { tab = 0 },
-                )
-                else -> app.autohost.ui2.SettingsHub(activity, onNavigate, onAddTask = { addOpen = true })
+    if (!loaded) {
+        Box(Modifier.fillMaxSize())
+    } else if (!onboarded) {
+        app.autohost.ui2.OnboardingFlow(
+            activity = activity,
+            onNavigate = onNavigate,
+            onAddTask = { addOpen = true },
+            onFinished = { scope.launch { graph.setOnboarded(true) } },
+        )
+    } else {
+        Scaffold(
+            bottomBar = {
+                NavigationBar {
+                    MAIN_TABS.forEachIndexed { i, spec ->
+                        NavigationBarItem(
+                            selected = tab == i,
+                            onClick = { tab = i },
+                            icon = { Icon(painterResource(spec.iconRes), contentDescription = null) },
+                            label = { Text(stringResource(spec.labelRes)) },
+                        )
+                    }
+                }
+            },
+        ) { padding ->
+            Box(Modifier.padding(padding).fillMaxSize()) {
+                when (tab) {
+                    0 -> LibraryScreen(
+                        activity, onNavigate,
+                        onAddTask = { addOpen = true },
+                        onOpenSetup = { onNavigate(Routes.SETUP, null) },
+                    )
+                    1 -> AskSheetHost(
+                        graph,
+                        onBack = { tab = 0 },
+                        onOpenRun = { runId -> onNavigate(Routes.RUN, runId) },
+                        simple = true,
+                        onOpenAiSettings = { onNavigate(Routes.AI_SETTINGS, null) },
+                    )
+                    2 -> app.autohost.ui2.BuildScreen(activity, onNavigate, onAddTask = { addOpen = true })
+                    3 -> app.autohost.ui2.ActivityScreen(activity, onNavigate)
+                    else -> app.autohost.ui2.SettingsHub(activity, onNavigate, onAddTask = { addOpen = true })
+                }
             }
         }
     }
@@ -245,7 +299,11 @@ fun LibraryScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                app.autohost.ui2.BrandMark(32.dp)
+                androidx.compose.foundation.layout.Spacer(Modifier.padding(start = 10.dp))
+                Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall)
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = {
                     searching = !searching
