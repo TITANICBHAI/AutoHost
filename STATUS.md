@@ -1,55 +1,38 @@
 # STATUS — rewrite this file at the end of every session (do not append). Keep it under 150 lines.
 
-Updated: 2026-11-12 · by: Session 2 (+ S03 smoke test) · branch: work/s02-green · last pushed commit: bf14f3e
+Updated: 2026-11-14 · by: Session 2 (UI v2) · branch: work/s02-green · last pushed commit: 14561e8 (CI run 24: GREEN, 1451 JVM tests, APK builds)
 
 ## Now
-**S04 (`work/plan/S04_task_list_back_setup.md`)**: steps 1–6 are written, compile and pass unit tests on CI (run 14, commit bf14f3e), but nobody has seen them run.
-Left in S04: step 7 (Robolectric test that a freshly installed task shows up in Library) and the Studio task list (`TaskStudioScreen` still lists the dev folder only). Then S05 (schedule form screen).
-Owner: please open a pull request from `work/s02-green` into main (the API token here cannot create one).
+UI v2 (`docs/UI_V2.md`) is in: three tabs **Tasks / Setup (Start here on first launch) / Settings**, quick macros, Add a task (template · macro · .zip import), feature catalog tested against the capability contract, optional-ADB access plan.
+Nobody has seen any of it on a screen. Owner: please open a pull request `work/s02-green` → main (the token here cannot), install the debug APK from the `Android debug APK` run and tell me what the first launch looks like.
 
-## Works (evidence: CI run 11, commit dc45104 — all five workflows green: jvm-tests, jvm-core, jvm-capabilities, Android debug APK, ci)
-- **1349 JVM tests, 0 failed, 0 Kotlin compile errors** in 29 modules (`ci-results` branch, `latest.md`, run 11). Python root suite 70 tests OK (`ci` workflow).
-- **The app starts on the JVM**: `app/src/testCoreLite/.../LaunchSmokeTest.kt` (Robolectric, SDK 35) builds the app graph and the first screen without a crash. `:app` 188 tests, 0 failed.
-  This is a JVM simulation, NOT a phone: nothing here proves a real device launch, permissions, the accessibility service, or the UI looking right.
-- Debug APK builds on CI (artifact of the `Android debug APK` workflow). Not installed or run anywhere by me.
-- Real product bugs found by the tests and fixed in Session 2 (each has its own commit, `S02-…`):
-  · model gateway never retried: every 429/5xx returned at once (`core/llm` LlmGateway).
-  · wireless pairing crashed: HKDF with an empty salt → "Empty key" (`capabilities/shell` WirelessPairing).
-  · tool catalog read JSON `null` as the string "null" (host tools had capability "null") (`runtime/agent` ToolCatalog).
-  · agent completion treated an answer without a readable `confirmed` field as a user rejection; now Unverified (fail closed).
-  · logcat line regex, ADB auth order (signature, then public key), `shell,v2` CLSE fallback, HTTP engine watcher/headers, no-tool nudge counting, stuck-warning at 3 screens (earlier S02 commits).
-- Earlier session facts still true: Python SDK/simulator suites pass; `ScheduleForm` + `NavStack` logic verified by the golden vectors and unit tests (now also run by Gradle on CI).
+## Works (CI evidence only; JVM, not a phone)
+- 1451 tests, 0 failed, 0 compile errors; Python root suite OK; Android debug APK builds; the app starts in the Robolectric launch smoke test (`LaunchSmokeTest`), now with the new tabs.
+- Pure, tested UI logic in `app/.../ui2/`: `FeatureCatalog` (every one of the 47 capabilities → what the person must do; test fails if the contract and the catalog differ), `AccessPlan` (advanced-access routes, computer-free first), `Readiness`, `PhonePlan`, `GetStarted` (first-run checklist), `TodayModel`, `SettingsHubModel`, `macro/MacroCompiler` (compiled flow accepted by the real `FlowParser`, task by `TaskManifest`).
+- Earlier real bugs fixed (LLM gateway retry, pairing HKDF, tool catalog null, completion fail-closed, etc.) — see git log `S02-…`.
 
 ## Broken or unverified
-- **Never run on a device or emulator** (D-24/D-25). Everything above the JVM line is unverified: Compose screens, back handling, rotation, Setup scrolling, StrictMode, permissions.
-- 4 modules produce no test results because they have no tests (`runtime/api`, `runtime/python`, `plugin-sdk`, `testing/fixture-app`); not an error, but also not covered.
-- Style baseline: 18963 ktlint/detekt findings (report only, never fails the job). Not addressed.
-- Robolectric is in the licence allowlist as MIT "as far as known" — owner should confirm against the upstream LICENSE.
-- Written, compiled, unit-tested, not yet seen on a screen: `TaskCatalog`, the new Library (cards with Ready/Running chip, last result, search, + and ⋮ menu; Record/Studio/Ask behind the Labs switch in Settings, default off), Surfaces pickers on the combined list, `NavStack` in `MainActivity`, Setup scroll, debug StrictMode. 16 new tests (`TaskListModelTest`).
-- Library gaps: no "Needs setup" chip yet (no cheap data source); Settings is reached from the ⋮ menu or Setup; the Labs switch is only in Settings.
-- Not done: the Studio task list still reads the dev folder only; the Schedule screen (S05 steps 2–4: schedules still need JSON on screen, S-01).
-- Release signing (S06) needs owner steps (key + secrets); a phone session (S07/S08) needs the owner.
+- **Never run on a device** (D-24/25). Compose layout, small-screen fit (320 dp, font 1.3), back handling, first-run flow, permissions: all unverified.
+- Advanced access without a computer: only **Shizuku (Android 11+)** and **root** are wired. In-app Wireless-debugging pairing is a DRAFT (`exec` throws UNSUPPORTED). Plain ADB needs a computer. The UI says so.
+- Not built: pick a whole folder as a task; write a Python script in the app; "Grant myself permanent permissions" (one-time secure-settings grant); Needs-setup filter chip; per-task "Can do" tab (uses `Readiness`); Studio list reads the dev folder only; Recorder saves `flow.json` without `task.json`, so recorded flows never reach the Library.
+- Triggers are still created per task (task detail); the Schedules screen lists schedules only.
+- Agent: no screenshot tool, no memory/subagents, local model only via a localhost OpenAI-compatible server (`docs/REFERENCE_COMPARISON.md`). Python SDK has no `llm` module.
+- Style baseline: ~19k ktlint/detekt findings (report only). Robolectric licence row is "as far as known — confirm".
 
-## Needs you (owner decisions, still open)
-1. Open a pull request `work/s02-green` → main (or tell me to merge differently).
-2. A phone session: install the debug APK from the `Android debug APK` run and tell me what you see (Setup, Library, Back button).
-3. Labs switch default (on/off), FileProvider removal, signing key/secrets, naming "Tasks" vs "Automations".
+## Needs you
+1. Pull request `work/s02-green` → main. 2. Phone session with the debug APK (first launch, Back, Settings hub, Add a task, macro). 3. Decisions: Labs default, FileProvider removal, signing key/secrets, tab names ("Tasks" vs "Automations").
 
-## Frozen (Labs)
-Ask/agent runtime, Task Studio, Recorder, plugins/app packs, webhooks, Dev API/MCP, reverse bridge, browser, vision, `full` flavor. Kept compiling and tested; not extended.
+## Next
+1. Screenshot tool for the agent + Python `llm` module (small; capabilities exist).
+2. Per-task "Can do" tab with Allow-all; Needs-setup chip.
+3. Folder import and an in-app script editor.
+4. More trigger events (location, Bluetooth, calendar); global trigger list in When.
+5. S05 schedule form without JSON; S06 signing; S07/S08 phone session.
 
-## Next 5
-1. S04 leftovers: Studio list, Robolectric Library test.
-2. S05: schedule form screen without JSON (uses `testing/golden/schedule_form_vectors.json`).
-3. S06: stable signing (owner steps first).
-4. S07: first run on a phone (owner).
-5. S08: fix what the phone shows.
-
-## Lessons (from this and earlier sessions)
-- Read the digest's `details.md` (all errors and failing tests) before touching code; the 150-line digest hides most of it.
-- Most remaining "failures" after the compile errors were wrong TESTS, not wrong code: `Job.join()` does not throw for a cancelled job; `advanceUntilIdle()` returns at once when only `backgroundScope` work is left; a stuck detector stops 5 identical screens; an empty `packages` grant means "nothing"; the selector mode is `eq`.
-- But four were real product bugs (list above). Check which it is by reading the code, not by making the test pass.
-- Heredoc edits half-persist; use exact find/replace and re-read the file. Keep CRLF as found.
-- A new interface method breaks every fake; a new parameter must reach every call site.
-- A test that waits on a clock needs a clock that moves (`FakeClock(autoAdvancePerReadMs=…)`).
-- Robolectric 4.16.1 supports SDK 36 only on JDK 21; CI uses JDK 17, so tests pin SDK 35.
+## Lessons
+- Read `details.md` on the `ci-results` branch (all errors and failing tests) before touching code; fetch with `git fetch -q origin ci-results:refs/remotes/origin/ci-results`.
+- Most "failures" after compile errors were wrong tests, but four were real product bugs: decide by reading the code.
+- A completeness test against the contract caught a missing capability (`device.intent`) in the new catalog: generate UI from data, test the join.
+- A negative test that greps copy ("no computer") must forbid asking, not mentioning.
+- Missing imports (`dp`, `rememberSaveable`) are the usual first CI failure on Compose files: check imports when writing without a compiler.
+- Keep LF/CRLF as found; use exact find/replace and re-read.
