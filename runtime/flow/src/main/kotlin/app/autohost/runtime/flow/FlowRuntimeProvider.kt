@@ -61,6 +61,15 @@ class FlowRuntimeProvider(
         val doc = FlowSources.loadFlowDocument(flowFile)
         val subflows = FlowSources.loadSubflows(taskPath, flowFile)
 
+        // INT-B: values a caller passed in `args` reach the flow only through the names its own `env` block declares.
+        val args = spec.trigger.payload["args"] as? JsonObject
+        val ignoredInputs = FlowInputs.ignored(doc.env, args)
+        if (ignoredInputs.isNotEmpty()) {
+            AhLog.i(TAG, "flow inputs ignored (not declared in env, or not a plain value)", buildJsonObject {
+                put("run_id", spec.runId); put("names", ignoredInputs.joinToString(","))
+            })
+        }
+
         val controls = RunControls()
         val handle = InProcessRunHandle(spec.runId, controls) { deathListener?.invoke(spec.runId) }
 
@@ -83,11 +92,11 @@ class FlowRuntimeProvider(
                     doc, ex,
                     config = spec.config,
                     profile = spec.profile,
-                    env = JsonObject(emptyMap()),
+                    env = FlowInputs.accepted(doc.env, args),
                     // Secrets are host-injected only when the SecretsProvider ships (it is still a
                     // typed NOT_FOUND stub); ${secret.NAME} then fails NOT_FOUND — fail closed.
                     secrets = emptyMap(),
-                    run = buildJsonObject { put("attempt", spec.attempt) },
+                    run = FlowInputs.runObject(spec.attempt, spec.trigger.type, args),
                 )
                 emitFinished(spec.runToken, outcome)
             } catch (e: kotlinx.coroutines.CancellationException) {

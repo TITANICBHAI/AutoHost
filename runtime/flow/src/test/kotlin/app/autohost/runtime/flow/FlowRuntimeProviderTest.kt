@@ -4,6 +4,7 @@ import app.autohost.core.common.AhJson
 import app.autohost.core.common.AppDispatchers
 import app.autohost.core.model.Envelope
 import app.autohost.core.model.RunSpec
+import app.autohost.core.model.TriggerInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -262,5 +263,59 @@ class FlowRuntimeProviderTest {
         val broker = BinderFlowBroker("tok", binder, Dispatchers.Unconfined)
         val out = runBlocking { broker.call("device.ime", "clipboard_get", buildJsonObject { }) }
         assertEquals("hello", (out["value"] as JsonPrimitive).content)
+    }
+
+    // --- INT-B: values a script passes with tasks.run reach the flow through the names its env declares ---
+
+    /** Runs [flow] once with [trigger] and returns the (title, text) its `notify` step sent to the broker. */
+    private fun notifySeen(flow: String, trigger: TriggerInfo): Pair<String, String> {
+        val tmp = TemporaryFolder().apply { create() }
+        try {
+            val dir = tmp.newFolder("task")
+            File(dir, "flow.json").writeText(flow)
+            val binder = FakeBinder()
+            val handle = runBlocking { provider(binder).start(spec(dir).copy(trigger = trigger)) }
+            val call = binder.calls.first { it.first == "notify.post" }
+            handle.release()
+            return (call.third["title"] as JsonPrimitive).content to (call.third["text"] as JsonPrimitive).content
+        } finally {
+            scope.cancel()
+            tmp.delete()
+        }
+    }
+
+    private val titleFlow =
+        """{"schema":1,"env":{"title":"default title"},"steps":[{"notify":{"title":"${'$'}{title}","text":"${'$'}{run.trigger}:${'$'}{run.args.other}"}}]}"""
+
+    private fun chainWith(args: JsonObject) = TriggerInfo(type = "chain", payload = buildJsonObject { put("args", args) })
+
+    @Test
+    fun `a script's args reach the flow through the names its env declares`() {
+        val (title, text) = notifySeen(
+            titleFlow,
+            chainWith(buildJsonObject { put("title", "Hello"); put("other", "x") }),
+        )
+        assertEquals("Hello", title)
+        // An undeclared name is not a variable, but the flow can still read it as run.args.<name>.
+        assertEquals("chain:x", text)
+    }
+
+    @Test
+    fun `without args the flow keeps its own default`() {
+        val (title, _) = notifySeen(titleFlow, TriggerInfo())
+        assertEquals("default title", title)
+    }
+
+    @Test
+    fun `an argument the flow did not declare never becomes a variable`() {
+        val flow = """{"schema":1,"env":{"title":"default title"},"steps":[{"notify":{"title":"${'$'}{other}","text":"t"}}]}"""
+        val (title, _) = notifySeen(flow, chainWith(buildJsonObject { put("other", "x") }))
+        assertEquals("\${other}", title)
+    }
+
+    @Test
+    fun `a number sent for a text variable still resolves as text`() {
+        val (title, _) = notifySeen(titleFlow, chainWith(buildJsonObject { put("title", 42) }))
+        assertEquals("42", title)
     }
 }
