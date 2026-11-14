@@ -53,6 +53,7 @@ fun BuildScreen(
             val click: (() -> Unit)? = when (val t = item.target) {
                 is HubTarget.Go -> ({ onNavigate(t.route, null) })
                 HubTarget.AddTask -> onAddTask
+                HubTarget.Welcome -> null // only Settings replays the welcome; nothing on the Build tab points here
                 null -> null
             }
             Card(Modifier.fillMaxWidth().let { if (click != null) it.clickable(onClick = click) else it }) {
