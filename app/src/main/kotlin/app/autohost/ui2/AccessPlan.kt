@@ -76,6 +76,7 @@ data class LiveAccess(
     val advancedLive: Boolean = false,
     val secureSettingsGranted: Boolean = false,
     val unsafeSwitchesOn: Set<String> = emptySet(),
+    val batteryExempt: Boolean = false,
 )
 
 /** The answer shown next to a feature: ready, will ask, needs one setup step, or needs the optional advanced access. */

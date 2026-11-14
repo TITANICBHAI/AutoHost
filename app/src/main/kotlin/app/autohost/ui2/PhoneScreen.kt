@@ -45,9 +45,16 @@ import kotlinx.coroutines.withContext
  * access with computer-free routes first. Everything shown comes from [PhonePlan], which is unit-tested; this file only draws it.
  */
 @Composable
-fun PhoneScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit) {
+fun PhoneScreen(
+    activity: MainActivity,
+    onNavigate: (Routes, String?) -> Unit,
+    onAddTask: () -> Unit = {},
+    onFinish: () -> Unit = {},
+) {
     val graph = (activity.application as AutoHostApp).graph
     var live by remember { mutableStateOf(LiveAccess()) }
+    var facts by remember { mutableStateOf(SetupFacts()) }
+    val onboarded by graph.onboarded.collectAsState()
     var tick by remember { mutableIntStateOf(0) }
     val service by app.autohost.capabilities.a11y.A11yBridge.service.collectAsState()
     val expanded = remember { mutableStateMapOf<FeatureGroup, Boolean>() }
@@ -60,12 +67,21 @@ fun PhoneScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit) {
         onDispose { activity.lifecycle.removeObserver(observer) }
     }
     LaunchedEffect(tick, service) {
-        live = withContext(Dispatchers.IO) { LiveAccessReader.read(activity, graph) }
+        graph.loadOnboarded()
+        withContext(Dispatchers.IO) {
+            live = LiveAccessReader.read(activity, graph)
+            facts = SetupFactsReader.read(graph)
+        }
     }
+    val started = remember(live, facts) { GetStarted.steps(live, facts) }
     val plan = remember(live) { PhonePlan.build(live, android.os.Build.VERSION.SDK_INT) }
 
     fun press(action: String?) {
         if (action == null) return
+        when (action) {
+            "OPEN_AI_SETTINGS" -> { onNavigate(Routes.AI_SETTINGS, null); return }
+            "ADD_TASK" -> { onAddTask(); return }
+        }
         if (action in FixHub.IN_APP_ROUTES) onNavigate(Routes.SETTINGS, null) else FixHub.launch(activity, action)
     }
 
@@ -75,26 +91,52 @@ fun PhoneScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
-            Text("Your phone", style = MaterialTheme.typography.headlineSmall)
+            Text(if (onboarded) "Setup" else "Welcome to AutoHost", style = MaterialTheme.typography.headlineSmall)
             Text(
-                "${plan.readyCount} of ${plan.totalCount} abilities work now. No computer needed for any of these.",
+                if (onboarded) "${plan.readyCount} of ${plan.totalCount} abilities work now. No computer needed for any of these."
+                else "AutoHost runs tasks on this phone: it taps, types, reads and schedules. Nothing here needs a computer. " +
+                    "Only the first step is required; the rest can wait.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        item { SectionHeader(if (plan.steps.isEmpty()) "Set up" else "Do these first") }
-        if (plan.steps.isEmpty()) {
-            item { Card(Modifier.fillMaxWidth()) { Text("All the switches are on.", Modifier.padding(12.dp)) } }
-        } else {
-            items(plan.steps, key = { it.toggle.name }) { step ->
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(step.title, style = MaterialTheme.typography.titleMedium)
-                        Text(step.why, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Unlocks ${step.unlocks} abilities", style = MaterialTheme.typography.labelSmall)
-                        Button(onClick = { press(step.fixAction) }) { Text("Open") }
+        item {
+            val (done, total) = GetStarted.counts(started)
+            SectionHeader("Get started ($done of $total)")
+        }
+        items(started, key = { it.id.name }) { step ->
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(step.title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                        StatusChip(
+                            if (step.done) "Done" else when (step.level) {
+                                Level.REQUIRED -> "Required"
+                                Level.RECOMMENDED -> "Recommended"
+                                Level.OPTIONAL -> "Optional"
+                            },
+                            success = step.done,
+                            warning = !step.done && step.level == Level.REQUIRED,
+                            neutral = !step.done && step.level != Level.REQUIRED,
+                        )
+                    }
+                    Text(step.why, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (!step.done) {
+                        if (step.level == Level.REQUIRED || step.level == Level.RECOMMENDED) {
+                            Button(onClick = { press(step.action) }) { Text(step.button) }
+                        } else {
+                            OutlinedButton(onClick = { press(step.action) }) { Text(step.button) }
+                        }
                     }
                 }
+            }
+        }
+        if (!onboarded) {
+            item {
+                Button(
+                    onClick = { scope.launch { graph.setOnboarded(true); onFinish() } },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(if (GetStarted.requiredLeft(started) > 0) "Skip for now" else "Finish and go to my tasks") }
             }
         }
         item { SectionHeader("What your tasks can do") }

@@ -51,8 +51,38 @@ fun AppNavHost(
 ) {
     when (route) {
         Routes.LIBRARY -> MainTabs(activity, onNavigate, initialTab = 0)
-        Routes.SETUP -> MainTabs(activity, onNavigate, initialTab = 3)
-        Routes.SCHEDULES -> MainTabs(activity, onNavigate, initialTab = 2)
+        Routes.SETUP -> MainTabs(activity, onNavigate, initialTab = 1)
+        Routes.SCHEDULES -> {
+            val graph = (activity.application as app.autohost.AutoHostApp).graph
+            androidx.compose.material3.Surface {
+                Column(Modifier.fillMaxSize()) {
+                    TextButton(onClick = { onNavigate(Routes.LIBRARY, null) }) { Text("\u2190 Tasks") }
+                    ScheduleScreen(graph)
+                }
+            }
+        }
+        Routes.MACRO -> {
+            val graph = (activity.application as app.autohost.AutoHostApp).graph
+            androidx.compose.material3.Surface {
+                app.autohost.ui2.macro.MacroEditorScreen(
+                    graph = graph,
+                    devRoot = activity.getExternalFilesDir("dev"),
+                    onDone = { taskId ->
+                        if (taskId != null) onNavigate(Routes.TASK_DETAIL, taskId) else onNavigate(Routes.LIBRARY, null)
+                    },
+                )
+            }
+        }
+        Routes.TEMPLATES -> {
+            val graph = (activity.application as app.autohost.AutoHostApp).graph
+            androidx.compose.material3.Surface {
+                NewFromTemplateScreen(
+                    graph = graph,
+                    onOpenTask = { taskId -> onNavigate(Routes.TASK_DETAIL, taskId) },
+                    onBack = { onNavigate(Routes.LIBRARY, null) },
+                )
+            }
+        }
         Routes.RUN -> RunScreen(activity, runId = runId, onBack = { onNavigate(Routes.LIBRARY, null) })
         Routes.RUNS_HISTORY -> RunsHistoryScreen(
             activity,
@@ -141,30 +171,51 @@ fun AppNavHost(
 
 @Composable
 private fun MainTabs(activity: MainActivity, onNavigate: (Routes, String?) -> Unit, initialTab: Int) {
+    val graph = (activity.application as app.autohost.AutoHostApp).graph
     var tab by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(initialTab) }
+    var addOpen by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val onboarded by graph.onboarded.collectAsState()
+    // First launch: open on Setup instead of an empty task list (owner feedback 2026-11-14).
+    LaunchedEffect(Unit) {
+        graph.loadOnboarded()
+        if (!graph.onboarded.value && initialTab == 0) tab = 1
+    }
+    if (addOpen) {
+        app.autohost.ui2.AddTaskDialog(
+            graph = graph,
+            onTemplates = { addOpen = false; onNavigate(Routes.TEMPLATES, null) },
+            onMacro = { addOpen = false; onNavigate(Routes.MACRO, null) },
+            onInstalled = { taskId -> addOpen = false; onNavigate(Routes.TASK_DETAIL, taskId) },
+            onDismiss = { addOpen = false },
+        )
+    }
     Scaffold { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
             TabRow(selectedTabIndex = tab) {
-                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Today") })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(R.string.tab_tasks)) })
-                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("When") })
-                Tab(selected = tab == 3, onClick = { tab = 3 }, text = { Text("Phone") })
+                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(stringResource(R.string.tab_tasks)) })
+                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(if (onboarded) "Setup" else "Start here") })
+                Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Settings") })
             }
             when (tab) {
-                0 -> app.autohost.ui2.TodayScreen(activity, onNavigate, onOpenPhone = { tab = 3 })
-                1 -> LibraryScreen(activity, onNavigate)
-                2 -> {
-                    val graph = (activity.application as app.autohost.AutoHostApp).graph
-                    app.autohost.ui.ScheduleScreen(graph)
-                }
-                else -> app.autohost.ui2.PhoneScreen(activity, onNavigate)
+                0 -> LibraryScreen(activity, onNavigate, onAddTask = { addOpen = true }, onOpenSetup = { tab = 1 })
+                1 -> app.autohost.ui2.PhoneScreen(
+                    activity, onNavigate,
+                    onAddTask = { addOpen = true },
+                    onFinish = { tab = 0 },
+                )
+                else -> app.autohost.ui2.SettingsHub(activity, onNavigate, onAddTask = { addOpen = true })
             }
         }
     }
 }
 
 @Composable
-fun LibraryScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit) {
+fun LibraryScreen(
+    activity: MainActivity,
+    onNavigate: (Routes, String?) -> Unit,
+    onAddTask: () -> Unit = {},
+    onOpenSetup: () -> Unit = {},
+) {
     val graph = (activity.application as app.autohost.AutoHostApp).graph
     // U-01: installed tasks (templates, examples, imports) and dev-folder tasks in ONE list.
     val entries by remember(graph) {
@@ -176,8 +227,6 @@ fun LibraryScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit)
     var searching by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     var menuOpen by remember { mutableStateOf(false) }
-    var showTemplates by remember { mutableStateOf(false) }
-    var showMacro by remember { mutableStateOf(false) }
     val visible = remember(rows, query) { TaskListModel.search(rows, query) }
 
     LaunchedEffect(Unit) {
@@ -187,30 +236,6 @@ fun LibraryScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit)
         graph.devTasks.tasks.value.take(4).let { tasks ->
             app.autohost.surfaces.Shortcuts.syncDynamicShortcuts(activity, tasks.map { it.taskId to it.name })
         }
-    }
-
-    if (showTemplates) {
-        NewFromTemplateScreen(
-            graph = graph,
-            onOpenTask = { taskId ->
-                showTemplates = false
-                onNavigate(Routes.TASK_DETAIL, taskId)
-            },
-            onBack = { showTemplates = false },
-        )
-        return
-    }
-
-    if (showMacro) {
-        app.autohost.ui2.macro.MacroEditorScreen(
-            graph = graph,
-            devRoot = activity.getExternalFilesDir("dev"),
-            onDone = { taskId ->
-                showMacro = false
-                if (taskId != null) onNavigate(Routes.TASK_DETAIL, taskId)
-            },
-        )
-        return
     }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
@@ -225,7 +250,7 @@ fun LibraryScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit)
                     searching = !searching
                     if (!searching) query = ""
                 }) { Text(stringResource(R.string.library_search)) }
-                TextButton(onClick = { showTemplates = true }) { Text("+ " + stringResource(R.string.library_add)) }
+                TextButton(onClick = onAddTask) { Text("+ " + stringResource(R.string.library_add)) }
                 Box {
                     IconButton(onClick = { menuOpen = true }) { Text("\u22EE") }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
@@ -233,7 +258,7 @@ fun LibraryScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit)
                             text = { Text("Quick macro") },
                             onClick = {
                                 menuOpen = false
-                                showMacro = true
+                                onNavigate(Routes.MACRO, null)
                             },
                         )
                         DropdownMenuItem(
@@ -314,6 +339,7 @@ fun LibraryScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit)
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
         }
+        app.autohost.ui2.TasksAttention(activity, graph, entries, runs, onNavigate, onOpenSetup)
         SectionHeader(stringResource(R.string.library_section_title))
         when {
             entries.isEmpty() -> {
@@ -321,7 +347,7 @@ fun LibraryScreen(activity: MainActivity, onNavigate: (Routes, String?) -> Unit)
                     title = stringResource(R.string.library_empty_title),
                     body = stringResource(R.string.library_empty_body),
                 )
-                Button(onClick = { showTemplates = true }, modifier = Modifier.padding(horizontal = 24.dp)) {
+                Button(onClick = onAddTask, modifier = Modifier.padding(horizontal = 24.dp)) {
                     Text(stringResource(R.string.library_empty_action))
                 }
             }

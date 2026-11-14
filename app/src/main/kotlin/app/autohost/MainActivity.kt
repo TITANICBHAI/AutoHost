@@ -115,4 +115,6 @@ enum class Routes(val arg: String? = null) {
     SURFACES,
     RECORDER_REVIEW,
     STUDIO, // P11-05 (ADR-083): the in-app Task Studio
+    MACRO, // UI v2: the quick macro editor
+    TEMPLATES, // UI v2: new task from a template
 }

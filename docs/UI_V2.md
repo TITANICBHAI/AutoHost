@@ -11,15 +11,17 @@ from the feature list (`app/.../ui2/FeatureCatalog.kt`, tested against `schemas/
 4. **Small phones first.** Design target 320 dp wide, 568 dp tall, font scale 1.3. Rows are at most two lines; chips wrap; no horizontal scrolling; sheets instead of new screens for short tasks; touch targets ≥ 48 dp; a long list is lazy.
 5. **No ids on normal screens.** Capability ids, selectors and JSON appear only under "Details" / Developer.
 
-## 2. Four tabs
+## 2. Three tabs (revised 2026-11-14 after owner feedback)
+The first draft had Today / Tasks / When / Phone and assumed the phone was already set up. Now:
+
 | Tab | Job | Contents |
 |---|---|---|
-| **Today** | what needs me now | needs-you prompts (top) · active run with Stop · "Finish setup" card (max 3 steps) · up next · recent runs · Ask bar (when an AI model is set) |
-| **Tasks** | what can this phone do for me | list with search and chips (All · Ready · Needs setup · Scheduled) · **+ New** sheet: Import file · From repo · Record · Quick macro · Ask AI to make one |
-| **When** | run things automatically | Schedules and Triggers (notification, app opened, charging, webhook, …) in one list; a Quick macro is one "When → Do" row |
-| **Phone** | what works here and what it needs | Set-up steps · every feature by group with its status · Advanced access (optional) · Always-on tips |
+| **Tasks** | do things | on top: *Finish setup* banner while a required step is open · runs that need you or are running (Stop) · **Schedules and triggers ›** (the old When) · then the task list with search · **+ Add** opens *Add a task*: template · quick macro · import a .zip task file |
+| **Setup** (named **Start here** until the first run is finished) | get the phone ready, then see what works | *Get started* checklist (accessibility = required; background running, notifications, keyboard, AI model, first task) with a Finish button · every ability by group with its status and fix · Advanced access (optional) · keep-running tips |
+| **Settings** | everything else, by what you want to do | AI and agent (BYOK model, Ask, runs) · Tasks, scripts and folders (add a task, quick macro, Python status, task folder) · Automatic (schedules, tiles/shortcuts/bubble) · Safety and system (health, security/backup/developer) · Labs switch |
 
-Top-bar gear on every tab → **Settings** (AI model, security switches, backup and packs, developer, about). Settings is no longer where features hide.
+**First launch** opens on *Start here*, not on an empty task list. The old developer-style settings page stays reachable as "Security, backup and developer".
+**Adding tasks needs no computer**: the dev folder is hidden from file managers on newer Android, so *Import a task file (.zip)* (system file picker → import review → install) is the route for Python, JavaScript and flow tasks. Not built yet: picking a whole folder; writing a Python script in the app.
 
 ## 3. What each feature asks (the `Need` table)
 | Need | Shown as | The button does |
@@ -38,9 +40,9 @@ Order: Root → Shizuku → in-app Wireless debugging → ADB from a computer. E
 
 ## 5. Build order (each step compiles and is unit-tested on CI before the next)
 1. `FeatureCatalog`, `AccessPlan`, `Readiness` (done, UI2-1).
-2. Phone tab (set-up steps, feature list, advanced sheet) on the live state.
-3. Tab shell (Today / Tasks / When / Phone) replacing `MainTabs`; old Setup/Surfaces reachable only from Settings until retired.
-4. Today (needs-you, active, finish setup, recent), Tasks + New sheet, When.
+2. Setup tab (feature list, advanced access) on the live state. (done)
+3. Tab shell. (done: three tabs, first-run checklist, Settings hub, Add a task, .zip import)
+4. Folder import and an in-app Python script editor.
 5. Task detail: Can do tab, Allow-all.
 6. Quick macros (OpenTasker-inspired, see the reference comparison).
 7. Small-screen checks: Robolectric at 320×568 and fontScale 1.3 for every tab (JVM only; not a phone).

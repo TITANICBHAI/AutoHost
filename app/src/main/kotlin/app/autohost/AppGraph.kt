@@ -1653,6 +1653,18 @@ class AppGraph(val application: Application) {
         data.settings.setBool(SETTING_LABS, on)
     }
 
+    /** UI v2: true once the person has finished (or skipped) the first-run checklist. Loaded at startup; false until then. */
+    val onboarded = kotlinx.coroutines.flow.MutableStateFlow(false)
+
+    suspend fun loadOnboarded() {
+        onboarded.value = data.settings.bool(SETTING_ONBOARDED, false)
+    }
+
+    suspend fun setOnboarded(done: Boolean) {
+        onboarded.value = done
+        data.settings.setBool(SETTING_ONBOARDED, done)
+    }
+
     /**
      * Crash-fix 1.3: runs one startup step so that a failure is logged and kept for the in-app crash report instead of
      * killing the process or skipping every step after it. Cancellation and out-of-memory still propagate.
@@ -1767,6 +1779,9 @@ class AppGraph(val application: Application) {
 
         /** S04: the Labs switch (Record, Studio, Ask). Default off. */
         const val SETTING_LABS = "ui.labs.enabled"
+
+        /** UI v2: the first-run checklist was finished or skipped. */
+        const val SETTING_ONBOARDED = "ui.onboarded"
 
         /** P9-08: the experimental exclusive UiAutomation provider toggle (default off). */
         const val SETTING_UI_AUTOMATION = "ui.automation.experimental"

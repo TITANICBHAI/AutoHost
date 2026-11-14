@@ -30,6 +30,7 @@ object LiveAccessReader {
             advancedLive = graph.shellTransportStatuses().any { it.second == "live" },
             secureSettingsGranted = env.writeSecureSettings,
             unsafeSwitchesOn = switchesOn,
+            batteryExempt = env.batteryExemption,
         )
     }
 }
