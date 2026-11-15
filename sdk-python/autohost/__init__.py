@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from . import (android, app_manage, audio, browser, calendar, camera, clipboard, contacts, devicectl, device,
-               errors, events, files, flow, http, intents, location, logcat, media, microphone, net,
+               errors, events, files, flow, http, intents, location, logcat, macros, media, microphone, net,
                notifications, notify, packs, power, sel, sensors, shell, sms, sockets, tasks, telephony, ui, vision)
 from ._core import current
 from ._ctx import ctx
@@ -23,6 +23,6 @@ def prefer(*providers: str) -> None:
 
 __all__ = ["android", "app_manage", "audio", "browser", "calendar", "camera", "clipboard", "contacts", "ctx",
            "devicectl", "device", "errors", "events", "files", "flow", "http",
-           "intents", "location", "log", "media", "microphone", "notifications", "notify", "packs", "sel", "sensors",
+           "intents", "location", "log", "macros", "media", "microphone", "notifications", "notify", "packs", "sel", "sensors",
            "shell", "sms", "sockets", "tasks", "telephony", "ui", "vision",
            "capabilities", "prefer", "API_LEVEL"]

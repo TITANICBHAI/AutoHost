@@ -120,6 +120,7 @@ class FakeDevice:
         self.overlays: list[dict] = []
         self.settings_table: dict = {}
         self.chain_results: dict[str, dict] = {}
+        self.chain_calls: list[dict] = []  # every tasks.run call a script made, arguments included
         self.raw_api_switch = False
         self.raw_bridge_authorized = False
         self.hook_names: list[str] = []
@@ -1610,6 +1611,7 @@ class FakeDevice:
         if method != "run":
             raise SimError("INVALID_ARGS", f"unknown tasks.run method '{method}'")
         task = a.get("task", "")
+        self.chain_calls.append(dict(a))
         if task not in self.chain_results:
             raise SimError("NOT_FOUND", f"no task {task}")
         outcome = self.chain_results[task]

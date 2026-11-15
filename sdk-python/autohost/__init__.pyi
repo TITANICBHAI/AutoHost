@@ -3,7 +3,7 @@ from typing import Any, Callable, Mapping, TypedDict
 from . import errors as errors, sel as sel, flow as flow, device as device, ui as ui, notify as notify
 from . import http as http, files as files, android as android
 from . import clipboard as clipboard, intents as intents, notifications as notifications, events as events
-from . import shell as shell, power as power, audio as audio, net as net, tasks as tasks
+from . import shell as shell, power as power, audio as audio, net as net, tasks as tasks, macros as macros
 from .errors import (AutoHostError as AutoHostError, NeedsUser as NeedsUser, Retryable as Retryable, Fatal as Fatal,
     CapabilityUnavailable as CapabilityUnavailable, PermissionDenied as PermissionDenied, ScopeViolation as ScopeViolation,
     Cancelled as Cancelled, Timeout as Timeout, NotFound as NotFound, StaleNode as StaleNode,

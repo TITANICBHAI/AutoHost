@@ -10,6 +10,7 @@ PKG = support.SDK / "autohost"
 PAIRS = {
     "errors.pyi": "autohost.errors", "sel.pyi": "autohost.sel", "flow.pyi": "autohost.flow",
     "ui.pyi": "autohost.ui", "notify.pyi": "autohost.notify", "http.pyi": "autohost.http",
+    "macros.pyi": "autohost.macros",
     "files.pyi": "autohost.files", "android.pyi": "autohost.android", "device/__init__.pyi": "autohost.device",
 }
 

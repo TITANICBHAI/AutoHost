@@ -13,7 +13,11 @@ from ._core import current
 
 def run(task: str, profile: str | None = None, args: dict[str, Any] | None = None,
         timeout_ms: int | None = None) -> dict[str, Any]:
-    """Run a task (optionally with a profile) and wait for its terminal status."""
+    """Run a task (optionally with a profile) and wait for its terminal status.
+
+    The answer is {run_id, status, result?}. `result` is the child's final {code, data} as JSON text when it set
+    one; autohost.macros.run decodes it for you. `args` reach a flow only through the names its `env` declares.
+    """
     if not task:
         raise InvalidArgs("task is required")
     call_args: dict[str, Any] = {"task": task, "profile": profile}
