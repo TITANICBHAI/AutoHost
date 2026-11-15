@@ -77,6 +77,7 @@
           "takeScreenshot",
           "notify",
           "runFlow",
+          "runTask",
           "repeat",
           "retry",
           "log",
@@ -196,6 +197,20 @@
             "properties": {
               "setResult": {
                 "$ref": "#/$defs/setResultBody"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "runTask"
+            ]
+          },
+          "then": {
+            "properties": {
+              "runTask": {
+                "$ref": "#/$defs/runTaskBody"
               }
             }
           }
@@ -771,6 +786,48 @@
         },
         "data": {
           "type": "object"
+        }
+      }
+    },
+    "runTaskBody": {
+      "type": "object",
+      "description": "Run another task (a macro, a flow or a Python script) and wait for it. The task must be a fixed id (no variables) and is listed in this task's tasks.run permission. args reach a flow only through the names its own env block declares. With into, the variable holds {status, run_id, code, data, text}. timeout is the wait in seconds (default 60; the host never waits longer than 600).",
+      "additionalProperties": false,
+      "required": [
+        "task"
+      ],
+      "properties": {
+        "task": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!.*\\$\\{)"
+        },
+        "args": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          }
+        },
+        "into": {
+          "type": "string",
+          "minLength": 1
+        },
+        "optional": {
+          "type": "boolean"
+        },
+        "label": {
+          "type": "string"
+        },
+        "timeout": {
+          "type": "number",
+          "minimum": 0
+        },
+        "when": {
+          "$ref": "#/$defs/when"
         }
       }
     }

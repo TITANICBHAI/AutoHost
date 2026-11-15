@@ -78,6 +78,7 @@ Semantics the vectors pin down:
 """
 from __future__ import annotations
 
+import json as _json
 import re as _re
 from typing import Any
 
@@ -85,7 +86,7 @@ COMMANDS = frozenset({
     "launchApp", "stopApp", "openLink", "tapOn", "longPressOn", "inputText", "eraseText",
     "pressKey", "scroll", "scrollUntilVisible", "swipe", "hideKeyboard", "waitFor", "waitUntil",
     "waitForAnimationToEnd", "assertVisible", "assertNotVisible", "copyTextFrom", "setClipboard",
-    "takeScreenshot", "notify", "runFlow", "repeat", "retry", "log", "setResult", "nextRun",
+    "takeScreenshot", "notify", "runFlow", "runTask", "repeat", "retry", "log", "setResult", "nextRun",
     "ask", "defineVariables",
 })
 
@@ -109,6 +110,7 @@ LOG_LEVELS = frozenset({"debug", "info", "warn", "error"})
 ASK_KINDS = frozenset({"confirm", "text", "choice"})
 
 DEFAULT_TIMEOUT_S = 10.0
+TASK_WAIT_S = 60.0  # INT-A: how long runTask waits for the other task when the step has no timeout
 MAX_WHILE_ITERATIONS = 10_000
 MAX_FLOW_DEPTH = 8
 RETRY_BACKOFF_MS_DEFAULT = 500
@@ -441,6 +443,21 @@ def _v_define_variables(body: dict, step: dict, where: str) -> None:
         _die(f"{where}: variable name(s) {reserved} are reserved modifiers")
 
 
+def _v_run_task(body: dict, step: dict, where: str) -> None:
+    _require_str(body, "task", where)
+    if "${" in body["task"]:
+        _die(f"{where}: task must be a fixed task id (no variables), so the permission review can list it")
+    if "args" in body:
+        if not isinstance(body["args"], dict):
+            _die(f"{where}: args must be an object")
+        for name, value in body["args"].items():
+            if not isinstance(value, (str, int, float)):  # bool is an int; None and containers are not plain values
+                _die(f"{where}: args.{name} must be text, a number or true/false")
+    if "into" in body:
+        _require_str(body, "into", where)
+    _reject(body, {"task", "args", "into"} | MODIFIER_KEYS, where)
+
+
 def _v_run_flow(body: dict, step: dict, where: str) -> None:
     _require_str(body, "file", where)
     if body.get("env") is not None:
@@ -505,6 +522,7 @@ _VALIDATORS = {
     "takeScreenshot": _v_take_screenshot,
     "notify": _v_notify,
     "runFlow": _v_run_flow,
+    "runTask": _v_run_task,
     "repeat": _v_repeat,
     "retry": _v_retry,
     "log": _v_log,
@@ -1336,6 +1354,63 @@ def _x_set_result(step: dict, scope: Scope, ex: Exec, state: dict, label: str) -
     state["result"] = {"code": code, "data": data}
 
 
+def _x_run_task(step: dict, scope: Scope, ex: Exec, state: dict, label: str) -> None:
+    """INT-A: run another task (a macro, a flow or a Python script) and wait for it (the `tasks.run` broker call).
+
+    The target must be in this task's `tasks.run` grant. `args` reach a flow only through the names its own `env`
+    block declares (INT-B). With `into`, the variable holds what came back even when the step then fails.
+    """
+    task = _arg_str(step, "task", scope, label)
+    args = resolve_value(step["body"].get("args") or {}, scope)
+    for name, value in args.items():
+        if not isinstance(value, (str, int, float)):
+            raise StepFailure("INVALID_ARGS", f"{label}: args.{name} must be text, a number or true/false",
+                              label=label)
+    call_args: dict[str, Any] = {"task": task, "timeout_ms": _timeout_ms(step, TASK_WAIT_S)}
+    if args:
+        call_args["args"] = args
+    out = _call(ex, "tasks.run", "run", call_args, label)
+    status = out.get("status") if isinstance(out.get("status"), str) else ""
+    into = step["body"].get("into")
+    if into is not None:
+        scope.env[into] = _task_answer(out, status)
+    if status == "SUCCEEDED":
+        return
+    if status == "RUNNING":
+        raise StepFailure("TIMEOUT", f"{label}: task '{task}' was still running when the wait ended",
+                          retryable=True, label=label)
+    if status == "CANCELLED":
+        raise StepFailure("CANCELLED", f"{label}: task '{task}' was cancelled", label=label)
+    raise StepFailure("INTERNAL", f"{label}: task '{task}' ended {status or 'without a status'}", label=label)
+
+
+def _task_answer(out: dict, status: str) -> dict:
+    """What `into` holds after a runTask: {status, run_id, code, data, text}, every field always present.
+
+    `code` and `data` come from the child's setResult (the host hands them back as JSON text); a child that
+    answered with plain text, or with nothing, leaves them empty and the plain text in `text`.
+    """
+    text = out.get("result") if isinstance(out.get("result"), str) else None
+    decoded: Any = None
+    if text is not None:
+        try:
+            decoded = _json.loads(text)
+        except ValueError:
+            decoded = None
+    if not isinstance(decoded, dict):
+        decoded = {}
+    code = decoded.get("code")
+    data = decoded.get("data")
+    run_id = out.get("run_id")
+    return {
+        "status": status,
+        "run_id": run_id if isinstance(run_id, str) else "",
+        "code": code if isinstance(code, str) else "",
+        "data": data if isinstance(data, dict) else {},
+        "text": text or "",
+    }
+
+
 def _x_next_run(step: dict, scope: Scope, ex: Exec, state: dict, label: str) -> None:
     after = step["body"]["afterMinutes"]
     state["next_run"] = {"afterMinutes": after}
@@ -1435,6 +1510,7 @@ _EXECUTORS = {
     "takeScreenshot": _x_take_screenshot,
     "notify": _x_notify,
     "runFlow": _x_run_flow,
+    "runTask": _x_run_task,
     "repeat": _x_repeat,
     "retry": _x_retry,
     "log": _x_log,

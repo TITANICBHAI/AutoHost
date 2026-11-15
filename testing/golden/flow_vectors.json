@@ -3905,6 +3905,100 @@
       "expected": {
         "error": "flow invalid: steps[0]: needs at least one selector key (above, below, bounds, checked, childOf, class, clickable, containsChild, containsDescendants, desc, enabled, focused, id, index, leftOf, package, rightOf, selected, text, visible)"
       }
+    },
+    {
+      "kind": "parse_error",
+      "name": "parse_error_run_task_templated_id",
+      "flow": {
+        "schema": 1,
+        "steps": [
+          {
+            "runTask": {
+              "task": "gemini-${which}"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "error": "flow invalid: steps[0]: task must be a fixed task id (no variables), so the permission review can list it"
+      }
+    },
+    {
+      "kind": "parse_error",
+      "name": "parse_error_run_task_missing_id",
+      "flow": {
+        "schema": 1,
+        "steps": [
+          {
+            "runTask": {
+              "into": "r"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "error": "flow invalid: steps[0]: task must be a non-empty string, got nothing"
+      }
+    },
+    {
+      "kind": "parse_error",
+      "name": "parse_error_run_task_args_not_object",
+      "flow": {
+        "schema": 1,
+        "steps": [
+          {
+            "runTask": {
+              "task": "t",
+              "args": [
+                "x"
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "error": "flow invalid: steps[0]: args must be an object"
+      }
+    },
+    {
+      "kind": "parse_error",
+      "name": "parse_error_run_task_nested_input",
+      "flow": {
+        "schema": 1,
+        "steps": [
+          {
+            "runTask": {
+              "task": "t",
+              "args": {
+                "a": {
+                  "b": 1
+                }
+              }
+            }
+          }
+        ]
+      },
+      "expected": {
+        "error": "flow invalid: steps[0]: args.a must be text, a number or true/false"
+      }
+    },
+    {
+      "kind": "parse_error",
+      "name": "parse_error_run_task_unknown_key",
+      "flow": {
+        "schema": 1,
+        "steps": [
+          {
+            "runTask": {
+              "task": "t",
+              "profile": "p"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "error": "flow invalid: steps[0]: unknown key(s) ['profile']"
+      }
     }
   ]
 }

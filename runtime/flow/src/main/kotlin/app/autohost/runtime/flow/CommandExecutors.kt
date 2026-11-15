@@ -1,5 +1,6 @@
 package app.autohost.runtime.flow
 
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -19,6 +20,9 @@ internal typealias CommandExecutor =
  * the Kotlin mirror of the `_x_*` executors in `sdk-python/autohost_ref/flows.py`.
  */
 internal object CommandExecutors {
+    /** INT-A: how long a runTask step waits for the other task when the step has no `timeout`. */
+    private const val TASK_WAIT_MS = 60_000L
+
     private val registry: Map<String, CommandExecutor> = mapOf(
         "launchApp" to ::launchApp,
         "stopApp" to ::stopApp,
@@ -46,6 +50,7 @@ internal object CommandExecutors {
         "retry" to ::retry,
         "log" to ::log,
         "setResult" to ::setResult,
+        "runTask" to ::runTask,
         "nextRun" to ::nextRun,
         "ask" to ::ask,
         "defineVariables" to ::defineVariables,
@@ -352,6 +357,60 @@ internal object CommandExecutors {
         val code = argString(step, "code", scope, label)
         val data = scope.resolveValue(body(step)["data"] ?: buildJsonObject { })
         state.result = code to (data as? JsonObject ?: JsonObject(emptyMap()))
+    }
+
+    /**
+     * INT-A: run another task (a macro, a flow or a Python script) and wait for it. This is the `tasks.run` broker call,
+     * so the target has to be named in this task's `tasks.run` grant and the chain depth limit applies. The values in
+     * `args` reach a flow only through the names its own `env` block declares (INT-B). With `into`, the variable holds
+     * what came back ({status, run_id, code, data, text}) even when the step then fails, so an optional step can still
+     * be inspected. Without a `timeout`, the wait is [TASK_WAIT_MS]; the host never waits longer than ten minutes.
+     */
+    private suspend fun runTask(step: app.autohost.core.model.FlowStep, scope: FlowScope, ex: FlowExec, state: RunState, label: String) {
+        val task = argString(step, "task", scope, label)
+        val args = scope.resolveValue(body(step)["args"] ?: JsonObject(emptyMap())) as? JsonObject ?: JsonObject(emptyMap())
+        for ((name, value) in args) {
+            if (!JsonValues.isScalar(value)) {
+                throw FlowFailure("INVALID_ARGS", "$label: args.$name must be text, a number or true/false", label = label)
+            }
+        }
+        val out = FlowInterpreter.call(ex, "tasks.run", "run", buildJsonObject {
+            put("task", task)
+            if (args.isNotEmpty()) put("args", args)
+            put("timeout_ms", step.timeoutMs ?: TASK_WAIT_MS)
+        }, label)
+        val status = (out["status"] as? JsonPrimitive)?.takeIf { it.isString }?.content.orEmpty()
+        val into = (body(step)["into"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+        if (into != null) scope.env[into] = taskAnswer(out, status)
+        when (status) {
+            "SUCCEEDED" -> Unit
+            "RUNNING" -> throw FlowFailure(
+                "TIMEOUT", "$label: task '$task' was still running when the wait ended", retryable = true, label = label,
+            )
+            "CANCELLED" -> throw FlowFailure("CANCELLED", "$label: task '$task' was cancelled", label = label)
+            else -> throw FlowFailure(
+                "INTERNAL", "$label: task '$task' ended ${status.ifEmpty { "without a status" }}", label = label,
+            )
+        }
+    }
+
+    /**
+     * What `into` holds after a runTask. `code` and `data` come from the child's `setResult` (the host hands them back
+     * as JSON text); a child that answered with plain text, or with nothing, leaves them empty and the plain text in
+     * `text`. Every field is always present, so a placeholder such as env.name.code never stays a literal.
+     */
+    private fun taskAnswer(out: JsonObject, status: String): JsonObject {
+        val text = (out["result"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+        val decoded = text?.let { runCatching { Json.parseToJsonElement(it) }.getOrNull() } as? JsonObject
+        val code = (decoded?.get("code") as? JsonPrimitive)?.takeIf { it.isString }?.content.orEmpty()
+        val data = (decoded?.get("data") as? JsonObject) ?: JsonObject(emptyMap())
+        return buildJsonObject {
+            put("status", status)
+            put("run_id", (out["run_id"] as? JsonPrimitive)?.takeIf { it.isString }?.content.orEmpty())
+            put("code", code)
+            put("data", data)
+            put("text", text.orEmpty())
+        }
     }
 
     private suspend fun nextRun(step: app.autohost.core.model.FlowStep, scope: FlowScope, ex: FlowExec, state: RunState, label: String) {

@@ -16,6 +16,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -42,13 +43,20 @@ class FlowRuntimeProviderTest {
         val events = mutableListOf<JsonObject>()
         var failEnvelope: String? = null
 
+        /** What a call answers, keyed "capability.method"; every other call answers {"ok": true}. */
+        val answers = mutableMapOf<String, JsonObject>()
+
+        /** A raw error envelope a call answers with, keyed "capability.method". */
+        val refusals = mutableMapOf<String, String>()
+
         override fun call(runToken: String, capability: String, method: String, argsJson: String): String {
             failEnvelope?.let { return it }
             val args = AhJson.json.parseToJsonElement(argsJson) as? JsonObject ?: JsonObject(emptyMap())
             calls.add(Triple(capability, method, args))
+            refusals["$capability.$method"]?.let { return it }
             return AhJson.json.encodeToString(
                 Envelope.serializer(),
-                Envelope.ok(buildJsonObject { put("ok", true) }),
+                Envelope.ok(answers["$capability.$method"] ?: buildJsonObject { put("ok", true) }),
             )
         }
 
@@ -317,5 +325,145 @@ class FlowRuntimeProviderTest {
     fun `a number sent for a text variable still resolves as text`() {
         val (title, _) = notifySeen(titleFlow, chainWith(buildJsonObject { put("title", 42) }))
         assertEquals("42", title)
+    }
+
+    // --- INT-A: runTask starts another task through tasks.run and waits for it ---
+
+    /** Runs [flow] once; returns what the broker saw and what the run finished with. */
+    private fun runOnce(flow: String, configure: FakeBinder.() -> Unit = {}): Pair<FakeBinder, JsonObject> {
+        val tmp = TemporaryFolder().apply { create() }
+        try {
+            val dir = tmp.newFolder("task")
+            File(dir, "flow.json").writeText(flow)
+            val binder = FakeBinder().apply(configure)
+            val handle = runBlocking { provider(binder).start(spec(dir)) }
+            val finished = binder.events.last { (it["type"] as? JsonPrimitive)?.content == "finished" }
+            handle.release()
+            return binder to (finished["data"] as JsonObject)
+        } finally {
+            scope.cancel()
+            tmp.delete()
+        }
+    }
+
+    /** What the host answers `tasks.run`: the child's run id and terminal status, with the text it ended on. */
+    private fun taskAnswer(status: String, result: String? = null, timedOut: Boolean = false) = buildJsonObject {
+        put("run_id", "run-7")
+        put("status", status)
+        if (result != null) put("result", result)
+        if (timedOut) put("await", "timeout")
+    }
+
+    private fun childResult(code: String, idea: String) = """{"code":"$code","data":{"idea":"$idea"}}"""
+
+    private fun text(obj: JsonObject, key: String) = (obj[key] as JsonPrimitive).content
+
+    private fun callsTo(binder: FakeBinder, capability: String) = binder.calls.filter { it.first == capability }.map { it.third }
+
+    private val runOneTask = """{"schema":1,"steps":[{"runTask":{"task":"t"}}]}"""
+
+    @Test
+    fun `runTask sends the task, the resolved inputs and a one minute wait, and into feeds the next steps`() {
+        val flow = """{"schema":1,"env":{"idea":"a cat"},"steps":[
+            {"runTask":{"task":"gemini-copy-idea","args":{"prompt":"Make a video about ${'$'}{idea}","n":2},"into":"r"}},
+            {"notify":{"title":"${'$'}{env.r.code}","text":"${'$'}{env.r.data.idea}|${'$'}{env.r.status}|${'$'}{env.r.run_id}"}}]}"""
+        val (binder, outcome) = runOnce(flow) {
+            answers["tasks.run.run"] = taskAnswer("SUCCEEDED", childResult("COPIED", "a cat on a skateboard"))
+        }
+        assertEquals("SUCCEEDED", text(outcome, "status"))
+        val sent = callsTo(binder, "tasks.run").single()
+        assertEquals("gemini-copy-idea", text(sent, "task"))
+        assertEquals(buildJsonObject { put("prompt", "Make a video about a cat"); put("n", 2) }, sent["args"])
+        assertEquals("60000", text(sent, "timeout_ms"))
+        val note = callsTo(binder, "notify.post").single()
+        assertEquals("COPIED", text(note, "title"))
+        assertEquals("a cat on a skateboard|SUCCEEDED|run-7", text(note, "text"))
+    }
+
+    @Test
+    fun `runTask without inputs sends none, and its timeout in seconds goes out in milliseconds`() {
+        val (binder, outcome) = runOnce("""{"schema":1,"steps":[{"runTask":{"task":"t","timeout":5}}]}""") {
+            answers["tasks.run.run"] = taskAnswer("SUCCEEDED")
+        }
+        assertEquals("SUCCEEDED", text(outcome, "status"))
+        val sent = callsTo(binder, "tasks.run").single()
+        assertNull(sent["args"])
+        assertEquals("5000", text(sent, "timeout_ms"))
+    }
+
+    @Test
+    fun `a plain text answer lands in text with code and data left empty`() {
+        val flow = """{"schema":1,"steps":[
+            {"runTask":{"task":"t","into":"r"}},
+            {"notify":{"title":"[${'$'}{env.r.code}]","text":"${'$'}{env.r.text}|${'$'}{env.r.data}"}}]}"""
+        val (binder, _) = runOnce(flow) { answers["tasks.run.run"] = taskAnswer("SUCCEEDED", "just text") }
+        val note = callsTo(binder, "notify.post").single()
+        assertEquals("[]", text(note, "title"))
+        assertEquals("just text|{}", text(note, "text"))
+    }
+
+    @Test
+    fun `no answer at all still succeeds with every field empty`() {
+        val flow = """{"schema":1,"steps":[
+            {"runTask":{"task":"t","into":"r"}},
+            {"notify":{"title":"${'$'}{env.r.status}","text":"[${'$'}{env.r.code}][${'$'}{env.r.text}]${'$'}{env.r.data}"}}]}"""
+        val (binder, outcome) = runOnce(flow) { answers["tasks.run.run"] = taskAnswer("SUCCEEDED") }
+        assertEquals("SUCCEEDED", text(outcome, "status"))
+        val note = callsTo(binder, "notify.post").single()
+        assertEquals("SUCCEEDED", text(note, "title"))
+        assertEquals("[][]{}", text(note, "text"))
+    }
+
+    @Test
+    fun `a task still running at the deadline fails the step with a retryable TIMEOUT`() {
+        val (binder, outcome) = runOnce(runOneTask) { answers["tasks.run.run"] = taskAnswer("RUNNING", timedOut = true) }
+        assertEquals("FAILED", text(outcome, "status"))
+        assertEquals("TIMEOUT", text(outcome, "reason"))
+        val evidence = binder.events.first { (it["type"] as? JsonPrimitive)?.content == "evidence" }["data"] as JsonObject
+        assertEquals("true", text(evidence, "retryable"))
+    }
+
+    @Test
+    fun `a cancelled task fails the step as CANCELLED`() {
+        val (_, outcome) = runOnce(runOneTask) { answers["tasks.run.run"] = taskAnswer("CANCELLED") }
+        assertEquals("FAILED", text(outcome, "status"))
+        assertEquals("CANCELLED", text(outcome, "reason"))
+    }
+
+    @Test
+    fun `a task that failed fails the step as INTERNAL and names its status`() {
+        val (_, outcome) = runOnce(runOneTask) { answers["tasks.run.run"] = taskAnswer("FAILED") }
+        assertEquals("FAILED", text(outcome, "status"))
+        assertEquals("INTERNAL", text(outcome, "reason"))
+        assertTrue(text(outcome, "message").contains("ended FAILED"))
+    }
+
+    @Test
+    fun `an optional runTask that fails still leaves its answer to inspect`() {
+        val flow = """{"schema":1,"steps":[
+            {"runTask":{"task":"t","into":"r","optional":true}},
+            {"notify":{"title":"${'$'}{env.r.status}","text":"x"}}]}"""
+        val (binder, outcome) = runOnce(flow) { answers["tasks.run.run"] = taskAnswer("FAILED") }
+        assertEquals("SUCCEEDED", text(outcome, "status"))
+        assertEquals("FAILED", text(callsTo(binder, "notify.post").single(), "title"))
+    }
+
+    @Test
+    fun `a refusal from the host keeps its own code`() {
+        val (_, outcome) = runOnce(runOneTask) {
+            refusals["tasks.run.run"] = """{"ok":false,"error":{"code":"SCOPE_VIOLATION","message":"not in scope","retryable":false}}"""
+        }
+        assertEquals("FAILED", text(outcome, "status"))
+        assertEquals("SCOPE_VIOLATION", text(outcome, "reason"))
+    }
+
+    @Test
+    fun `an input that resolves to an object is refused before the call`() {
+        val flow = """{"schema":1,"steps":[
+            {"runTask":{"task":"first","into":"r"}},
+            {"runTask":{"task":"second","args":{"x":"${'$'}{env.r.data}"}}}]}"""
+        val (binder, outcome) = runOnce(flow) { answers["tasks.run.run"] = taskAnswer("SUCCEEDED", childResult("A", "v")) }
+        assertEquals("INVALID_ARGS", text(outcome, "reason"))
+        assertEquals(listOf("first"), callsTo(binder, "tasks.run").map { text(it, "task") })
     }
 }

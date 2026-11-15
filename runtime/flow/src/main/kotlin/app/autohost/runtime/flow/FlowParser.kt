@@ -26,7 +26,7 @@ object FlowParser {
         "launchApp", "stopApp", "openLink", "tapOn", "longPressOn", "inputText", "eraseText",
         "pressKey", "scroll", "scrollUntilVisible", "swipe", "hideKeyboard", "waitFor", "waitUntil",
         "waitForAnimationToEnd", "assertVisible", "assertNotVisible", "copyTextFrom", "setClipboard",
-        "takeScreenshot", "notify", "runFlow", "repeat", "retry", "log", "setResult", "nextRun",
+        "takeScreenshot", "notify", "runFlow", "runTask", "repeat", "retry", "log", "setResult", "nextRun",
         "ask", "defineVariables",
     )
     val SELECTOR_KEYS: Set<String> = setOf(
@@ -343,6 +343,22 @@ object FlowParser {
             if (reserved.isNotEmpty()) {
                 die("$where: variable name(s) ${renderSorted(reserved)} are reserved modifiers")
             }
+            Extras()
+        }
+        "runTask" -> {
+            requireStr(body, "task", where)
+            if ("\${" in JsonValues.str(body.getValue("task"))) {
+                die("$where: task must be a fixed task id (no variables), so the permission review can list it")
+            }
+            val args = body["args"]
+            if (args != null) {
+                if (args !is JsonObject) die("$where: args must be an object")
+                for ((name, value) in args) {
+                    if (!JsonValues.isScalar(value)) die("$where: args.$name must be text, a number or true/false")
+                }
+            }
+            if (body["into"] != null) requireStr(body, "into", where)
+            reject(body, setOf("task", "args", "into") + MODIFIER_KEYS, where)
             Extras()
         }
         "runFlow" -> {

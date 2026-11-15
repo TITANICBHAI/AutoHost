@@ -6,6 +6,7 @@ shared contract with the Kotlin :runtime:flow interpreter (see test_flow_vectors
 """
 from __future__ import annotations
 
+import json
 import pathlib
 import sys
 import unittest
@@ -506,6 +507,137 @@ class RunTests(unittest.TestCase):
         runner = Runner(cancel_after=0)
         outcome = runner.run({"schema": 1, "steps": [{"log": {"message": "x"}}]})
         self.assertEqual(outcome, {"status": "CANCELLED", "reason": "USER_CANCELLED"})
+
+
+# ---------------------------------------------------------------------------
+# INT-A: runTask — run another task (a macro, a flow, a script) through tasks.run
+# ---------------------------------------------------------------------------
+def _task_done(code="OK", run_id="run-7", **data):
+    """The host's answer for a child that finished with setResult(code, data)."""
+    return {"run_id": run_id, "status": "SUCCEEDED", "result": json.dumps({"code": code, "data": data})}
+
+
+def _run_task_flow(**body):
+    return {"schema": 1, "steps": [{"runTask": dict({"task": "gemini-copy-idea"}, **body)}]}
+
+
+class RunTaskParseTests(unittest.TestCase):
+    def test_a_minimal_step_parses(self):
+        self.assertEqual(parse_flow(_run_task_flow())["steps"][0]["command"], "runTask")
+
+    def test_inputs_may_be_text_numbers_and_booleans(self):
+        parse_flow(_run_task_flow(args={"s": "x", "n": 3, "f": 1.5, "b": True}, into="r", timeout=30))
+
+    def test_the_task_must_be_a_fixed_id(self):
+        with self.assertRaisesRegex(FlowError, "fixed task id"):
+            parse_flow(_run_task_flow(task="gemini-${which}"))
+
+    def test_the_task_is_required(self):
+        with self.assertRaisesRegex(FlowError, "task must be a non-empty string"):
+            parse_flow({"schema": 1, "steps": [{"runTask": {"into": "r"}}]})
+
+    def test_inputs_must_be_an_object_of_plain_values(self):
+        with self.assertRaisesRegex(FlowError, "args must be an object"):
+            parse_flow(_run_task_flow(args=["x"]))
+        for bad in ({"a": [1]}, {"a": {"b": 1}}, {"a": None}):
+            with self.assertRaisesRegex(FlowError, "args.a must be text, a number or true/false"):
+                parse_flow(_run_task_flow(args=bad))
+
+    def test_an_unknown_key_is_refused(self):
+        with self.assertRaisesRegex(FlowError, "unknown key"):
+            parse_flow(_run_task_flow(profile="p"))
+
+
+class RunTaskTests(unittest.TestCase):
+    def runner(self, answer: dict) -> Runner:
+        return Runner(StubBroker(handlers={("tasks.run", "run"): lambda args: answer}))
+
+    def test_the_host_gets_the_task_the_resolved_inputs_and_a_one_minute_wait(self):
+        runner = self.runner(_task_done())
+        flow = {"schema": 1, "env": {"idea": "a cat"}, "steps": [
+            {"runTask": {"task": "gemini-send", "args": {"prompt": "Make a video about ${idea}", "n": 2}}}]}
+        self.assertEqual("SUCCEEDED", runner.run(flow)["status"])
+        self.assertEqual(
+            [{"task": "gemini-send", "args": {"prompt": "Make a video about a cat", "n": 2}, "timeout_ms": 60000}],
+            runner.calls("tasks.run", "run"))
+
+    def test_no_inputs_sends_none_and_the_timeout_is_in_seconds(self):
+        runner = self.runner(_task_done())
+        runner.run(_run_task_flow(timeout=5))
+        self.assertEqual([{"task": "gemini-copy-idea", "timeout_ms": 5000}], runner.calls("tasks.run", "run"))
+
+    def test_into_holds_the_status_run_id_code_and_data(self):
+        runner = self.runner(_task_done("COPIED", idea="a cat on a skateboard"))
+        flow = {"schema": 1, "steps": [
+            {"runTask": {"task": "gemini-copy-idea", "into": "r"}},
+            {"setResult": {"code": "${env.r.code}", "data": {
+                "idea": "${env.r.data.idea}", "status": "${env.r.status}", "run": "${env.r.run_id}"}}}]}
+        self.assertEqual(
+            {"code": "COPIED", "data": {"idea": "a cat on a skateboard", "status": "SUCCEEDED", "run": "run-7"}},
+            runner.run(flow)["result"])
+
+    def test_a_plain_text_answer_lands_in_text_with_code_and_data_empty(self):
+        runner = self.runner({"run_id": "r1", "status": "SUCCEEDED", "result": "just text"})
+        flow = {"schema": 1, "steps": [
+            {"runTask": {"task": "t", "into": "r"}},
+            {"setResult": {"code": "ok", "data": {"text": "${env.r.text}", "code": "${env.r.code}",
+                                                  "data": "${env.r.data}"}}}]}
+        self.assertEqual({"text": "just text", "code": "", "data": {}}, runner.run(flow)["result"]["data"])
+
+    def test_no_answer_at_all_still_succeeds_with_every_field_empty(self):
+        runner = self.runner({"run_id": "r2", "status": "SUCCEEDED"})
+        flow = {"schema": 1, "steps": [
+            {"runTask": {"task": "t", "into": "r"}},
+            {"setResult": {"code": "ok", "data": {"s": "${env.r.status}", "c": "${env.r.code}",
+                                                  "t": "${env.r.text}", "d": "${env.r.data}"}}}]}
+        outcome = runner.run(flow)
+        self.assertEqual("SUCCEEDED", outcome["status"])
+        self.assertEqual({"s": "SUCCEEDED", "c": "", "t": "", "d": {}}, outcome["result"]["data"])
+
+    def test_a_task_still_running_at_the_deadline_is_a_retryable_timeout(self):
+        runner = self.runner({"run_id": "r3", "status": "RUNNING", "await": "timeout"})
+        outcome = runner.run(_run_task_flow())
+        self.assertEqual("FAILED", outcome["status"])
+        self.assertEqual("TIMEOUT", outcome["reason"])
+        self.assertTrue(runner.by_type("evidence")[0]["data"]["retryable"])
+
+    def test_a_cancelled_task_fails_the_step_as_cancelled(self):
+        outcome = self.runner({"run_id": "r4", "status": "CANCELLED"}).run(_run_task_flow())
+        self.assertEqual(("FAILED", "CANCELLED"), (outcome["status"], outcome["reason"]))
+
+    def test_a_task_that_failed_fails_the_step_as_internal_and_names_the_status(self):
+        outcome = self.runner({"run_id": "r5", "status": "FAILED"}).run(_run_task_flow())
+        self.assertEqual(("FAILED", "INTERNAL"), (outcome["status"], outcome["reason"]))
+        self.assertIn("ended FAILED", outcome["message"])
+
+    def test_an_optional_step_that_fails_still_leaves_its_answer_to_inspect(self):
+        runner = self.runner({"run_id": "r6", "status": "FAILED"})
+        flow = {"schema": 1, "steps": [
+            {"runTask": {"task": "t", "into": "r", "optional": True}},
+            {"setResult": {"code": "${env.r.status}"}}]}
+        outcome = runner.run(flow)
+        self.assertEqual("SUCCEEDED", outcome["status"])
+        self.assertEqual("FAILED", outcome["result"]["code"])
+
+    def test_a_refusal_from_the_host_keeps_its_own_code(self):
+        broker = StubBroker(fail_first={("tasks.run", "run"): [BrokerError("SCOPE_VIOLATION", "not in scope")]})
+        outcome = Runner(broker).run(_run_task_flow())
+        self.assertEqual(("FAILED", "SCOPE_VIOLATION"), (outcome["status"], outcome["reason"]))
+
+    def test_an_input_that_resolves_to_an_object_is_refused_before_the_call(self):
+        runner = self.runner(_task_done("A", k="v"))
+        flow = {"schema": 1, "steps": [
+            {"runTask": {"task": "first", "into": "r"}},
+            {"runTask": {"task": "second", "args": {"x": "${env.r.data}"}}}]}
+        outcome = runner.run(flow)
+        self.assertEqual("INVALID_ARGS", outcome["reason"])
+        self.assertEqual(["first"], [call["task"] for call in runner.calls("tasks.run", "run")])
+
+    def test_a_secret_is_never_resolved_into_another_task_s_inputs(self):
+        runner = self.runner(_task_done())
+        flow = {"schema": 1, "steps": [{"runTask": {"task": "t", "args": {"pw": "${secret.pw}"}}}]}
+        runner.run(flow, secrets={"pw": "s3cr3t"})
+        self.assertEqual({"pw": "${secret.pw}"}, runner.calls("tasks.run", "run")[0]["args"])
 
 
 if __name__ == "__main__":

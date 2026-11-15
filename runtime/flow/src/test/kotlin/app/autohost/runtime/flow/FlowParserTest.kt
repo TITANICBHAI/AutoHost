@@ -113,6 +113,35 @@ class FlowParserTest {
         assertEquals(null, defaulted.steps[0].timeoutMs)
     }
 
+    // --- INT-A: runTask (the exact messages are pinned by the golden parse_error cases) ---
+
+    @Test fun `runTask parses with inputs, a variable for the answer, a wait and optional`() {
+        val flow = parse(
+            """{"schema": 1, "steps": [{"runTask": {"task": "gemini-send",
+                "args": {"prompt": "hi", "n": 2, "loud": true}, "into": "r", "timeout": 30, "optional": true}}]}""",
+        )
+        val step = flow.steps[0]
+        assertEquals("runTask", step.command)
+        assertEquals(30_000L, step.timeoutMs)
+        assertTrue(step.optional)
+        assertEquals("gemini-send", step.body.getValue("task").jsonPrimitive.content)
+    }
+
+    @Test fun `runTask refuses a templated id, a missing id, odd inputs and unknown keys`() {
+        fun fails(body: String, expect: String) {
+            val e = assertThrows(FlowParseException::class.java) {
+                parse("""{"schema": 1, "steps": [{"runTask": $body}]}""")
+            }
+            assertTrue(e.message, e.message!!.contains(expect))
+        }
+        fails("""{"task": "a${'$'}{b}"}""", "fixed task id")
+        fails("""{"into": "r"}""", "task must be a non-empty string")
+        fails("""{"task": "t", "args": ["x"]}""", "args must be an object")
+        fails("""{"task": "t", "args": {"a": [1]}}""", "args.a must be text, a number or true/false")
+        fails("""{"task": "t", "args": {"a": null}}""", "args.a must be text, a number or true/false")
+        fails("""{"task": "t", "profile": "p"}""", "unknown key")
+    }
+
     @Test fun `parse error golden cases fail with the recorded message`() {
         val doc = Json.parseToJsonElement(
             java.io.File(System.getProperty("user.dir")).let { dir ->

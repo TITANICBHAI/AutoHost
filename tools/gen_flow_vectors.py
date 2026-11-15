@@ -441,6 +441,30 @@ parse_error_case("parse_error_unknown_selector_key", {
     "schema": 1, "steps": [{"tapOn": {"xpath": "//foo"}}],
 })
 
+# ---------------------------------------------------------------------------
+# H. runTask (INT-A): the parse rules both interpreters must state in the same words (5). Running one needs a
+#    `tasks.run` model the data-only device does not have, so execution is pinned by each side's own tests.
+# ---------------------------------------------------------------------------
+parse_error_case("parse_error_run_task_templated_id", {
+    "schema": 1, "steps": [{"runTask": {"task": "gemini-${which}"}}],
+})
+
+parse_error_case("parse_error_run_task_missing_id", {
+    "schema": 1, "steps": [{"runTask": {"into": "r"}}],
+})
+
+parse_error_case("parse_error_run_task_args_not_object", {
+    "schema": 1, "steps": [{"runTask": {"task": "t", "args": ["x"]}}],
+})
+
+parse_error_case("parse_error_run_task_nested_input", {
+    "schema": 1, "steps": [{"runTask": {"task": "t", "args": {"a": {"b": 1}}}}],
+})
+
+parse_error_case("parse_error_run_task_unknown_key", {
+    "schema": 1, "steps": [{"runTask": {"task": "t", "profile": "p"}}],
+})
+
 
 def main():
     doc = {
