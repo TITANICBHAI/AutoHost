@@ -1260,7 +1260,7 @@ class AppGraph(val application: Application) {
                     run == null -> return app.autohost.core.engine.host.TasksRunProvider.ChainRunner.Outcome.UnknownRun
                     run.status.terminal -> return app.autohost.core.engine.host.TasksRunProvider.ChainRunner.Outcome.Terminal(
                         run.status.name,
-                        (run.result?.get("result") as? JsonPrimitive)?.content,
+                        app.autohost.core.engine.host.TasksRunProvider.resultText(run.result),
                     )
                 }
                 Thread.sleep(200)

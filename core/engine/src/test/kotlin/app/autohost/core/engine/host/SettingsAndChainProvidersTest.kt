@@ -125,5 +125,33 @@ class SettingsAndChainProvidersTest {
         assertEquals("RUNNING", stillRunning.result!!.jsonObject["status"]!!.jsonPrimitive.content)
     }
 
+    // ---- INT-R: what the caller gets back as `result` ------------------------------------------
+
+    @Test fun `a child that finished with code and data hands both back as JSON text`() {
+        val finished = buildJsonObject {
+            put("code", "COPIED")
+            put("data", buildJsonObject { put("idea", "a cat on a skateboard") })
+        }
+        val text = TasksRunProvider.resultText(finished)!!
+        val back = kotlinx.serialization.json.Json.parseToJsonElement(text).jsonObject
+        assertEquals("COPIED", back["code"]!!.jsonPrimitive.content)
+        assertEquals("a cat on a skateboard", back["data"]!!.jsonObject["idea"]!!.jsonPrimitive.content)
+    }
+
+    @Test fun `no result gives no text and an older plain result string comes through unchanged`() {
+        assertEquals(null, TasksRunProvider.resultText(null))
+        assertEquals("done", TasksRunProvider.resultText(buildJsonObject { put("result", "done") }))
+    }
+
+    @Test fun `the chain call returns the child's result text to the caller`() = runBlocking {
+        val runner = FakeRunner()
+        runner.outcome = TasksRunProvider.ChainRunner.Outcome.Terminal("SUCCEEDED", "{\"code\":\"OK\",\"data\":{}}")
+        val result = TasksRunProvider(runner).invoke(
+            CallContext("r", "t", null, grantsWith("task-b"), 0),
+            "run", buildJsonObject { put("task", "task-b") },
+        )
+        assertEquals("{\"code\":\"OK\",\"data\":{}}", result.result!!.jsonObject["result"]!!.jsonPrimitive.content)
+    }
+
     private fun ctx() = CallContext("r", "t", null, emptyMap(), 0)
 }

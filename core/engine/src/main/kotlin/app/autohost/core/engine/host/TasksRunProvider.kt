@@ -108,5 +108,17 @@ class TasksRunProvider(private val runner: ChainRunner) : CapabilityProvider {
         const val PERMISSION = "tasks.run"
         const val MAX_CHAIN_DEPTH = 3
         const val MAX_AWAIT_MS = 10L * 60 * 1000
+
+        /**
+         * INT-R: the text handed back to the caller as `result`. A child that finished with `{code, data}` (every
+         * Python task and every flow does) gives that object as JSON text, so the caller can read what the child set;
+         * an older plain `result` string still comes through as it is. No result at all gives null.
+         */
+        fun resultText(result: JsonObject?): String? {
+            if (result == null) return null
+            val plain = result["result"] as? JsonPrimitive
+            if (plain != null && plain.isString) return plain.content
+            return result.toString()
+        }
     }
 }
