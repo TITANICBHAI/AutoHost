@@ -45,6 +45,7 @@ fun MacroEditorScreen(graph: AppGraph, devRoot: File?, onDone: (taskId: String?)
     var whenId by remember { mutableStateOf(WhenKinds.all.first().id) }
     val whenValues = remember { mutableStateMapOf<String, String>() }
     val steps = remember { mutableStateListOf<MacroStep>() }
+    val inputs = remember { mutableStateListOf<NamedValue>() }
     var problems by remember { mutableStateOf(emptyList<String>()) }
     var saving by remember { mutableStateOf(false) }
     var whenMenu by remember { mutableStateOf(false) }
@@ -79,6 +80,13 @@ fun MacroEditorScreen(graph: AppGraph, devRoot: File?, onDone: (taskId: String?)
             )
         }
 
+        SectionHeader("Values it can be given")
+        Text(
+            "Optional. A script or another task can hand your macro values. Each one has a default; use it in any step as {name}.",
+            style = MaterialTheme.typography.bodySmall,
+        )
+        PairsEditor(inputs, "+ Add a value", valueLabel = "Default value") { inputs.clear(); inputs.addAll(it) }
+
         SectionHeader("Then")
         steps.forEachIndexed { i, step ->
             Card(Modifier.fillMaxWidth()) {
@@ -95,10 +103,17 @@ fun MacroEditorScreen(graph: AppGraph, devRoot: File?, onDone: (taskId: String?)
         Box {
             OutlinedButton(onClick = { stepMenu = true }) { Text("+ Add step") }
             DropdownMenu(expanded = stepMenu, onDismissRequest = { stepMenu = false }) {
-                listOf(
-                    MacroStep.OpenApp(""), MacroStep.WaitFor("", "", 10), MacroStep.Tap("", ""),
-                    MacroStep.Notify("", ""), MacroStep.Ask("", ""), MacroStep.Log(""),
-                ).forEach { s -> DropdownMenuItem(text = { Text(s.label) }, onClick = { steps.add(s); stepMenu = false }) }
+                MacroSteps.menu().forEach { s ->
+                    DropdownMenuItem(
+                        text = { Text(s.label) },
+                        onClick = {
+                            // A new step starts with the app the last step used, so the person types it once.
+                            val pkg = MacroSteps.lastPackage(steps)
+                            steps.add(if (pkg.isNotBlank()) MacroSteps.withPackage(s, pkg) else s)
+                            stepMenu = false
+                        },
+                    )
+                }
             }
         }
 
@@ -106,7 +121,7 @@ fun MacroEditorScreen(graph: AppGraph, devRoot: File?, onDone: (taskId: String?)
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(enabled = !saving, onClick = {
-                val macro = Macro(name, whenId, whenValues.toMap(), steps.toList())
+                val macro = Macro(name, whenId, whenValues.toMap(), steps.toList(), inputs.toList())
                 val now = System.currentTimeMillis()
                 when (val result = MacroCompiler.compile(macro, now)) {
                     is MacroResult.Invalid -> problems = result.problems
@@ -139,7 +154,7 @@ fun MacroEditorScreen(graph: AppGraph, devRoot: File?, onDone: (taskId: String?)
                                     )
                                     graph.refreshDevTasks()
                                 }.onSuccess { onDone(c.taskId) }
-                                    .onFailure { problems = listOf("Could not save: ${it.message}"); saving = false }
+                                    .onFailure { problems = listOf("The macro could not be saved. Check that the phone has free space, then try again."); saving = false }
                             }
                         }
                     }
@@ -176,5 +191,74 @@ private fun StepFields(step: MacroStep, onChange: (MacroStep) -> Unit) {
             field("Message", step.message) { onChange(step.copy(message = it)) }
         }
         is MacroStep.Log -> field("Message", step.message) { onChange(step.copy(message = it)) }
+        is MacroStep.TypeText -> {
+            field("App package", step.pkg) { onChange(step.copy(pkg = it)) }
+            field("Field label (blank: the field you just tapped)", step.field) { onChange(step.copy(field = it)) }
+            field("Text to type", step.text) { onChange(step.copy(text = it)) }
+        }
+        is MacroStep.Scroll -> {
+            field("App package", step.pkg) { onChange(step.copy(pkg = it)) }
+            Choice("Direction", step.direction, MacroSteps.DIRECTIONS.map { it to titleCase(it) }) { onChange(step.copy(direction = it)) }
+        }
+        is MacroStep.PressKey -> {
+            field("App package", step.pkg) { onChange(step.copy(pkg = it)) }
+            Choice("Key", step.key, MacroSteps.KEYS.map { it to titleCase(it) }) { onChange(step.copy(key = it)) }
+        }
+        is MacroStep.RunTask -> {
+            field("Task to run", step.task) { onChange(step.copy(task = it)) }
+            Text("Values to hand over", style = MaterialTheme.typography.labelLarge)
+            PairsEditor(step.inputs, "+ Add a value", valueLabel = "Value") { onChange(step.copy(inputs = it)) }
+            field("Wait up to (seconds, 1-600)", step.waitSeconds.toString()) { onChange(step.copy(waitSeconds = it.toIntOrNull() ?: 0)) }
+            field("Keep its answer as (optional name)", step.into) { onChange(step.copy(into = it)) }
+            if (step.into.isNotBlank()) {
+                val n = step.into.trim()
+                Text(
+                    "Later steps can use {" + n + ".code} or {" + n + ".data.name}.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+        is MacroStep.Finish -> {
+            field("Result word, for example DONE", step.code) { onChange(step.copy(code = it)) }
+            Text("Values to return", style = MaterialTheme.typography.labelLarge)
+            PairsEditor(step.values, "+ Add a value", valueLabel = "Value") { onChange(step.copy(values = it)) }
+        }
+    }
+}
+
+private fun titleCase(word: String): String = word.replaceFirstChar { it.uppercase() }
+
+/** A short list of name + value pairs: one name field, one value field and Remove per pair, stacked so it fits a narrow screen. */
+@Composable
+private fun PairsEditor(items: List<NamedValue>, addLabel: String, valueLabel: String, onChange: (List<NamedValue>) -> Unit) {
+    items.forEachIndexed { i, item ->
+        OutlinedTextField(
+            value = item.name,
+            onValueChange = { v -> onChange(items.toMutableList().also { list -> list[i] = item.copy(name = v) }) },
+            label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = item.value,
+            onValueChange = { v -> onChange(items.toMutableList().also { list -> list[i] = item.copy(value = v) }) },
+            label = { Text(valueLabel) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+        )
+        TextButton(onClick = { onChange(items.filterIndexed { j, _ -> j != i }) }) { Text("Remove") }
+    }
+    OutlinedButton(onClick = { onChange(items + NamedValue("")) }) { Text(addLabel) }
+}
+
+/** A drop-down of fixed choices; [options] are (value, label) pairs and [onPick] gets the value. */
+@Composable
+private fun Choice(label: String, current: String, options: List<Pair<String, String>>, onPick: (String) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) {
+            Text(label + ": " + (options.firstOrNull { it.first == current }?.second ?: "choose"))
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(text = { Text(option.second) }, onClick = { onPick(option.first); open = false })
+            }
+        }
     }
 }

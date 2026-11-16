@@ -49,11 +49,83 @@ sealed interface MacroStep {
     data class WaitFor(val pkg: String, val text: String, val seconds: Int) : MacroStep { override val label get() = "Wait for text" }
     data class Ask(val title: String, val message: String) : MacroStep { override val label get() = "Ask me to confirm" }
     data class Log(val message: String) : MacroStep { override val label get() = "Write to the run log" }
+
+    /** Type [text] into the field labelled [field]; a blank [field] means the field you just tapped. */
+    data class TypeText(val pkg: String, val field: String, val text: String) : MacroStep { override val label get() = "Type text" }
+
+    /** Scroll the screen: [direction] is one of [MacroSteps.DIRECTIONS]. */
+    data class Scroll(val pkg: String, val direction: String) : MacroStep { override val label get() = "Scroll" }
+
+    /** Press a system key: [key] is one of [MacroSteps.KEYS]. */
+    data class PressKey(val pkg: String, val key: String) : MacroStep { override val label get() = "Press a key" }
+
+    /**
+     * Start another task (a macro or a script) and wait up to [waitSeconds] for it. [inputs] are handed to it; its answer
+     * is kept under [into] when that is not blank, and can be used in later steps as {into.code} or {into.data.name}.
+     */
+    data class RunTask(val task: String, val inputs: List<NamedValue>, val waitSeconds: Int, val into: String) : MacroStep {
+        override val label get() = "Run another task"
+    }
+
+    /** End the macro with a result word and some named values, which a script (or another macro) can read. */
+    data class Finish(val code: String, val values: List<NamedValue>) : MacroStep { override val label get() = "Finish with a result" }
 }
 
+/** A name and a value: a macro input with its default, a value handed to another task, or one value a macro finishes with. */
+data class NamedValue(val name: String, val value: String = "")
+
+/** Small pure helpers the editor and the compiler share. */
+object MacroSteps {
+    val DIRECTIONS = listOf("up", "down", "left", "right")
+    val KEYS = listOf("back", "home", "enter")
+
+    /** The steps the editor offers, in menu order, each with its starting values. */
+    fun menu(): List<MacroStep> = listOf(
+        MacroStep.OpenApp(""),
+        MacroStep.WaitFor("", "", 10),
+        MacroStep.Tap("", ""),
+        MacroStep.TypeText("", "", ""),
+        MacroStep.Scroll("", "down"),
+        MacroStep.PressKey("", "back"),
+        MacroStep.RunTask("", emptyList(), 60, ""),
+        MacroStep.Finish("DONE", emptyList()),
+        MacroStep.Notify("", ""),
+        MacroStep.Ask("", ""),
+        MacroStep.Log(""),
+    )
+
+    /** The app a step names, or null when the step does not name one. */
+    fun packageOf(step: MacroStep): String? = when (step) {
+        is MacroStep.OpenApp -> step.pkg
+        is MacroStep.Tap -> step.pkg
+        is MacroStep.WaitFor -> step.pkg
+        is MacroStep.TypeText -> step.pkg
+        is MacroStep.Scroll -> step.pkg
+        is MacroStep.PressKey -> step.pkg
+        is MacroStep.Notify, is MacroStep.Ask, is MacroStep.Log, is MacroStep.RunTask, is MacroStep.Finish -> null
+    }
+
+    /** [step] with its app set to [pkg]; steps that name no app come back unchanged. */
+    fun withPackage(step: MacroStep, pkg: String): MacroStep = when (step) {
+        is MacroStep.OpenApp -> step.copy(pkg = pkg)
+        is MacroStep.Tap -> step.copy(pkg = pkg)
+        is MacroStep.WaitFor -> step.copy(pkg = pkg)
+        is MacroStep.TypeText -> step.copy(pkg = pkg)
+        is MacroStep.Scroll -> step.copy(pkg = pkg)
+        is MacroStep.PressKey -> step.copy(pkg = pkg)
+        is MacroStep.Notify, is MacroStep.Ask, is MacroStep.Log, is MacroStep.RunTask, is MacroStep.Finish -> step
+    }
+
+    /** The app named by the latest step that names one, so the next step can start with it filled in. */
+    fun lastPackage(steps: List<MacroStep>): String =
+        steps.asReversed().firstNotNullOfOrNull { s -> packageOf(s)?.takeIf { it.isNotBlank() } }.orEmpty()
+}
+
+/** [inputs] are values something else can pass when it starts the macro (each with a default); steps use them as {name}. */
 data class Macro(
     val name: String,
     val whenId: String,
     val whenValues: Map<String, String>,
     val steps: List<MacroStep>,
+    val inputs: List<NamedValue> = emptyList(),
 )
