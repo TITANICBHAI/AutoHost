@@ -1,6 +1,6 @@
 # INTEGRATION_V3 — macros, Python scripts and agents working as one
 
-Status: DESIGN (2026-11-14), first joins BUILT (updated 2026-11-15). Built and CI-green: **B** flows read the inputs a script passes (run 34), **R** `tasks.run` hands back the child's answer, **D** Python `autohost.macros` (run 35). **A** (`runTask`, a macro starts another task) is written and recorded in ADR-102; its CI run is in `STATUS.md`. Nothing here has run on a phone. Evidence tags: **[code]** read in this repo, **[spec]** in `schemas/capability-specs.w1.json`, **[unverified]** not checked on a device or not read yet, **[opinion]** my judgement.
+Status: DESIGN (2026-11-14), first joins BUILT (updated 2026-11-16). Built and CI-green: **B** flows read the inputs a script passes (run 34), **R** `tasks.run` hands back the child's answer and **D** Python `autohost.macros` (run 35), **A** `runTask` (a macro starts another task, ADR-102; run 36), **C1** the quick-macro editor takes inputs and offers Type text, Scroll, Press key, Run another task and Finish with a result (run 37). Nothing here has run on a phone. Evidence tags: **[code]** read in this repo, **[spec]** in `schemas/capability-specs.w1.json`, **[unverified]** not checked on a device or not read yet, **[opinion]** my judgement.
 
 Owner answers that start this (2026-11-14): "yes" to the agent sending screenshots, "yes" to scripts calling a model. Both stay **opt-in per provider** and off until the person turns them on (`docs/AGENT_RUNTIME.md` §6, ADR-091).
 
@@ -15,7 +15,7 @@ Do not build a fourth engine. A macro, a Python script and an agent goal are thr
 | Data into the started task | **Built (B, run 34).** `args` arrive in the child's trigger payload; a flow reads them only through the names its own `env` block declares (the declared value is the default), plain values only, read-only copies in `run.args` / `run.trigger`. Anything not declared is ignored and logged by name. Before B a flow could not read them at all. | [code] `FlowInputs`, `FlowRuntimeProvider`, `FlowInputsTest` |
 | Data out of the task | **Built (R, run 35).** The child's `setResult` `{code, data}` come back as JSON text in `result`. My first version of this row said `setResult` already fed `result`; it did not — the host read a key the flow runtime never sets, so `result` was always empty. | [code] `TasksRunProvider.resultText`, `SettingsAndChainProvidersTest` |
 | Shared notes between steps | `store.profile` (shared by tasks on the same profile) and `store.task` (private). Non-secret values only. | [spec] |
-| Macro starts Python / another task | **Written (A, ADR-102).** Flow step `runTask {task, args?, into?}`: fixed task id, plain-value inputs, wait = the step's `timeout` (default 60 s), answer in `into` as `{status, run_id, code, data, text}`. Same `tasks.run` grant and depth limit as Python. Reachable today from a hand-written flow; the quick-macro editor does not offer it yet. | [code] `FlowParser`, `CommandExecutors.runTask`, `flows.py`, schema, vectors |
+| Macro starts Python / another task | **Built (A, ADR-102; run 36).** Flow step `runTask {task, args?, into?}`: fixed task id, plain-value inputs, wait = the step's `timeout` (default 60 s), answer in `into` as `{status, run_id, code, data, text}`. Same `tasks.run` grant and depth limit as Python. The quick-macro editor offers it as *Run another task* (C1, run 37): the person types the task's id for now; a task picker is next. | [code] `FlowParser`, `CommandExecutors.runTask`, `flows.py`, schema, vectors, `MacroCompiler` |
 | Python runs a macro by id | **Built (D, run 35).** `autohost.macros.run(id, inputs)` → `MacroResult(status, code, data, text)`; refuses non-plain inputs before the call; raises `Timeout` / `NeedsUser` / `Fatal`. | [code] `sdk-python/autohost/macros.py`, `tests/test_macros.py` |
 | Agent starts a task/script | **Missing.** Agent tools: 9 `ui_*`, 4 `app_*`, `ask_user`, `todo_write`, `wait`, `finish`. | [code] `tool_catalog.json` |
 | Script/macro starts the agent | **Missing.** No agent module in the SDK. | [code] |
@@ -54,9 +54,9 @@ from autohost import ctx, log, macros, notifications
 def main():
     gemini = ctx.config["gemini_package"]       # confirm the real package name on your phone [unverified]
     macros.run("open-gemini")                    # a macro that launches the app
-    macros.run("gemini-send", {"prompt": ctx.config["video_prompt"]})      # needs a "type text" step in the quick editor [not yet]
+    macros.run("gemini-send", {"prompt": ctx.config["video_prompt"]})      # quick editor: a declared value "prompt" + a "Type text" step using {prompt}
     notifications.wait_for(package=gemini, text_regex="video", timeout_ms=15 * 60 * 1000)   # needs notification access on
-    idea = macros.run("gemini-copy-idea")        # needs "scroll", "copy text" and "return values" in the quick editor [not yet]
+    idea = macros.run("gemini-copy-idea")        # quick editor has "Scroll" and "Finish with a result"; "Copy text" is not built yet
     log.info("idea copied", chars=len(idea.data.get("idea", "")))
     macros.run("youtube-upload-short", {"title": idea.data["title"], "description": idea.data["description"]})
     return ctx.result("ok", {"title": idea.data["title"]})
@@ -102,9 +102,10 @@ Cost = my rough count of CI-checked rounds, without a device **[opinion]**.
 
 | # | Piece | Cost | Notes |
 |---|---|---|---|
-| A | Flow command `runTask(task, args) → variable`, same grant and depth limit as `tasks.run` | S–M | **Written** (ADR-102); its CI run is in `STATUS.md` |
+| A | Flow command `runTask(task, args) → variable`, same grant and depth limit as `tasks.run` | S–M | **Done** (ADR-102): run 36, 1520 tests green |
 | B | Flow variables from `args` and richer `result` (JSON) | S–M | **Done**: inputs through a declared `env` (run 34), result text (run 35) |
-| C | Declared macro **inputs** (named variables, with a default) that Python can set per run | M | **Flow side done** (it is B's `env` block). The quick-macro editor cannot declare inputs yet |
+| C | Declared macro **inputs** (named variables, with a default) that Python can set per run | M | **Done**: the flow side is B's `env` block (run 34); the quick-macro editor's *Values it can be given* and the steps Type text, Scroll, Press key, Run another task, Finish with a result are C1 (run 37, 1548 tests green). In texts a value is written `{name}`, a saved answer `{answer.code}` or `{answer.data.name}` |
+| C2 | Quick-editor follow-ups | S–M | Not built: installed-app picker, task picker (people still type package names and task ids), *Copy text* into a value, a "Use from a script" snippet, editing a macro after saving it |
 | D | Python `macros` module: list, read, **set inputs**, run | M | **`run` with inputs done** (run 35). `list` and `read` are not built |
 | E | Agent tool `run_task` (+ allowlist of tasks the user ticks) | M | agent runtime is frozen by `AGENTS.md`; you lifted that for this |
 | F | Agent chat tab: type what you want, see steps, Stop, approvals | M–L | `AskSheet` and `AgentLoop` exist; the tab is mostly UI + run lifecycle |
