@@ -80,13 +80,13 @@ object MacroCompiler {
                     if (step.title.isBlank()) problems += "$n needs a title."
                     checkText(n, step.title + " " + step.text, known, problems)
                 }
-                is MacroStep.OpenApp -> if (!PACKAGE.matches(step.pkg)) problems += "$n needs an app package like com.android.chrome."
+                is MacroStep.OpenApp -> if (!PACKAGE.matches(step.pkg)) problems += "$n needs an app: choose one from the list."
                 is MacroStep.Tap -> {
-                    if (!PACKAGE.matches(step.pkg)) problems += "$n needs an app package."
+                    if (!PACKAGE.matches(step.pkg)) problems += "$n needs an app: choose one from the list."
                     if (step.text.isBlank()) problems += "$n needs the button text."
                 }
                 is MacroStep.WaitFor -> {
-                    if (!PACKAGE.matches(step.pkg)) problems += "$n needs an app package."
+                    if (!PACKAGE.matches(step.pkg)) problems += "$n needs an app: choose one from the list."
                     if (step.text.isBlank()) problems += "$n needs the text to wait for."
                     if (step.seconds !in 1..120) problems += "$n: wait between 1 and 120 seconds."
                 }
@@ -99,16 +99,16 @@ object MacroCompiler {
                     checkText(n, step.message, known, problems)
                 }
                 is MacroStep.TypeText -> {
-                    if (!PACKAGE.matches(step.pkg)) problems += "$n needs an app package."
+                    if (!PACKAGE.matches(step.pkg)) problems += "$n needs an app: choose one from the list."
                     if (step.text.isEmpty()) problems += "$n needs the text to type."
                     checkText(n, step.text, known, problems)
                 }
                 is MacroStep.Scroll -> {
-                    if (!PACKAGE.matches(step.pkg)) problems += "$n needs an app package."
+                    if (!PACKAGE.matches(step.pkg)) problems += "$n needs an app: choose one from the list."
                     if (step.direction !in MacroSteps.DIRECTIONS) problems += "$n needs a direction."
                 }
                 is MacroStep.PressKey -> {
-                    if (!PACKAGE.matches(step.pkg)) problems += "$n needs an app package."
+                    if (!PACKAGE.matches(step.pkg)) problems += "$n needs an app: choose one from the list."
                     if (step.key !in MacroSteps.KEYS) problems += "$n needs a key."
                 }
                 is MacroStep.RunTask -> {
@@ -174,7 +174,7 @@ object MacroCompiler {
             when (p.kind) {
                 ParamKind.TIME -> if (!TIME.matches(v)) out += "${p.label} must look like 07:30."
                 ParamKind.NUMBER -> if (v.toIntOrNull()?.let { it >= 1 } != true) out += "${p.label} must be a whole number of 1 or more."
-                ParamKind.PACKAGE -> if (!PACKAGE.matches(v)) out += "${p.label} must look like com.android.chrome."
+                ParamKind.PACKAGE -> if (!PACKAGE.matches(v)) out += "${p.label}: choose an app from the list."
                 ParamKind.TEXT -> Unit
             }
         }

@@ -23,8 +23,8 @@ object WhenKinds {
         WhenKind("battery_low", "Battery gets low", "battery.low"),
         WhenKind("unlocked", "Phone unlocked", "user.present"),
         WhenKind("screen_on", "Screen turns on", "screen.on"),
-        WhenKind("app_opened", "An app is opened", "app.entered", listOf(WhenParam("package", "App package", ParamKind.PACKAGE, hint = "com.android.chrome"))),
-        WhenKind("app_closed", "An app is closed", "app.exited", listOf(WhenParam("package", "App package", ParamKind.PACKAGE, hint = "com.android.chrome"))),
+        WhenKind("app_opened", "An app is opened", "app.entered", listOf(WhenParam("package", "App", ParamKind.PACKAGE))),
+        WhenKind("app_closed", "An app is closed", "app.exited", listOf(WhenParam("package", "App", ParamKind.PACKAGE))),
         WhenKind(
             "notification", "A notification arrives", "notification.posted",
             listOf(

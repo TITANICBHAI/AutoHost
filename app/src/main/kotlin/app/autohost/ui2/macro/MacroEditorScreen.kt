@@ -31,6 +31,12 @@ import androidx.compose.ui.unit.dp
 import app.autohost.AppGraph
 import app.autohost.core.data.db.TriggerRuleEntity
 import app.autohost.core.designsystem.components.SectionHeader
+import app.autohost.ui2.pickers.AppChoice
+import app.autohost.ui2.pickers.AppPickerButton
+import app.autohost.ui2.pickers.TaskChoice
+import app.autohost.ui2.pickers.TaskPickerButton
+import app.autohost.ui2.pickers.rememberInstalledApps
+import app.autohost.ui2.pickers.rememberTaskChoices
 import java.io.File
 import kotlinx.coroutines.launch
 
@@ -51,6 +57,10 @@ fun MacroEditorScreen(graph: AppGraph, devRoot: File?, onDone: (taskId: String?)
     var whenMenu by remember { mutableStateOf(false) }
     var stepMenu by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    // People pick an app or a task by name from a list; the package name or id is only what gets stored.
+    val apps = rememberInstalledApps(graph)
+    val myTasks = rememberTaskChoices(graph)
+    val ownPackage = graph.application.packageName
     val kind = WhenKinds.byId(whenId)!!
 
     Column(
@@ -73,11 +83,18 @@ fun MacroEditorScreen(graph: AppGraph, devRoot: File?, onDone: (taskId: String?)
             }
         }
         kind.params.forEach { p ->
-            OutlinedTextField(
-                value = whenValues[p.key].orEmpty(), onValueChange = { whenValues[p.key] = it },
-                label = { Text(p.label) }, placeholder = { if (p.hint.isNotEmpty()) Text(p.hint) },
-                singleLine = true, modifier = Modifier.fillMaxWidth(),
-            )
+            if (p.kind == ParamKind.PACKAGE) {
+                AppPickerButton(
+                    label = p.label, pkg = whenValues[p.key].orEmpty(), apps = apps, hide = ownPackage,
+                    noneLabel = if (p.required) null else "Any app",
+                ) { whenValues[p.key] = it }
+            } else {
+                OutlinedTextField(
+                    value = whenValues[p.key].orEmpty(), onValueChange = { whenValues[p.key] = it },
+                    label = { Text(p.label) }, placeholder = { if (p.hint.isNotEmpty()) Text(p.hint) },
+                    singleLine = true, modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
 
         SectionHeader("Values it can be given")
@@ -92,7 +109,7 @@ fun MacroEditorScreen(graph: AppGraph, devRoot: File?, onDone: (taskId: String?)
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("${i + 1}. ${step.label}", style = MaterialTheme.typography.titleSmall)
-                    StepFields(step) { steps[i] = it }
+                    StepFields(step, apps, myTasks, ownPackage) { steps[i] = it }
                     Row {
                         if (i > 0) TextButton(onClick = { val s = steps.removeAt(i); steps.add(i - 1, s) }) { Text("Up") }
                         TextButton(onClick = { steps.removeAt(i) }) { Text("Remove") }
@@ -166,23 +183,31 @@ fun MacroEditorScreen(graph: AppGraph, devRoot: File?, onDone: (taskId: String?)
 }
 
 @Composable
-private fun StepFields(step: MacroStep, onChange: (MacroStep) -> Unit) {
+private fun StepFields(
+    step: MacroStep,
+    apps: List<AppChoice>,
+    tasks: List<TaskChoice>,
+    ownPackage: String,
+    onChange: (MacroStep) -> Unit,
+) {
     @Composable
     fun field(label: String, value: String, set: (String) -> Unit) = OutlinedTextField(
         value = value, onValueChange = set, label = { Text(label) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
     )
+    @Composable
+    fun app(pkg: String, set: (String) -> Unit) = AppPickerButton("App", pkg, apps, ownPackage, onPick = set)
     when (step) {
         is MacroStep.Notify -> {
             field("Title", step.title) { onChange(step.copy(title = it)) }
             field("Text", step.text) { onChange(step.copy(text = it)) }
         }
-        is MacroStep.OpenApp -> field("App package", step.pkg) { onChange(step.copy(pkg = it)) }
+        is MacroStep.OpenApp -> app(step.pkg) { onChange(step.copy(pkg = it)) }
         is MacroStep.Tap -> {
-            field("App package", step.pkg) { onChange(step.copy(pkg = it)) }
+            app(step.pkg) { onChange(step.copy(pkg = it)) }
             field("Button text", step.text) { onChange(step.copy(text = it)) }
         }
         is MacroStep.WaitFor -> {
-            field("App package", step.pkg) { onChange(step.copy(pkg = it)) }
+            app(step.pkg) { onChange(step.copy(pkg = it)) }
             field("Text to wait for", step.text) { onChange(step.copy(text = it)) }
             field("Seconds (1-120)", step.seconds.toString()) { onChange(step.copy(seconds = it.toIntOrNull() ?: 0)) }
         }
@@ -192,20 +217,20 @@ private fun StepFields(step: MacroStep, onChange: (MacroStep) -> Unit) {
         }
         is MacroStep.Log -> field("Message", step.message) { onChange(step.copy(message = it)) }
         is MacroStep.TypeText -> {
-            field("App package", step.pkg) { onChange(step.copy(pkg = it)) }
+            app(step.pkg) { onChange(step.copy(pkg = it)) }
             field("Field label (blank: the field you just tapped)", step.field) { onChange(step.copy(field = it)) }
             field("Text to type", step.text) { onChange(step.copy(text = it)) }
         }
         is MacroStep.Scroll -> {
-            field("App package", step.pkg) { onChange(step.copy(pkg = it)) }
+            app(step.pkg) { onChange(step.copy(pkg = it)) }
             Choice("Direction", step.direction, MacroSteps.DIRECTIONS.map { it to titleCase(it) }) { onChange(step.copy(direction = it)) }
         }
         is MacroStep.PressKey -> {
-            field("App package", step.pkg) { onChange(step.copy(pkg = it)) }
+            app(step.pkg) { onChange(step.copy(pkg = it)) }
             Choice("Key", step.key, MacroSteps.KEYS.map { it to titleCase(it) }) { onChange(step.copy(key = it)) }
         }
         is MacroStep.RunTask -> {
-            field("Task to run", step.task) { onChange(step.copy(task = it)) }
+            TaskPickerButton("Task to run", step.task, tasks) { onChange(step.copy(task = it)) }
             Text("Values to hand over", style = MaterialTheme.typography.labelLarge)
             PairsEditor(step.inputs, "+ Add a value", valueLabel = "Value") { onChange(step.copy(inputs = it)) }
             field("Wait up to (seconds, 1-600)", step.waitSeconds.toString()) { onChange(step.copy(waitSeconds = it.toIntOrNull() ?: 0)) }

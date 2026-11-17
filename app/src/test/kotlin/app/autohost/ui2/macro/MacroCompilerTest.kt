@@ -246,7 +246,7 @@ class MacroCompilerTest {
                 MacroStep.Log("after the finish"),
             ),
         )
-        assertTrue(p.any { it.contains("Type text") && it.contains("app package") })
+        assertTrue(p.any { it.contains("Type text") && it.contains("needs an app") })
         assertTrue(p.any { it.contains("text to type") })
         assertTrue(p.any { it.contains("needs a direction") })
         assertTrue(p.any { it.contains("needs a key") })
