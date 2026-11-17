@@ -1,13 +1,16 @@
-# CI digest - run 39 - branch work/s02-green - commit fdd065d
+# CI digest - run 40 - branch work/s02-green - commit 7992b1b
 tests step outcome: failure
 
-## Verdict: RED - 1561 tests ran, 1 failed, 0 Kotlin compile errors, 1 failed Gradle tasks, 4 modules with no results
+## Verdict: RED - 1568 tests ran, 4 failed, 0 Kotlin compile errors, 1 failed Gradle tasks, 4 modules with no results
 
 ## Failed Gradle tasks
 - :app:testCoreLiteDebugUnitTest
 
-## Failing tests (first 40 of 1)
-- [app] MacroEditorJourneyTest.the macro editor draws every kind of step, opens the pickers and refuses an unfinished macro in plain words - androidx.test.espresso.AppNotIdleException: Compose did not get idle after 179963 attempts in 60 SECONDS. Please check your measure/layout lambdas, they may be causing an infinite composition loop. Or set Espresso's mas…
+## Failing tests (first 40 of 4)
+- [app] MacroEditorJourneyTest.the task picker opens with a search box and closes - java.lang.AssertionError: wait for [Search] -> AppNotIdleException: Compose did not get idle after 173988 attempts in 60 SECONDS. Please check your measure/layout lambdas, they m
+- [app] MacroEditorJourneyTest.an optional app starts on any app and its list can clear the choice - java.lang.AssertionError: wait for [Search] -> AppNotIdleException: Compose did not get idle after 62797 attempts in 60 SECONDS. Please check your measure/layout lambdas, they ma
+- [app] MacroEditorJourneyTest.the app picker opens with a search box and closes - java.lang.AssertionError: wait for [Search] -> AppNotIdleException: Compose did not get idle after 5547 attempts in 60 SECONDS. Please check your measure/layout lambdas, they may
+- [app] MacroEditorJourneyTest.every kind of step can be added and draws its fields - java.lang.AssertionError: wait for [Write to the run log] -> ComposeTimeoutException: Condition still not satisfied after 40000 ms
 
 ## Modules that produced no test results (compile error, timeout, or no tests)
 - runtime/api
@@ -16,7 +19,7 @@ tests step outcome: failure
 - testing/fixture-app
 
 ## Per module (tests / failed / skipped)
-- app: 373 / 1 / 0
+- app: 380 / 4 / 0
 - capabilities/a11y: 114 / 0 / 0
 - capabilities/app: 32 / 0 / 0
 - capabilities/audio: 8 / 0 / 0
@@ -45,7 +48,11 @@ tests step outcome: failure
 - runtime/flow: 117 / 0 / 24
 - runtime/js: 41 / 0 / 0
 
-## Style baseline (report only): 20894 ktlint/detekt findings
+## Style baseline (report only): 20923 ktlint/detekt findings
+- app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:14:1 Class body should not start with blank line
+- app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:32 Newline expected after opening parenthesis
+- app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:50 Parameter should start on a newline
+- app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:81 Newline expected before closing parenthesis
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:6:1 Unused import
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:11:1 Unused import
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:12:1 Unused import
@@ -62,7 +69,3 @@ tests step outcome: failure
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:91:65 Newline expected before expression body
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:93:24 A multiline expression should start on a new line
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:100:1 Exceeded max line length (120) (cannot be auto-corrected)
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:102:22 A multiline expression should start on a new line
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:123:39 Newline expected after opening parenthesis
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:123:56 Parameter should start on a newline
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:123:71 Parameter should start on a newline
