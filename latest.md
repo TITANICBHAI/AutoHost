@@ -1,16 +1,7 @@
-# CI digest - run 40 - branch work/s02-green - commit 7992b1b
-tests step outcome: failure
+# CI digest - run 41 - branch work/s02-green - commit 45d63b1
+tests step outcome: success
 
-## Verdict: RED - 1568 tests ran, 4 failed, 0 Kotlin compile errors, 1 failed Gradle tasks, 4 modules with no results
-
-## Failed Gradle tasks
-- :app:testCoreLiteDebugUnitTest
-
-## Failing tests (first 40 of 4)
-- [app] MacroEditorJourneyTest.the task picker opens with a search box and closes - java.lang.AssertionError: wait for [Search] -> AppNotIdleException: Compose did not get idle after 173988 attempts in 60 SECONDS. Please check your measure/layout lambdas, they m
-- [app] MacroEditorJourneyTest.an optional app starts on any app and its list can clear the choice - java.lang.AssertionError: wait for [Search] -> AppNotIdleException: Compose did not get idle after 62797 attempts in 60 SECONDS. Please check your measure/layout lambdas, they ma
-- [app] MacroEditorJourneyTest.the app picker opens with a search box and closes - java.lang.AssertionError: wait for [Search] -> AppNotIdleException: Compose did not get idle after 5547 attempts in 60 SECONDS. Please check your measure/layout lambdas, they may
-- [app] MacroEditorJourneyTest.every kind of step can be added and draws its fields - java.lang.AssertionError: wait for [Write to the run log] -> ComposeTimeoutException: Condition still not satisfied after 40000 ms
+## Verdict: GREEN - 1569 tests ran, 0 failed, 0 Kotlin compile errors, 0 failed Gradle tasks, 4 modules with no results
 
 ## Modules that produced no test results (compile error, timeout, or no tests)
 - runtime/api
@@ -19,7 +10,7 @@ tests step outcome: failure
 - testing/fixture-app
 
 ## Per module (tests / failed / skipped)
-- app: 380 / 4 / 0
+- app: 381 / 0 / 0
 - capabilities/a11y: 114 / 0 / 0
 - capabilities/app: 32 / 0 / 0
 - capabilities/audio: 8 / 0 / 0
@@ -48,7 +39,7 @@ tests step outcome: failure
 - runtime/flow: 117 / 0 / 24
 - runtime/js: 41 / 0 / 0
 
-## Style baseline (report only): 20923 ktlint/detekt findings
+## Style baseline (report only): 20933 ktlint/detekt findings
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:14:1 Class body should not start with blank line
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:32 Newline expected after opening parenthesis
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:50 Parameter should start on a newline
