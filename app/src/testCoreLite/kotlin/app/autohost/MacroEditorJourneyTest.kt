@@ -19,11 +19,12 @@ import org.robolectric.annotation.Config
 /**
  * Composes the real quick-macro editor (opened from the Build tab) the way a person would use it, in small tests so a
  * failure names the part that broke: the editor itself, the two drop-down menus, the app picker, the task picker, every
- * step kind, and Save on an unfinished macro. A layout-time crash in any of the new fields or dialogs fails here, not on
- * a phone (UiJourneyTest explains why). The window is 3600 dp tall so the whole editor and the 11-item step menu fit
- * without scrolling: this checks that the screens draw and react, not that they fit a small phone (still unverified).
+ * step kind, and Save on an unfinished macro. A layout-time crash in any of the new fields or lists fails here, not on
+ * a phone (UiJourneyTest explains why). The window is 3600 dp tall so the editor and the 11-item step menu fit without
+ * scrolling: this checks that the screens draw and react, not that they fit a small phone (still unverified).
  * Every wait and click names itself in its failure message, because the first CI run of this file failed with "Compose
- * did not get idle" and nothing said where.
+ * did not get idle" and nothing said where. It turned out to be the pop-up dialogs the pickers first used (CI run 40:
+ * both drop-down menus were fine); the pickers now open as an inline list and no test here opens a dialog.
  * SDK 35 for the same reason as [LaunchSmokeTest].
  */
 @RunWith(RobolectricTestRunner::class)
@@ -91,10 +92,11 @@ class MacroEditorJourneyTest {
         clickText(label)
     }
 
-    /** Opens a picker dialog by the text on its button, checks it drew its search box, and closes it without choosing. */
-    private fun openAndCloseDialog(buttonText: String) {
+    /** Opens a picker list by the text on its button, checks it drew its search box, and closes it without choosing. */
+    private fun openAndClosePicker(buttonText: String) {
         clickText(buttonText)
         waitForText("Search")
+        waitForText("Close")
         clickText("Close")
         waitUntilGone("Search")
     }
@@ -119,13 +121,13 @@ class MacroEditorJourneyTest {
     @Test fun `the app picker opens with a search box and closes`() = withEditor {
         chooseWhen("Every day at a time", "An app is opened")
         waitForText("App: choose an app")
-        openAndCloseDialog("App: choose an app")
+        openAndClosePicker("App: choose an app")
     }
 
     @Test fun `the task picker opens with a search box and closes`() = withEditor {
         addStep("Run another task")
         waitForText("Task to run: choose a task")
-        openAndCloseDialog("Task to run: choose a task")
+        openAndClosePicker("Task to run: choose a task")
     }
 
     @Test fun `an optional app starts on any app and its list can clear the choice`() = withEditor {
@@ -138,16 +140,22 @@ class MacroEditorJourneyTest {
         waitUntilGone("Search")
     }
 
-    @Test fun `every kind of step can be added and draws its fields`() = withEditor {
-        clickText("+ Add a value")
-        waitForText("Default value")
-        for (label in MacroSteps.menu().map { it.label }) addStep(label)
+    // Two tests, not one: run 40 added all eleven steps in one editor and the eleventh "+ Add step" click missed, most
+    // likely because the page had grown taller than the 3600 dp window (a click below the window hits nothing).
+    @Test fun `the first six kinds of step can be added and draw their fields`() = withEditor {
+        for (label in MacroSteps.menu().map { it.label }.take(6)) addStep(label)
         waitForText("App: choose an app")
         waitForText("Text to wait for")
         waitForText("Button text")
         waitForText("Field label (blank: the field you just tapped)")
         waitForText("Direction: Down")
         waitForText("Key: Back")
+    }
+
+    @Test fun `the other kinds of step can be added and draw their fields`() = withEditor {
+        clickText("+ Add a value")
+        waitForText("Default value")
+        for (label in MacroSteps.menu().map { it.label }.drop(6)) addStep(label)
         waitForText("Task to run: choose a task")
         waitForText("Values to hand over")
         waitForText("Wait up to (seconds, 1-600)")
