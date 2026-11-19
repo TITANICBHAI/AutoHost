@@ -48,6 +48,9 @@ KNOWN = {
     "run_starts": {
         "app/src/main/kotlin/app/autohost/AppGraph.kt":
             "resumeRunFromDb rebuilds the lost record, then goes through the orchestrator (P5-05, recorded 2026-11-03)",
+        "app/src/testCoreLite/kotlin/app/autohost/AgentChatJourneyTest.kt":
+            "test only: puts finished and running records into the run store so the chat can be drawn without an "
+            "agent; nothing is started and no orchestrator is involved (INT-F1, recorded 2026-11-19)",
     },
 }
 
