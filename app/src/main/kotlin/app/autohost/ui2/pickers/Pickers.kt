@@ -66,12 +66,16 @@ fun AppPickerButton(
     apps: List<AppChoice>,
     hide: String?,
     noneLabel: String? = null,
+    blankText: String = "choose an app",
     onPick: (String) -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
-    val shown = PickerModel.appLabel(apps, pkg) ?: noneLabel?.takeIf { pkg.isBlank() } ?: "choose an app"
+    val shown = PickerModel.appLabel(apps, pkg) ?: noneLabel?.takeIf { pkg.isBlank() } ?: blankText
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        OutlinedButton(onClick = { open = !open }, modifier = Modifier.fillMaxWidth()) { Text("$label: $shown") }
+        // a blank [label] makes the button read as just [shown]: "+ Add an app", not ": + Add an app"
+        OutlinedButton(onClick = { open = !open }, modifier = Modifier.fillMaxWidth()) {
+            Text(if (label.isBlank()) shown else "$label: $shown")
+        }
         if (open) {
             var query by remember { mutableStateOf("") }
             val rows = remember(apps, query) { PickerModel.apps(apps, query, hide) }

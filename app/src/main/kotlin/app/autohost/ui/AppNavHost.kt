@@ -52,8 +52,10 @@ fun AppNavHost(
     runId: String?,
     onNavigate: (Routes, String?) -> Unit,
 ) {
+    // The tab the person was on, so Back from a detail screen lands on it: Agent chat -> "Open details" -> Back is the chat.
+    var lastTab by rememberSaveable { mutableStateOf(0) }
     when (route) {
-        Routes.LIBRARY -> MainTabs(activity, onNavigate, initialTab = 0)
+        Routes.LIBRARY -> MainTabs(activity, onNavigate, initialTab = lastTab, onTabChanged = { lastTab = it })
         Routes.SETUP -> {
             // "What this phone allows": reached from Settings and from a task that needs something. Not a tab, not onboarding.
             androidx.compose.material3.Surface {
@@ -195,9 +197,15 @@ private val MAIN_TABS = listOf(
  * Tasks, Agent, Build, Activity, Settings. What each tab shows comes from the ui2 models.
  */
 @Composable
-private fun MainTabs(activity: MainActivity, onNavigate: (Routes, String?) -> Unit, initialTab: Int) {
+private fun MainTabs(
+    activity: MainActivity,
+    onNavigate: (Routes, String?) -> Unit,
+    initialTab: Int,
+    onTabChanged: (Int) -> Unit = {},
+) {
     val graph = (activity.application as app.autohost.AutoHostApp).graph
     var tab by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(initialTab) }
+    androidx.compose.runtime.LaunchedEffect(tab) { onTabChanged(tab) }
     var addOpen by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var loaded by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     val onboarded by graph.onboarded.collectAsState()
@@ -247,11 +255,9 @@ private fun MainTabs(activity: MainActivity, onNavigate: (Routes, String?) -> Un
                         onAddTask = { addOpen = true },
                         onOpenSetup = { onNavigate(Routes.SETUP, null) },
                     )
-                    1 -> AskSheetHost(
+                    1 -> app.autohost.ui2.chat.AgentChatHost(
                         graph,
-                        onBack = { tab = 0 },
                         onOpenRun = { runId -> onNavigate(Routes.RUN, runId) },
-                        simple = true,
                         onOpenAiSettings = { onNavigate(Routes.AI_SETTINGS, null) },
                     )
                     2 -> app.autohost.ui2.BuildScreen(activity, onNavigate, onAddTask = { addOpen = true })
