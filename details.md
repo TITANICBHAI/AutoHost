@@ -5,3 +5,6 @@
 ## All failing tests
 
 ## Gradle 'What went wrong' blocks
+### 1
+    Execution failed for task ':app:testCoreLiteDebugUnitTest'.
+    > Timeout has been exceeded
