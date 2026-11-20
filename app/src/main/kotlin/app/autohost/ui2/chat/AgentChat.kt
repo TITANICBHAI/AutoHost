@@ -24,8 +24,14 @@ sealed interface ChatLine {
     /** The run is still going, or waiting for the person. */
     data class Working(override val key: String, val text: String, val waitingForYou: Boolean) : ChatLine
 
-    /** The run is over. */
-    data class Outcome(override val key: String, val tone: Tone, val headline: String, val detail: String?) : ChatLine
+    /** The run is over. [fix] is a button when the catalog names a fix for the reason that the chat can carry out. */
+    data class Outcome(
+        override val key: String,
+        val tone: Tone,
+        val headline: String,
+        val detail: String?,
+        val fix: ChatFix? = null,
+    ) : ChatLine
 
     enum class Tone { Good, Bad, Neutral }
 }
@@ -44,6 +50,21 @@ sealed interface ChatRow {
         override val key: String get() = "$runId:${line.key}"
     }
 }
+
+/** What a button under a refusal or a failed run does. */
+sealed interface FixTarget {
+    /** The AI settings screen (a model, a key, AI switched on). */
+    object AiSettings : FixTarget
+
+    /** The screen that reviews what tasks and the agent may do. */
+    object ReviewPermissions : FixTarget
+
+    /** A system screen, handed to the app's fix launcher by the catalog's action name. */
+    data class SystemScreen(val action: String) : FixTarget
+}
+
+/** A button the catalog says would fix a stop: its words (from the catalog) and what it does. */
+data class ChatFix(val label: String, val target: FixTarget)
 
 /**
  * The agent chat as pure logic (INT-F, docs/INTEGRATION_V3.md §5): what a run's events and record look like as a
@@ -83,6 +104,24 @@ object AgentChat {
     /** The remembered apps that are still installed. With no list yet (it is still loading) nothing is dropped. */
     fun stillInstalled(packages: List<String>, installed: Set<String>): List<String> =
         if (installed.isEmpty()) packages else packages.filter { it in installed }
+
+    /** The catalog fix actions the chat can carry out. A fix not in this set draws no button (no dead buttons). */
+    val supportedFixes: Set<String> = setOf("OPEN_AI_SETTINGS", "OPEN_PERMISSION_REVIEW", "OPEN_ACCESSIBILITY_SETTINGS")
+
+    /**
+     * The button for the reason a start was refused or a run failed: the catalog's words, and what it does. Null when the
+     * catalog names no fix for the reason, the fix needs a value, or the chat cannot carry it out.
+     */
+    fun fixFor(reason: String?): ChatFix? {
+        val fix = ReasonCopy.fix(reason) ?: return null
+        val target: FixTarget = when (fix.action) {
+            "OPEN_AI_SETTINGS" -> FixTarget.AiSettings
+            "OPEN_PERMISSION_REVIEW" -> FixTarget.ReviewPermissions
+            "OPEN_ACCESSIBILITY_SETTINGS" -> FixTarget.SystemScreen(fix.action)
+            else -> return null
+        }
+        return ChatFix(fix.label, target)
+    }
 
     /**
      * The conversation for the stored goals, oldest first: each goal, then what the agent did for it. [recordOf] and
@@ -156,7 +195,9 @@ object AgentChat {
         RunStatus.PAUSED -> ChatLine.Working("w", "Paused.", waitingForYou = false)
         RunStatus.WAITING_USER -> ChatLine.Working("w", "The agent is waiting for you.", waitingForYou = true)
         RunStatus.SUCCEEDED -> ChatLine.Outcome("o", ChatLine.Tone.Good, "Done.", summary(record, appNames))
-        RunStatus.FAILED -> ChatLine.Outcome("o", ChatLine.Tone.Bad, "The agent could not finish.", explain(record.reason))
+        RunStatus.FAILED -> ChatLine.Outcome(
+            "o", ChatLine.Tone.Bad, "The agent could not finish.", explain(record.reason), fixFor(record.reason),
+        )
         RunStatus.CANCELLED -> ChatLine.Outcome(
             "o", ChatLine.Tone.Neutral, "Stopped.",
             if (record.reason == null || record.reason == "USER_CANCELLED") null else explain(record.reason),

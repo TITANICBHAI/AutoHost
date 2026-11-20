@@ -22,6 +22,7 @@ import app.autohost.ui2.ReasonCopy
 import app.autohost.ui2.chat.ChatEntry
 import app.autohost.ui2.chat.ChatTranscript
 import app.autohost.ui2.chat.ChatTranscriptStore
+import app.autohost.ui2.chat.REFUSAL_FIX_TAG
 import app.autohost.ui2.chat.REFUSAL_TAG
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.buildJsonObject
@@ -221,6 +222,23 @@ class AgentChatJourneyTest {
         waitForText(ReasonCopy.text("BUDGET_TURNS")!!)
         assertFalse("no exception text", shown("boom", substring = true) || shown("IllegalState", substring = true))
         assertFalse("no reason code", shown("BUDGET_TURNS", substring = true))
+        assertFalse(
+            "the catalog names no fix for this reason, so no fix button",
+            shown("Open AI settings") || shown("Open accessibility settings") || shown("Review permissions"),
+        )
+    }
+
+    @Test fun `a run that failed because the AI refused the key offers Open AI settings and the button opens them`() = withChat(
+        seed = {
+            seedRun("run-key", RunStatus.FAILED, reason = "MODEL_AUTH")
+            saveChat(oneGoal("run-key", "Do something"))
+        },
+    ) {
+        waitForText("The agent could not finish.")
+        waitForText(ReasonCopy.text("MODEL_AUTH")!!)
+        waitForText("Open AI settings")
+        clickText("Open AI settings")
+        waitForText("AI features")
     }
 
     @Test fun `a run in progress says what it is doing and offers Stop instead of Send`() = withChat(
@@ -284,6 +302,33 @@ class AgentChatJourneyTest {
             assertTrue("the refusal has words", said.isNotBlank())
             assertFalse("no reason code: $said", Regex("[A-Z][A-Z0-9]+_[A-Z0-9_]+").containsMatchIn(said))
             assertFalse("no exception text: $said", said.contains("Exception") || said.contains("kotlin") || said.contains("java."))
+        }
+    }
+
+    @Test fun `a refusal that names a fix draws its button with the catalog's words`() = withChat(
+        seed = {
+            app.graph.aiProfileStore.save(listOf(profile))
+            runBlocking { app.graph.refreshAiFacts(enabled = true, profiles = listOf(profile), cleartextLoopback = false) }
+            saveChat(ChatTranscript(packages = listOf(app.packageName), profileId = "p1"))
+        },
+    ) {
+        waitForText("Model: P1", substring = true)
+        at("type a goal") { compose.onAllNodes(hasSetTextAction()).onFirst().performTextInput("Open the shop app") }
+        at("Send turns on") { compose.waitUntil(timeoutMillis = 40_000) { sendIsOn() } }
+        clickText("Send")
+        // no key is saved for the profile and no accessibility service runs here, so the start refuses; either reason has a fix
+        at("the refusal and its button appear") {
+            compose.waitUntil(timeoutMillis = 40_000) {
+                compose.onAllNodes(hasTestTag(REFUSAL_FIX_TAG)).fetchSemanticsNodes().isNotEmpty()
+            }
+        }
+        val label = textOfTag(REFUSAL_FIX_TAG)
+        assertTrue("the button has the catalog's words: $label", label in setOf("Open AI settings", "Open accessibility settings", "Review permissions"))
+        assertFalse("the button shows no code: $label", Regex("[A-Z][A-Z0-9]+_[A-Z0-9_]+").containsMatchIn(label))
+        assertTrue("the refusal above it has words", textOfTag(REFUSAL_TAG).isNotBlank())
+        if (label == "Open AI settings") {
+            clickText(label)
+            waitForText("AI features")
         }
     }
 

@@ -261,6 +261,13 @@ private fun MainTabs(
                         graph,
                         onOpenRun = { runId -> onNavigate(Routes.RUN, runId) },
                         onOpenAiSettings = { onNavigate(Routes.AI_SETTINGS, null) },
+                        onFix = { target ->
+                            when (target) {
+                                app.autohost.ui2.chat.FixTarget.AiSettings -> onNavigate(Routes.AI_SETTINGS, null)
+                                app.autohost.ui2.chat.FixTarget.ReviewPermissions -> onNavigate(Routes.SETTINGS, null)
+                                is app.autohost.ui2.chat.FixTarget.SystemScreen -> app.autohost.fix.FixHub.launch(activity, target.action)
+                            }
+                        },
                     )
                     2 -> app.autohost.ui2.BuildScreen(activity, onNavigate, onAddTask = { addOpen = true })
                     3 -> app.autohost.ui2.ActivityScreen(activity, onNavigate)

@@ -203,6 +203,59 @@ class AgentChatTest {
         assertEquals("AutoHost does not have a plain explanation for why this stopped.", none.detail)
     }
 
+    // ---- the button under a refusal or a failure ---------------------------------------------------------------------
+
+    @Test fun `every reason the agent start can refuse with a fix gets a button the chat can carry out`() {
+        assertEquals(
+            ChatFix("Open accessibility settings", FixTarget.SystemScreen("OPEN_ACCESSIBILITY_SETTINGS")),
+            AgentChat.fixFor("A11Y_SERVICE_DISABLED"),
+        )
+        for (reason in listOf("AI_DISABLED", "AI_NOT_CONFIGURED")) {
+            assertEquals(reason, ChatFix("Open AI settings", FixTarget.AiSettings), AgentChat.fixFor(reason))
+        }
+        assertEquals(ChatFix("Review permissions", FixTarget.ReviewPermissions), AgentChat.fixFor("AI_GRANTS_TOO_BROAD"))
+    }
+
+    @Test fun `a reason with no fix, or a fix the chat cannot carry out, has no button`() {
+        for (reason in listOf(null, "", "START_FAILED", "SCREEN_LOCKED", "UI_RUN_ACTIVE", "USER_CANCELLED", "BUDGET_TURNS")) {
+            assertNull(reason, AgentChat.fixFor(reason))
+        }
+        // the catalog names a fix for these, but the chat has no way to perform it, so it draws no button
+        assertNull(AgentChat.fixFor("NOTIFICATION_PERMISSION_DENIED"))
+        assertNull(AgentChat.fixFor("BATTERY_OPTIMIZED"))
+    }
+
+    @Test fun `every fix the chat carries out is one the catalog gives words to and some reason reaches`() {
+        val actions = ReasonCopy.fixTable.values.map { it.action }.toSet()
+        for (action in AgentChat.supportedFixes) {
+            assertTrue("$action is in the catalog", action in actions)
+            val reached = ReasonCopy.fixTable.keys.any { ReasonCopy.fix(it)?.action == action && AgentChat.fixFor(it) != null }
+            assertTrue("$action is reached by some reason", reached)
+        }
+    }
+
+    @Test fun `a failed run offers the fix its reason names and no other outcome does`() {
+        val auth = AgentChat.lines(emptyList(), record(RunStatus.FAILED, reason = "MODEL_AUTH")).last() as ChatLine.Outcome
+        assertEquals("Open AI settings", auth.fix?.label)
+        val lost = AgentChat.lines(emptyList(), record(RunStatus.FAILED, reason = "A11Y_LOST")).last() as ChatLine.Outcome
+        assertEquals(FixTarget.SystemScreen("OPEN_ACCESSIBILITY_SETTINGS"), lost.fix?.target)
+        val budget = AgentChat.lines(emptyList(), record(RunStatus.FAILED, reason = "BUDGET_TURNS")).last() as ChatLine.Outcome
+        assertNull(budget.fix)
+        for (status in listOf(RunStatus.SUCCEEDED, RunStatus.CANCELLED, RunStatus.INTERRUPTED, RunStatus.SKIPPED)) {
+            val last = AgentChat.lines(emptyList(), record(status, reason = "MODEL_AUTH")).last() as ChatLine.Outcome
+            assertNull(status.name, last.fix)
+        }
+    }
+
+    @Test fun `no button shows a code, an id or a package name`() {
+        for ((reason, fix) in ReasonCopy.fixTable) {
+            val chat = AgentChat.fixFor(reason) ?: continue
+            assertFalse(reason, Regex("[A-Z][A-Z0-9]+_[A-Z0-9_]+").containsMatchIn(chat.label))
+            assertFalse(reason, chat.label.contains("package", ignoreCase = true))
+            assertEquals(reason, fix.label, chat.label)
+        }
+    }
+
     @Test fun `stopping by the person is neutral and a stop by the host says why`() {
         val byPerson = AgentChat.lines(emptyList(), record(RunStatus.CANCELLED, reason = "USER_CANCELLED")).last() as ChatLine.Outcome
         assertEquals("Stopped.", byPerson.headline)

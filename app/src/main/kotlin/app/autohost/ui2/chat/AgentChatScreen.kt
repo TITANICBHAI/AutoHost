@@ -76,6 +76,7 @@ fun AgentChatHost(
     graph: AppGraph,
     onOpenRun: (String) -> Unit,
     onOpenAiSettings: () -> Unit,
+    onFix: (FixTarget) -> Unit,
 ) {
     val store = remember(graph) {
         ChatTranscriptStore(graph.application.getSharedPreferences(ChatTranscriptStore.PREFS_NAME, Context.MODE_PRIVATE))
@@ -86,7 +87,7 @@ fun AgentChatHost(
     var profileId by remember(store) { mutableStateOf(transcript.profileId) }
     var profiles by remember { mutableStateOf(emptyList<ProviderProfile>()) }
     var aiEnabled by remember { mutableStateOf(false) }
-    var refusal by remember { mutableStateOf<String?>(null) }
+    var refusal by remember { mutableStateOf<Refusal?>(null) }
     var starting by remember { mutableStateOf(false) }
     var setupOpen by remember { mutableStateOf(false) }
     var tick by remember { mutableStateOf(0) }
@@ -145,8 +146,11 @@ fun AgentChatHost(
                     store.save(transcript)
                     goal = ""
                 }
-                is AhResult.Err -> refusal = ReasonCopy.text(started.error.reason) ?: START_FAILED
-                null -> refusal = START_FAILED
+                is AhResult.Err -> refusal = Refusal(
+                    ReasonCopy.text(started.error.reason) ?: START_FAILED,
+                    AgentChat.fixFor(started.error.reason),
+                )
+                null -> refusal = Refusal(START_FAILED, null)
             }
             starting = false
         }
@@ -173,7 +177,7 @@ fun AgentChatHost(
             if (rows.isEmpty()) {
                 EmptyChat(onExample = { goal = it })
             } else {
-                Conversation(rows, onOpenRun)
+                Conversation(rows, onOpenRun, onFix)
             }
         }
         SetupStrip(
@@ -197,6 +201,7 @@ fun AgentChatHost(
             starting = starting,
             running = runningId != null,
             refusal = refusal,
+            onFix = onFix,
             onSend = send,
             onStop = { runningId?.let { graph.orchestrator.cancel(it) } },
         )
@@ -208,6 +213,12 @@ private const val MAX_GOAL_CHARS = 2_000
 
 /** Lets a journey test find the "could not start" line whatever its words are. */
 const val REFUSAL_TAG = "chat-refusal"
+
+/** Lets a journey test find the button under the "could not start" line. */
+const val REFUSAL_FIX_TAG = "chat-refusal-fix"
+
+/** Why the last message could not start a run, in the catalog's words, and the button that would fix it (if any). */
+private data class Refusal(val text: String, val fix: ChatFix?)
 
 @Composable
 private fun EmptyChat(onExample: (String) -> Unit) {
@@ -230,7 +241,7 @@ private fun EmptyChat(onExample: (String) -> Unit) {
 }
 
 @Composable
-private fun Conversation(rows: List<ChatRow>, onOpenRun: (String) -> Unit) {
+private fun Conversation(rows: List<ChatRow>, onOpenRun: (String) -> Unit, onFix: (FixTarget) -> Unit) {
     val listState = rememberLazyListState()
     // follow the newest line while the person is at the bottom; stop following once they scroll up to read
     var follow by remember { mutableStateOf(true) }
@@ -246,12 +257,12 @@ private fun Conversation(rows: List<ChatRow>, onOpenRun: (String) -> Unit) {
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        items(rows, key = { it.key }) { row -> ChatRowView(row, onOpenRun) }
+        items(rows, key = { it.key }) { row -> ChatRowView(row, onOpenRun, onFix) }
     }
 }
 
 @Composable
-private fun ChatRowView(row: ChatRow, onOpenRun: (String) -> Unit) {
+private fun ChatRowView(row: ChatRow, onOpenRun: (String) -> Unit, onFix: (FixTarget) -> Unit) {
     when (row) {
         is ChatRow.Goal -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
             Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(16.dp), modifier = Modifier.widthIn(max = 300.dp)) {
@@ -281,7 +292,7 @@ private fun ChatRowView(row: ChatRow, onOpenRun: (String) -> Unit) {
                 Text(line.text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
                 if (line.waitingForYou) TextButton(onClick = { onOpenRun(row.runId) }) { Text("Open details") }
             }
-            is ChatLine.Outcome -> OutcomeCard(line, onOpen = { onOpenRun(row.runId) })
+            is ChatLine.Outcome -> OutcomeCard(line, onOpen = { onOpenRun(row.runId) }, onFix = onFix)
         }
     }
 }
@@ -295,7 +306,7 @@ private fun stepMark(ok: Boolean?, runFinished: Boolean): String = when {
 }
 
 @Composable
-private fun OutcomeCard(line: ChatLine.Outcome, onOpen: () -> Unit) {
+private fun OutcomeCard(line: ChatLine.Outcome, onOpen: () -> Unit, onFix: (FixTarget) -> Unit) {
     val container = when (line.tone) {
         ChatLine.Tone.Good -> MaterialTheme.colorScheme.primaryContainer
         ChatLine.Tone.Bad -> MaterialTheme.colorScheme.errorContainer
@@ -305,6 +316,7 @@ private fun OutcomeCard(line: ChatLine.Outcome, onOpen: () -> Unit) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(line.headline, style = MaterialTheme.typography.titleSmall)
             line.detail?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+            line.fix?.let { fix -> Button(onClick = { onFix(fix.target) }) { Text(fix.label) } }
             TextButton(onClick = onOpen) { Text("Open details") }
         }
     }
@@ -400,18 +412,22 @@ private fun Composer(
     canSend: Boolean,
     starting: Boolean,
     running: Boolean,
-    refusal: String?,
+    refusal: Refusal?,
+    onFix: (FixTarget) -> Unit,
     onSend: () -> Unit,
     onStop: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        refusal?.let {
+        refusal?.let { said ->
             Text(
-                it,
+                said.text,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.testTag(REFUSAL_TAG),
             )
+            said.fix?.let { fix ->
+                Button(onClick = { onFix(fix.target) }, modifier = Modifier.testTag(REFUSAL_FIX_TAG)) { Text(fix.label) }
+            }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
             OutlinedTextField(
