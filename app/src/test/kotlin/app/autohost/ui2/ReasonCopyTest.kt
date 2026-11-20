@@ -24,7 +24,7 @@ class ReasonCopyTest {
         error("repo file not found from ${System.getProperty("user.dir")}: $relative")
     }
 
-    private data class Entry(val code: String, val text: String, val hasParams: Boolean)
+    private data class Entry(val code: String, val text: String, val hasParams: Boolean, val fixAction: String?)
 
     private fun catalog(): List<Entry> {
         val root = Json.parseToJsonElement(repoFile("schemas/errors.json").readText()).jsonObject
@@ -34,8 +34,28 @@ class ReasonCopyTest {
                 code = item.getValue("code").jsonPrimitive.content,
                 text = item.getValue("userMessage").jsonPrimitive.content,
                 hasParams = item["params"]?.jsonArray?.isNotEmpty() == true,
+                fixAction = item["fixAction"]?.jsonPrimitive?.content,
             )
         }
+    }
+
+    /** The words on each fix action's button, as the catalog gives them. */
+    private fun fixLabels(): Map<String, String> {
+        val root = Json.parseToJsonElement(repoFile("schemas/errors.json").readText()).jsonObject
+        return root.getValue("fixActions").jsonArray.associate { element ->
+            val item = element.jsonObject
+            item.getValue("id").jsonPrimitive.content to (item["label"]?.jsonPrimitive?.content ?: "")
+        }
+    }
+
+    private fun isPlain(entry: Entry) = !(entry.hasParams || entry.text.contains('{'))
+
+    /** The button words for a plain reason, or null when the catalog names no fix (NONE) or gives it no words. */
+    private fun buttonWords(entry: Entry, labels: Map<String, String>): String? {
+        if (!isPlain(entry)) return null
+        val action = entry.fixAction ?: return null
+        if (action == "NONE") return null
+        return labels[action]?.takeIf { it.isNotBlank() }
     }
 
     @Test fun `every catalog text that needs no value is copied word for word`() {
@@ -54,6 +74,29 @@ class ReasonCopyTest {
             assertNull(entry.code, ReasonCopy.text(entry.code))
         }
         assertFalse(ReasonCopy.table.values.any { it.contains('{') || it.contains('}') })
+    }
+
+    @Test fun `every plain reason that names a fix gets the catalog's button, word for word`() {
+        val labels = fixLabels()
+        val withButton = catalog().filter { buttonWords(it, labels) != null }
+        assertTrue("the catalog has plain reasons with a button", withButton.size > 10)
+        for (entry in withButton) {
+            assertEquals(entry.code, ReasonFix(entry.fixAction!!, buttonWords(entry, labels)!!), ReasonCopy.fix(entry.code))
+        }
+    }
+
+    @Test fun `the button table holds exactly those reasons and no other`() {
+        val labels = fixLabels()
+        val wanted = catalog().filter { buttonWords(it, labels) != null }.map { it.code }.toSet()
+        assertEquals(wanted, ReasonCopy.fixTable.keys)
+    }
+
+    @Test fun `a reason with no fix, or whose text needs a value, has no button`() {
+        val labels = fixLabels()
+        for (entry in catalog().filter { buttonWords(it, labels) == null }) assertNull(entry.code, ReasonCopy.fix(entry.code))
+        assertNull(ReasonCopy.fix(null))
+        assertNull(ReasonCopy.fix("START_FAILED"))
+        assertTrue("every button has words", ReasonCopy.fixTable.values.all { it.label.isNotBlank() && it.action != "NONE" })
     }
 
     @Test fun `an unknown or missing code has no text`() {

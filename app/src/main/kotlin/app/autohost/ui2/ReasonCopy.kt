@@ -4,7 +4,8 @@ package app.autohost.ui2
 
 /**
  * The plain-language text for the reason a run stopped, copied from the error catalog
- * (`schemas/errors.json`, `reasonCodes`). Only texts that need no value (a package, a number) are here.
+ * (`schemas/errors.json`, `reasonCodes`), and the button the catalog attaches to it (`fixActions`). Only reasons
+ * that need no value (a package, a number) are here.
  */
 object ReasonCopy {
     /** The catalog's text for [reason], or null when the code is unknown or its text needs a value. */
@@ -78,4 +79,41 @@ object ReasonCopy {
         "UI_RUN_ACTIVE" to "Another UI run is active; only one UI run can run at a time.",
         "BUDGET_INVALID" to "The run budgets are invalid (a budget of zero refuses to start).",
     )
+
+    /** The button the catalog attaches to [reason] (the action it names and the words on it), or null when it names none. */
+    fun fix(reason: String?): ReasonFix? = if (reason == null) null else FIX_TABLE[reason]
+
+    /** Every reason that has a button, for the test that compares it with the catalog. */
+    val fixTable: Map<String, ReasonFix> get() = FIX_TABLE
+
+    private val FIX_TABLE: Map<String, ReasonFix> = mapOf(
+        "A11Y_SERVICE_DISABLED" to ReasonFix("OPEN_ACCESSIBILITY_SETTINGS", "Open accessibility settings"),
+        "A11Y_BLOCKED_ADVANCED_PROTECTION" to ReasonFix("EXPLAIN_ADVANCED_PROTECTION", "Learn more"),
+        "A11Y_LOST" to ReasonFix("OPEN_ACCESSIBILITY_SETTINGS", "Open accessibility settings"),
+        "RESTRICTED_SETTINGS_NOT_ALLOWED" to ReasonFix("SHOW_RESTRICTED_SETTINGS_HELP", "Show steps"),
+        "NOTIFICATION_PERMISSION_DENIED" to ReasonFix("REQUEST_POST_NOTIFICATIONS", "Allow notifications"),
+        "NOTIFICATION_ACCESS_DISABLED" to ReasonFix("OPEN_NOTIFICATION_ACCESS_SETTINGS", "Open notification access"),
+        "EXACT_ALARM_DENIED" to ReasonFix("OPEN_EXACT_ALARM_SETTINGS", "Allow exact alarms"),
+        "BATTERY_OPTIMIZED" to ReasonFix("REQUEST_BATTERY_EXEMPTION", "Exempt from battery limits"),
+        "OEM_AUTOSTART_NEEDED" to ReasonFix("SHOW_OEM_GUIDE", "Show phone-specific steps"),
+        "AUTO_REVOKE_ENABLED" to ReasonFix("OPEN_APP_INFO_UNUSED_SETTINGS", "Open app settings"),
+        "OVERLAY_PERMISSION_DENIED" to ReasonFix("OPEN_OVERLAY_SETTINGS", "Allow display over apps"),
+        "USAGE_ACCESS_DENIED" to ReasonFix("OPEN_USAGE_ACCESS_SETTINGS", "Open usage access"),
+        "WRITE_SETTINGS_DENIED" to ReasonFix("OPEN_WRITE_SETTINGS", "Allow modifying settings"),
+        "IME_NOT_SELECTED" to ReasonFix("SELECT_IME", "Select AutoHost keyboard"),
+        "SHELL_TIER_NOT_PAIRED" to ReasonFix("OPEN_SHELL_SETUP", "Open shell setup"),
+        "PC_ASSIST_REQUIRED" to ReasonFix("SHOW_PC_COMMAND_SHELL", "Show command"),
+        "SECURE_SETTINGS_NOT_GRANTED" to ReasonFix("SHOW_PC_COMMAND_SECURE", "Show command"),
+        "PROJECTION_NOT_GRANTED" to ReasonFix("REQUEST_PROJECTION_CONSENT", "Allow screen capture"),
+        "DISABLED_BY_SWITCH" to ReasonFix("OPEN_INSECURE_SWITCH", "Open switch"),
+        "DEV_API_DISABLED" to ReasonFix("OPEN_DEV_API_SETTINGS", "Open Dev API settings"),
+        "AI_DISABLED" to ReasonFix("OPEN_AI_SETTINGS", "Open AI settings"),
+        "AI_NOT_CONFIGURED" to ReasonFix("OPEN_AI_SETTINGS", "Open AI settings"),
+        "MODEL_AUTH" to ReasonFix("OPEN_AI_SETTINGS", "Open AI settings"),
+        "MODEL_UNREACHABLE" to ReasonFix("OPEN_AI_SETTINGS", "Open AI settings"),
+        "AI_GRANTS_TOO_BROAD" to ReasonFix("OPEN_PERMISSION_REVIEW", "Review permissions"),
+    )
 }
+
+/** A button the catalog names for a stop: the id of what the app does, and the words on the button. */
+data class ReasonFix(val action: String, val label: String)
