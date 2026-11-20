@@ -1,5 +1,6 @@
 package app.autohost.nav
 
+import app.autohost.Routes
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -27,9 +28,27 @@ class NavStackTest {
         assertFalse(three.canPop)
     }
 
-    @Test fun `choosing a tab replaces the whole stack`() {
-        val stack = NavStack().navigate("SETTINGS").navigate("HEALTH").navigate("SETUP")
-        assertEquals(listOf(NavEntry("SETUP")), stack.entries)
+    // This test used to say that "SETUP" was a tab. It was one before UI v3 (Tasks / Setup / Schedules); the bottom bar is
+    // now one route and "What this phone allows" is opened from Settings, so the rule moved to the tab bar itself.
+    @Test fun `choosing the tab bar replaces the whole stack`() {
+        val stack = NavStack().navigate("SETTINGS").navigate("HEALTH").navigate("LIBRARY")
+        assertEquals(listOf(NavEntry("LIBRARY")), stack.entries)
+    }
+
+    @Test fun `only the tab bar is a root, so Back on any other screen returns instead of closing the app`() {
+        for (route in Routes.entries.filter { it != Routes.LIBRARY }) {
+            val stack = NavStack().navigate(route.name)
+            assertEquals("${route.name} is pushed on top of the tab bar", listOf("LIBRARY", route.name), stack.entries.map { it.route })
+            assertTrue("Back must work on ${route.name}", stack.canPop)
+            assertEquals("Back from ${route.name} returns to the tab bar", NavStack(), stack.pop())
+        }
+    }
+
+    @Test fun `a screen opened from a task returns to that task`() {
+        val stack = NavStack().navigate("TASK_DETAIL", "t1").navigate("SETUP")
+        assertEquals(listOf("LIBRARY", "TASK_DETAIL", "SETUP"), stack.entries.map { it.route })
+        assertEquals("TASK_DETAIL", stack.pop().top.route)
+        assertEquals("t1", stack.pop().top.arg)
     }
 
     @Test fun `an on-screen back button returns to the screen already in the stack`() {

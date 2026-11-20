@@ -42,8 +42,13 @@ data class NavStack(
     companion object {
         const val ROOT = "LIBRARY"
 
-        /** The three tab screens; each is a root of its own. */
-        val TABS = setOf("LIBRARY", "SETUP", "SCHEDULES")
+        /**
+         * Screens that are a root of their own. Only the tab bar is: its five tabs are one route (`LIBRARY`) and the
+         * chosen tab lives inside that screen. "What this phone allows" and "Schedules" used to be tabs, but they are
+         * now opened from Settings or from a task, so they must be pushed: as roots, the phone's Back button closed
+         * the whole app on them.
+         */
+        val TABS = setOf("LIBRARY")
 
         private const val SEP = '|'
 

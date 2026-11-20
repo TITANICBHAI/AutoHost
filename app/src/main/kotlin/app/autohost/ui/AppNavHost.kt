@@ -141,7 +141,9 @@ fun AppNavHost(
         Routes.AI_SETTINGS -> {
             val graph = (activity.application as app.autohost.AutoHostApp).graph
             androidx.compose.material3.Surface {
-                AiSettingsHost(graph, onBack = { onNavigate(Routes.SETTINGS, null) })
+                // Back means "where I came from": the Settings list, the Agent tab or the developer screen. It used to
+                // jump to the developer screen, which the Settings list no longer routes through.
+                AiSettingsHost(graph, onBack = { activity.goBack() })
             }
         }
         Routes.ASK -> {
@@ -157,7 +159,7 @@ fun AppNavHost(
         Routes.SURFACES -> {
             val graph = (activity.application as app.autohost.AutoHostApp).graph
             androidx.compose.material3.Surface {
-                SurfacesScreen(graph, onBack = { onNavigate(Routes.SETTINGS, null) })
+                SurfacesScreen(graph, onBack = { activity.goBack() })
             }
         }
         Routes.RECORDER_REVIEW -> {

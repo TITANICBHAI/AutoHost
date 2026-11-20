@@ -27,6 +27,11 @@ class MainActivity : ComponentActivity() {
 
     internal val runIdArg: String? get() = stack.top.arg
 
+    /** One step back: what the phone's Back button does, and what an on-screen back button on a pushed screen should do. */
+    internal fun goBack() {
+        stack = stack.pop()
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putStringArrayList(STATE_STACK, ArrayList(stack.encode()))
@@ -70,7 +75,7 @@ class MainActivity : ComponentActivity() {
                         },
                     )
                 } else {
-                    BackHandler(enabled = stack.canPop) { stack = stack.pop() }
+                    BackHandler(enabled = stack.canPop) { goBack() }
                     AppNavHost(
                         activity = this,
                         route = route,
