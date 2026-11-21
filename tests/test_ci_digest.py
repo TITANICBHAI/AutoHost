@@ -129,6 +129,93 @@ class CiDigestTest(unittest.TestCase):
                                     slow=ci_digest.parse_times(root))
         self.assertNotIn("Where the time went", text)
 
+    # ---- INT-T4: where a hung test JVM was stuck ----------------------------------------------------------------------
+
+    @staticmethod
+    def dump(deadlock: bool = False) -> str:
+        filler = "".join(f"\tat java.base.Filler.m{i}(Filler.java:{i})\n" for i in range(20))
+        text = (
+            "Full thread dump OpenJDK 64-Bit Server VM (17.0.13+11 mixed mode, sharing):\n\n"
+            '"Test worker" #1 prio=5 os_prio=0 cpu=1234.5ms elapsed=700.1s tid=0x00007f nid=0x1a2b waiting on condition  [0x00007f]\n'
+            "   java.lang.Thread.State: WAITING (parking)\n"
+            "\tat jdk.internal.misc.Unsafe.park(java.base@17.0.13/Native Method)\n"
+            f"{filler}"
+            "\tat app.autohost.SettingsWalkJourneyTest.waitForText(SettingsWalkJourneyTest.kt:52)\n\n"
+            '"Reference Handler" #2 daemon prio=10 os_prio=0\n'
+            "   java.lang.Thread.State: RUNNABLE\n"
+            "\tat java.lang.ref.Reference.waitForReferencePendingList(java.base@17.0.13/Native Method)\n\n"
+        )
+        if deadlock:
+            text += (
+                "Found one Java-level deadlock:\n=============================\n"
+                '"A":\n  waiting to lock monitor 0x1 (object 0x2, a java.lang.Object),\n  which is held by "B"\n\n'
+            )
+        text += (
+            " garbage-first heap   total 2097152K, used 2051000K [0x0000000080000000, 0x0000000100000000)\n"
+            "  region size 1024K, 4 young (4096K), 1 survivors (1024K)\n"
+        )
+        return text
+
+    def timed_out_digest(self, threads_dir: Path) -> str:
+        stuck = ci_digest.stuck_stacks(threads_dir)
+        return ci_digest.render(LOG_HANG, {}, [], [], {"run": "9", "branch": "b", "sha": "c", "outcome": "failure"}, stuck=stuck)
+
+    def test_a_timeout_shows_where_the_test_thread_was_stuck(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            put(Path(tmp), "threads/4242.txt", self.dump())
+            text = self.timed_out_digest(Path(tmp) / "threads")
+        self.assertIn("## Where the test JVM was stuck", text)
+        self.assertIn("test JVM 4242: 2 threads", text)
+        self.assertIn("Unsafe.park", text)  # the call it is blocked in
+        self.assertIn("deeper down, frames of ours:", text)
+        self.assertIn("SettingsWalkJourneyTest.waitForText(SettingsWalkJourneyTest.kt:52)", text)  # the test step
+        self.assertNotIn("Filler.m19", text)  # frames in between are cut
+        self.assertIn("total 2097152K, used 2051000K", text)  # a full heap looks like a hang
+        self.assertNotIn("Reference Handler", text)  # only the test thread
+
+    def test_a_deadlock_the_jvm_found_is_quoted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            put(Path(tmp), "threads/7.txt", self.dump(deadlock=True))
+            text = self.timed_out_digest(Path(tmp) / "threads")
+        self.assertIn("JAVA-LEVEL DEADLOCK:", text)
+        self.assertIn('which is held by "B"', text)
+
+    def test_dumps_of_jvms_that_had_already_finished_are_left_out(self):
+        import os
+        import time
+        with tempfile.TemporaryDirectory() as tmp:
+            old = put_and_path(Path(tmp), "threads/1.txt", self.dump())
+            put(Path(tmp), "threads/2.txt", self.dump())
+            long_ago = time.time() - 1000
+            os.utime(old, (long_ago, long_ago))
+            text = self.timed_out_digest(Path(tmp) / "threads")
+        self.assertIn("test JVM 2:", text)
+        self.assertNotIn("test JVM 1:", text)
+
+    def test_no_dump_folder_or_an_empty_one_adds_nothing_and_a_run_without_a_timeout_never_shows_it(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "threads").mkdir()
+            self.assertEqual([], ci_digest.stuck_stacks(Path(tmp) / "threads"))
+            self.assertEqual([], ci_digest.stuck_stacks(Path(tmp) / "missing"))
+            self.assertEqual([], ci_digest.stuck_stacks(None))
+            put(Path(tmp), "threads/5.txt", self.dump())
+            stuck = ci_digest.stuck_stacks(Path(tmp) / "threads")
+        green = ci_digest.render("", {}, [], [], {"run": "9", "branch": "b", "sha": "c", "outcome": "success"}, stuck=stuck)
+        self.assertNotIn("Where the test JVM was stuck", green)
+
+    def test_the_stuck_section_is_capped(self):
+        frames = "".join(f"\tat app.autohost.Deep.m{j}(Deep.kt:{j})\n" for j in range(300))
+        many = '"Test worker" #1\n   java.lang.Thread.State: RUNNABLE\n' + frames + "\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            put(Path(tmp), "threads/3.txt", many)
+            stuck = ci_digest.stuck_stacks(Path(tmp) / "threads")
+        self.assertLessEqual(len(stuck), ci_digest.MAX_STUCK_LINES)
+
+
+def put_and_path(root: Path, rel: str, text: str) -> Path:
+    put(root, rel, text)
+    return root / rel
+
 
 if __name__ == "__main__":
     unittest.main()

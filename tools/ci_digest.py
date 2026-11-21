@@ -4,7 +4,8 @@
 Reads the Gradle console log and the JUnit XML reports and prints markdown of at most MAX_LINES lines:
 the verdict, Kotlin compile errors (the usual reason a blind change fails), failed Gradle tasks, failing tests
 with their first message line, the last tests that STARTED when a task timed out (the hung test), and which
-modules produced no results at all. The workflow commits the output to the `ci-results` branch.
+modules produced no results at all. After a timeout it also prints where the hung test JVM was stuck, from the thread dumps
+the workflow keeps (--threads). The workflow commits the output to the `ci-results` branch.
 
   python3 tools/ci_digest.py --log gradle.log --root . --tasks scripts/unit-test-tasks.txt \
       --run 12 --branch work/s3-green --sha 1a2b3c4 --outcome failure
@@ -21,6 +22,10 @@ MAX_FAILED_TASKS = 25
 MAX_FAILING_TESTS = 40
 MAX_STARTED_LINES = 10
 LINE_CUT = 220
+MAX_STACK_TOP = 14  # frames of the test thread shown from the top: the call it is blocked in
+MAX_STACK_OURS = 10  # further frames inside app.autohost: the test step it is in
+MAX_STUCK_LINES = 50
+MAX_DUMP_AGE_S = 150  # a dump this much older than the newest one belongs to a JVM that had already finished
 
 _PATH_PREFIX = re.compile(r"file:///.*?/work/[^/]+/[^/]+/")
 
@@ -49,6 +54,61 @@ def timed_out(log: str) -> bool:
 def started_tail(log: str) -> list:
     started = [ln.strip() for ln in log.splitlines() if ln.rstrip().endswith(" STARTED")]
     return started[-MAX_STARTED_LINES:]
+
+
+def _thread_blocks(dump: str) -> list:
+    """A jstack text split into one list of lines per thread (a thread starts at a line that begins with a quote)."""
+    blocks, current = [], []
+    for line in dump.splitlines():
+        if line.startswith('"'):
+            if current:
+                blocks.append(current)
+            current = [line]
+        elif not line.strip():
+            if current:
+                blocks.append(current)
+            current = []
+        elif current:
+            current.append(line)
+    if current:
+        blocks.append(current)
+    return blocks
+
+
+def stuck_stacks(threads_dir: Path | None) -> list:
+    """-> digest lines saying where each test JVM was when it was last looked at (INT-T4).
+
+    The workflow keeps one `jcmd Thread.print` + `GC.heap_info` text per Gradle test JVM and refreshes it every minute.
+    Of the dumps refreshed within MAX_DUMP_AGE_S of the newest one this prints the test thread's top frames, its frames
+    inside app.autohost (they name the test step it is in), the JVM's own deadlock report if it found one, and the heap line.
+    """
+    if not threads_dir or not threads_dir.is_dir():
+        return []
+    dumps = sorted(threads_dir.glob("*.txt"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not dumps:
+        return []
+    newest = dumps[0].stat().st_mtime
+    out = []
+    for path in [d for d in dumps if newest - d.stat().st_mtime <= MAX_DUMP_AGE_S][:2]:
+        text = path.read_text(encoding="utf-8", errors="replace")
+        blocks = _thread_blocks(text)
+        mine = [b for b in blocks if b[0].startswith('"Test worker"')]
+        if not mine:
+            mine = [b for b in blocks if any("org.junit" in ln for ln in b)]
+        out.append(f"test JVM {path.stem}: {len(blocks)} threads")
+        for block in mine[:1]:
+            out.append(short(block[0]))
+            out += [short(ln) for ln in block[1:MAX_STACK_TOP]]
+            ours = [ln for ln in block[MAX_STACK_TOP:] if "app.autohost" in ln]
+            if ours:
+                out.append("... deeper down, frames of ours:")
+                out += [short(ln) for ln in ours[:MAX_STACK_OURS]]
+        if "Found one Java-level deadlock" in text:
+            tail = text.split("Found one Java-level deadlock", 1)[1].splitlines()[:14]
+            out += ["JAVA-LEVEL DEADLOCK:"] + [short(ln) for ln in tail if ln.strip()]
+        heap = [ln.strip() for ln in text.splitlines() if "heap" in ln.lower() and "total" in ln.lower() and "used" in ln.lower()]
+        out += [short(h) for h in heap[:2]]
+    return out[:MAX_STUCK_LINES]
 
 
 def module_of(xml_path: Path, root: Path) -> str:
@@ -137,7 +197,7 @@ def render_details(log: str, per_module: dict, failing: list) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render(log: str, per_module: dict, failing: list, expected: list, header: dict, slow=None) -> str:
+def render(log: str, per_module: dict, failing: list, expected: list, header: dict, slow=None, stuck=None) -> str:
     errors = kotlin_errors(log)
     tasks = failed_tasks(log)
     tests = sum(r[0] for r in per_module.values())
@@ -163,6 +223,9 @@ def render(log: str, per_module: dict, failing: list, expected: list, header: di
     if timed_out(log):
         lines += ["", "## A task TIMED OUT - the last tests that started (the last one is the hung test)"]
         lines += [f"- {s}" for s in started_tail(log)] or ["- (no STARTED lines in the log)"]
+        if stuck:
+            lines += ["", "## Where the test JVM was stuck (its last thread dump, kept at most a minute before the end)"]
+            lines += [f"    {ln}" for ln in stuck]
     if silent:
         lines += ["", "## Modules that produced no test results (compile error, timeout, or no tests)"]
         lines += [f"- {m}" for m in silent]
@@ -189,6 +252,7 @@ def main(argv=None) -> int:
     p.add_argument("--sha", default="?")
     p.add_argument("--outcome", default="?")
     p.add_argument("--details-out", default="", help="also write the long form (all errors, all failing tests) here")
+    p.add_argument("--threads", default="", help="the folder of thread dumps the workflow keeps for each test JVM (INT-T4)")
     args = p.parse_args(argv)
     log = Path(args.log).read_text(encoding="utf-8", errors="replace") if args.log and Path(args.log).exists() else ""
     root = Path(args.root).resolve()
@@ -196,9 +260,10 @@ def main(argv=None) -> int:
     expected = modules_expected(Path(args.tasks) if args.tasks else None)
     if args.details_out:
         Path(args.details_out).write_text(render_details(log, per_module, failing), encoding="utf-8")
+    stuck = stuck_stacks(Path(args.threads)) if args.threads and timed_out(log) else None
     sys.stdout.write(render(log, per_module, failing, expected,
                             {"run": args.run, "branch": args.branch, "sha": args.sha, "outcome": args.outcome},
-                            slow=parse_times(root)))
+                            slow=parse_times(root), stuck=stuck))
     return 0
 
 
