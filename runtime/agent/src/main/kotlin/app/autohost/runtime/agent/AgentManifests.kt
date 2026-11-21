@@ -30,9 +30,30 @@ object AgentManifests {
     /** §4.1: must exceed the confirm window (120 s) plus a model-call timeout margin. */
     const val IDLE_TIMEOUT_SECONDS = 180
 
-    fun synthesize(packages: List<String>, maxWallClockS: Long = DEFAULT_BUDGETS.maxWallClockS): TaskManifest {
+    /**
+     * @param tasks INT-E1: ids of the saved tasks the person allowed this run to start. Empty (the default) adds no
+     *   `tasks.run` need at all, so an ordinary run holds no chaining grant; with ids, the grant's scope is exactly
+     *   `{"tasks": [ids]}` — the broker refuses every other task (`TasksRunProvider`).
+     */
+    fun synthesize(
+        packages: List<String>,
+        maxWallClockS: Long = DEFAULT_BUDGETS.maxWallClockS,
+        tasks: List<String> = emptyList(),
+    ): TaskManifest {
         val scope = buildJsonObject {
             put("packages", kotlinx.serialization.json.JsonArray(packages.map { JsonPrimitive(it) }))
+        }
+        val taskNeeds: List<CapabilityNeed> = if (tasks.isEmpty()) {
+            emptyList()
+        } else {
+            listOf(
+                CapabilityNeed(
+                    "tasks.run",
+                    buildJsonObject {
+                        put("tasks", kotlinx.serialization.json.JsonArray(tasks.map { JsonPrimitive(it) }))
+                    },
+                ),
+            )
         }
         return TaskManifest(
             schema = 1,
@@ -48,7 +69,7 @@ object AgentManifests {
                     CapabilityNeed("device.app.launch", scope),
                     // ui.prompt is NOT implicit — it must be listed (§4.1); `{}` per the spec table
                     CapabilityNeed("ui.prompt", buildJsonObject { }),
-                ),
+                ) + taskNeeds,
                 optional = emptyList(),
                 apps = packages.map { AppNeed(packageName = it) },
             ),
@@ -115,6 +136,10 @@ data class AgentConfig(
     val confirmTimeoutS: Int,
     /** The `tools` narrowing (§4.2: may only NARROW the catalog; empty = the whole catalog). */
     val tools: List<String> = emptyList(),
+    /** INT-E1: ids of the saved tasks the person allowed this run to start (empty = none; the default). */
+    val tasks: List<String> = emptyList(),
+    /** INT-E1: the name the person knows each allowed task by (id → name); only for the prompt and the approval. */
+    val taskNames: Map<String, String> = emptyMap(),
 ) {
     companion object {
         fun from(config: JsonObject): AgentConfig {
@@ -147,6 +172,13 @@ data class AgentConfig(
                 tools = (agent["tools"] as? kotlinx.serialization.json.JsonArray)
                     ?.mapNotNull { (it as? JsonPrimitive)?.content }
                     ?: emptyList(),
+                tasks = (agent["tasks"] as? kotlinx.serialization.json.JsonArray)
+                    ?.mapNotNull { (it as? JsonPrimitive)?.content }
+                    ?: emptyList(),
+                taskNames = (agent["task_names"] as? JsonObject)
+                    ?.mapNotNull { (id, name) -> (name as? JsonPrimitive)?.content?.let { id to it } }
+                    ?.toMap()
+                    ?: emptyMap(),
             )
         }
 

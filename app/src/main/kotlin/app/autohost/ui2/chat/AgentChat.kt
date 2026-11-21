@@ -235,6 +235,7 @@ object ToolPhrases {
         "app_wait_foreground" to "Waiting for an app to open",
         "ask_user" to "Asking you a question",
         "finish" to "Finishing up",
+        "run_task" to "Starting one of your saved tasks",
         "todo_write" to "Planning the next steps",
         "ui_click" to "Tapping something",
         "ui_find" to "Looking for something on the screen",

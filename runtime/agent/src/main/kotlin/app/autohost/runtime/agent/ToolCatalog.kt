@@ -32,6 +32,12 @@ class ToolCatalog private constructor(private val tools: Map<String, Tool>) {
 
     fun find(name: String): Tool? = tools[name]
 
+    /**
+     * A view of this catalog without the named tools (INT-E1: a run that was given no saved tasks never shows the
+     * model `run_task`; a call to it then fails as an unknown tool, like every tool outside the catalog).
+     */
+    fun without(names: Set<String>): ToolCatalog = ToolCatalog(tools.filterKeys { it !in names })
+
     /** The typed tool list for `ChatRequest.tools` (P13-10's loop builds the request from this). */
     fun specs(): List<ToolSpec> = tools.values.sortedBy { it.name }.map { tool ->
         ToolSpec(name = tool.name, description = tool.description, parameters = tool.args)

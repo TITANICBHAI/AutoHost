@@ -299,4 +299,166 @@ class ToolPipelineTest {
         assertEquals(1, transport.brokerCalls())
         assertEquals("device.ui" to "click", transport.calls[0].first to transport.calls[0].second)
     }
+
+    // --- INT-E1: run_task (a saved task the person allowed for this run) -------------------------
+
+    private val allowedTasks = setOf("daily.upload", "make.video")
+    private val taskNames = mapOf("daily.upload" to "Daily upload", "make.video" to "Make the video")
+
+    private fun taskPipeline(
+        transport: FakeTransport = FakeTransport(),
+        revalidator: FakeRevalidator = FakeRevalidator(),
+        foreground: String? = "com.normal.test",
+        tasks: Set<String> = allowedTasks,
+    ) = ToolPipeline(
+        catalog = catalog,
+        transport = transport,
+        budget = budget(),
+        packages = packages,
+        sensitivity = sensitivity,
+        foregroundSource = { foreground },
+        revalidator = revalidator,
+        tasks = tasks,
+        taskNames = taskNames,
+    )
+
+    private fun answer(transport: FakeTransport, button: String) {
+        transport.responses["ui.prompt.ask"] = buildJsonObject { put("answered", true); put("button", button) }
+    }
+
+    private fun taskCalls(transport: FakeTransport) = transport.calls.filter { it.first == "tasks.run" }
+
+    @Test
+    fun `given a task the person did not allow when run_task is executed then CAPABILITY_NOT_GRANTED with no ask and no call`() = runBlocking {
+        val transport = FakeTransport()
+        val result = taskPipeline(transport).execute(call("run_task", """{"task":"other.task"}"""), ctx)
+        assertEquals("CAPABILITY_NOT_GRANTED", errOf(result).second)
+        assertEquals(0, transport.calls.size)
+    }
+
+    @Test
+    fun `given a run with no allowed tasks when run_task is executed then nothing is ever asked or started`() = runBlocking {
+        val transport = FakeTransport()
+        val result = taskPipeline(transport, tasks = emptySet()).execute(call("run_task", """{"task":"daily.upload"}"""), ctx)
+        assertEquals("CAPABILITY_NOT_GRANTED", errOf(result).second)
+        assertEquals(0, transport.calls.size)
+    }
+
+    @Test
+    fun `given the model passes its own args object when run_task is executed then INVALID_ARGS (a task gets no model-made inputs yet)`() = runBlocking {
+        val transport = FakeTransport()
+        val result = taskPipeline(transport).execute(call("run_task", """{"task":"daily.upload","args":{"x":1}}"""), ctx)
+        assertEquals("INVALID_ARGS", errOf(result).first)
+        assertEquals(0, transport.calls.size)
+    }
+
+    @Test
+    fun `given an allowed task approved once when run_task is executed then the broker starts exactly that task with a bounded wait`() = runBlocking {
+        val transport = FakeTransport()
+        answer(transport, "Allow once")
+        transport.responses["tasks.run.run"] = buildJsonObject {
+            put("run_id", "r1")
+            put("status", "SUCCEEDED")
+        }
+        // the person is somewhere outside the target apps: a saved task can still be started from there
+        val revalidator = FakeRevalidator(ToolPipeline.Revalidator.Revalidation("com.elsewhere.test", null, true))
+        val result = taskPipeline(transport, revalidator = revalidator)
+            .execute(call("run_task", """{"task":"daily.upload"}"""), ctx)
+        assertEquals("SUCCEEDED", (result["status"] as JsonPrimitive).content)
+        assertEquals(1, transport.askCalls())
+        val askMessage = (transport.calls[0].third["message"] as JsonPrimitive).content
+        assertTrue(askMessage, askMessage.contains("Daily upload"))
+        assertTrue(askMessage, !askMessage.contains("run_task"))
+        val started = taskCalls(transport)
+        assertEquals(1, started.size)
+        assertEquals("run", started[0].second)
+        assertEquals("daily.upload", (started[0].third["task"] as JsonPrimitive).content)
+        assertEquals(ToolPipeline.DEFAULT_TASK_WAIT_MS, (started[0].third["timeout_ms"] as JsonPrimitive).content.toLong())
+    }
+
+    @Test
+    fun `given a wait chosen by the model when run_task is executed then it is used up to 120 s and refused above`() = runBlocking {
+        val transport = FakeTransport()
+        answer(transport, "Allow once")
+        val p = taskPipeline(transport)
+        p.execute(call("run_task", """{"task":"daily.upload","timeout_ms":30000}"""), ctx)
+        assertEquals(30_000L, (taskCalls(transport)[0].third["timeout_ms"] as JsonPrimitive).content.toLong())
+        val tooLong = p.execute(call("run_task", """{"task":"make.video","timeout_ms":600000}"""), ctx)
+        assertEquals("INVALID_ARGS", errOf(tooLong).first)
+        assertEquals(1, taskCalls(transport).size)
+    }
+
+    @Test
+    fun `given the person denies or does not answer when run_task is executed then nothing starts`() = runBlocking {
+        val denied = FakeTransport()
+        answer(denied, "Deny")
+        val deniedResult = taskPipeline(denied).execute(call("run_task", """{"task":"daily.upload"}"""), ctx)
+        assertEquals("APPROVAL_DENIED", errOf(deniedResult).second)
+        assertEquals(0, taskCalls(denied).size)
+
+        val silent = FakeTransport()
+        silent.responses["ui.prompt.ask"] = buildJsonObject { put("answered", false); put("reason", "timeout") }
+        val silentResult = taskPipeline(silent).execute(call("run_task", """{"task":"daily.upload"}"""), ctx)
+        assertEquals("APPROVAL_TIMEOUT", errOf(silentResult).second)
+        assertEquals(0, taskCalls(silent).size)
+    }
+
+    @Test
+    fun `given a blocked app on screen when run_task is executed then denied before the person is asked`() = runBlocking {
+        val transport = FakeTransport()
+        val result = taskPipeline(transport, foreground = "com.bank.test")
+            .execute(call("run_task", """{"task":"daily.upload"}"""), ctx)
+        assertEquals("OBSERVATION_BLOCKED", errOf(result).second)
+        assertEquals(0, transport.calls.size)
+    }
+
+    @Test
+    fun `given allow for this run on a task when later calls run then only that task skips the ask and no app is loosened`() = runBlocking {
+        val transport = FakeTransport()
+        answer(transport, "Allow for this run")
+        // an unknown (cautious) app is on screen while the task starts — the old rule would have trusted that app
+        val p = taskPipeline(transport, foreground = "com.unknown.test")
+        p.execute(call("run_task", """{"task":"daily.upload"}"""), ctx)
+        p.execute(call("run_task", """{"task":"daily.upload"}"""), ctx)
+        assertEquals("the same task is not asked about twice", 1, transport.askCalls())
+        assertEquals(2, taskCalls(transport).size)
+
+        p.execute(call("run_task", """{"task":"make.video"}"""), ctx)
+        assertEquals("a different task asks again", 2, transport.askCalls())
+
+        val unknownCtx = AgentLoop.TurnContext(
+            1,
+            AgentView.ViewIndex(1, mapOf(1 to AgentView.Entry("ref-1", "com.unknown.test", setOf("clickable"), Bounds(0, 0, 100, 50), "Go"))),
+            null,
+        )
+        p.execute(call("ui_click", """{"id":"[1]"}"""), unknownCtx)
+        assertEquals("approving a task does not approve clicks in the app on screen", 3, transport.askCalls())
+    }
+
+    @Test
+    fun `given a task still RUNNING after the wait when it is asked for again then refused without asking, and a finished task may run again`() = runBlocking {
+        val transport = FakeTransport()
+        answer(transport, "Allow once")
+        transport.responses["tasks.run.run"] = buildJsonObject {
+            put("run_id", "r1")
+            put("status", "RUNNING")
+            put("await", "timeout")
+        }
+        val p = taskPipeline(transport)
+        p.execute(call("run_task", """{"task":"daily.upload"}"""), ctx)
+        val again = p.execute(call("run_task", """{"task":"daily.upload"}"""), ctx)
+        assertEquals("CAPABILITY_UNAVAILABLE", errOf(again).first)
+        assertTrue(again.toString(), again.toString().contains("do not start it again"))
+        assertEquals("the second request did not ask the person", 1, transport.askCalls())
+        assertEquals("and never started a second copy", 1, taskCalls(transport).size)
+
+        // another task is unaffected, and a task that FINISHED may be started again
+        transport.responses["tasks.run.run"] = buildJsonObject {
+            put("run_id", "r2")
+            put("status", "SUCCEEDED")
+        }
+        p.execute(call("run_task", """{"task":"make.video"}"""), ctx)
+        p.execute(call("run_task", """{"task":"make.video"}"""), ctx)
+        assertEquals(3, taskCalls(transport).size)
+    }
 }

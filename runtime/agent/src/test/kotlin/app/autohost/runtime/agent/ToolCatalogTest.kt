@@ -21,9 +21,32 @@ class ToolCatalogTest {
             "ui_snapshot", "ui_find", "ui_wait_for", "ui_wait_for_settle",
             "ui_click", "ui_long_click", "ui_set_text", "ui_scroll_until", "ui_press", "ui_hide_keyboard",
             "app_launch", "app_foreground", "app_query", "app_wait_foreground",
+            "run_task",
             "ask_user", "finish", "todo_write", "wait",
         )
         assertEquals(expected, catalog.names())
+    }
+
+    @Test
+    fun `given run_task when inspected then it starts a saved task through tasks run, from the run's own task list only`() {
+        val tool = catalog.find("run_task")!!
+        assertEquals("tasks.run", tool.capability)
+        assertEquals("run", tool.method)
+        assertEquals("tasks.run", tool.permission)
+        assertEquals("run_tasks", tool.args["task"]!!.jsonObject["enum_of"]!!.jsonPrimitive.content)
+        assertEquals("120000", tool.args["timeout_ms?"]!!.jsonObject["max"]!!.jsonPrimitive.content)
+        // the model never sees the broker's other knobs: no profile, no free-form args object
+        assertEquals(setOf("task", "timeout_ms?"), tool.args.keys)
+    }
+
+    @Test
+    fun `given a catalog without run_task when listed then the model sees every other tool and not that one`() {
+        val trimmed = catalog.without(setOf("run_task"))
+        assertEquals(catalog.names() - "run_task", trimmed.names())
+        assertNull(trimmed.find("run_task"))
+        assertEquals(trimmed.names().size, trimmed.specs().size)
+        assertEquals(trimmed.names().size, trimmed.wireSpecs().size)
+        assertTrue("the original is untouched", "run_task" in catalog.names())
     }
 
     @Test

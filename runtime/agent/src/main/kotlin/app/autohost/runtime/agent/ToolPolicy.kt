@@ -15,6 +15,9 @@ import kotlinx.serialization.json.JsonObject
  *
  *  1. malformed arguments (the validator failed) → Deny — fail closed
  *  2. host tools (finish/todo_write/wait) and ask_user → Allow
+ *  2b. `run_task` (INT-E1): a blocked app on screen denies; otherwise EVERY start asks (the task acts on its own,
+ *      with its own permissions) unless the person chose "Allow for this run" for that ONE task. The list is a
+ *      separate subject (`task:<id>`): it never loosens a click ask, and an app's entry never skips a task ask.
  *  3. non-act tools (observe/query/launch): a BLOCKED destination denies; otherwise Allow
  *     (the observation floor already filtered reads; `app_launch` allows for `p ∈ P` per §6)
  *  4. `ui_press` allows `back` only (the escape rule — the agent must not be trapped)
@@ -32,6 +35,15 @@ import kotlinx.serialization.json.JsonObject
  * clicks, so the floor alone never allows more than the table above.
  */
 object ToolPolicy {
+
+    /** The tool that starts one of the person's saved tasks (INT-E1). */
+    const val RUN_TASK = "run_task"
+
+    /**
+     * The session allow-list entry for one saved task. A package name never contains a colon, so a task entry
+     * and an app entry can never be the same string.
+     */
+    fun taskSubject(id: String): String = "task:$id"
 
     /** Everything the policy needs about one resolved call. */
     data class Input(
@@ -65,6 +77,19 @@ object ToolPolicy {
         }
         // 2. host tools and ask_user
         if (input.tool.capability == null || input.tool.name == "ask_user") return Decision.Allow
+        // 2b. a saved task: the id was already checked against the person's list (validator + the broker's grant)
+        if (input.tool.name == RUN_TASK) {
+            val id = input.args.str("task")
+                ?: return Decision.Deny("INVALID_ARGS", null, "run_task needs the id of a saved task")
+            if (input.foregroundPkg != null && context.sensitivity.isBlocked(input.foregroundPkg)) {
+                return Decision.Deny(
+                    "PERMISSION_DENIED", "OBSERVATION_BLOCKED",
+                    "a blocked app is on screen — no saved task starts while it is",
+                )
+            }
+            if (taskSubject(id) in input.sessionAllowed) return Decision.Allow
+            return Decision.Ask("start the saved task \"${clip(input.nodeLabel ?: id)}\"")
+        }
 
         val destinationBlocked = input.targetPkg != null && context.sensitivity.isBlocked(input.targetPkg)
         // 3. non-act tools: reads are already floor-filtered; launch/query deny BLOCKED destinations

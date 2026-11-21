@@ -51,25 +51,35 @@ class AgentRunStarter(
         val uiRunActive: Boolean,
     )
 
+    /** INT-E1: a saved task the person ticked for a run — the id the broker checks and the name they know it by. */
+    data class AllowedTask(val id: String, val name: String)
+
     /**
      * @param agentOverride host-written extra `config.agent` keys (budgets/tools/confirm) —
      *   they override the defaults field-by-field; never a key, token or secret (§4.2).
+     * @param tasks INT-E1: the saved tasks the agent may start in this run (empty = it may start none, the default).
+     *   They become the run's `tasks.run` grant (scope = exactly these ids) and the `run_task` tool's allowed list.
      */
     fun start(
         goal: String,
         packages: List<String>,
         profileId: String?,
         agentOverride: JsonObject = JsonObject(emptyMap()),
+        tasks: List<AllowedTask> = emptyList(),
     ): AhResult<RunRecord> {
         val agentObject = buildJsonObject {
             put("goal", goal)
             put("packages", JsonArray(packages.map { JsonPrimitive(it) }))
             profileId?.let { put("provider", it) }
+            if (tasks.isNotEmpty()) {
+                put("tasks", JsonArray(tasks.map { JsonPrimitive(it.id) }))
+                put("task_names", buildJsonObject { tasks.forEach { put(it.id, it.name) } })
+            }
             agentOverride.forEach { (key, value) -> put(key, value) }
         }
         val config = buildJsonObject { put("agent", agentObject) }
         val agentConfig = AgentConfig.from(config)
-        val manifest = AgentManifests.synthesize(packages, agentConfig.budgets.maxWallClockS)
+        val manifest = AgentManifests.synthesize(packages, agentConfig.budgets.maxWallClockS, agentConfig.tasks)
         val grants = grantsFor(manifest, config)
         val android = androidFacts()
         val facts = AgentPreflight.Facts(

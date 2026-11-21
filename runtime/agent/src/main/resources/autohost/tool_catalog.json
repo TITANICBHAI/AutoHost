@@ -91,6 +91,22 @@
   },
   {
    "args": {
+    "task": {
+     "enum_of": "run_tasks"
+    },
+    "timeout_ms?": {
+     "max": 120000
+    }
+   },
+   "capability": "tasks.run",
+   "description": "Start one of the saved tasks (a macro or a script) the user allowed for this run, by its id, and wait for its result. Status RUNNING means it is still going: never start the same task twice, wait and look at the screen instead.",
+   "method": "run",
+   "name": "run_task",
+   "permission": "tasks.run",
+   "spec_risk": "medium"
+  },
+  {
+   "args": {
     "items": {}
    },
    "capability": null,

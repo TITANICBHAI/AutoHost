@@ -361,6 +361,23 @@ class AgentLoop(
 
         fun goalBlock(goal: String): String = "<goal>\n$goal\n</goal>"
 
+        /**
+         * INT-E1: the goal text the model reads. When the person allowed saved tasks they are listed under the goal
+         * as `- <id>: <name>` lines (the model hands the id to run_task); with none the goal is returned UNCHANGED, so
+         * a run that was not given any task reads exactly as before. The system prompt is a pinned, hashed asset
+         * (P13-10), so this list rides the goal, never the prompt. Names are the person's own labels, but an imported
+         * task can carry any text, so each is cut to one short line with no angle brackets (it can never close the
+         * `<goal>` block or start a new paragraph of instructions).
+         */
+        fun goalWithTasks(goal: String, tasks: List<String>, names: Map<String, String>): String {
+            if (tasks.isEmpty()) return goal
+            val lines = tasks.joinToString("\n") { id -> "- ${oneLine(id)}: ${oneLine(names[id] ?: id)}" }
+            return goal + "\n\nSaved tasks you may start with run_task (pass the id on the left):\n" + lines
+        }
+
+        private fun oneLine(text: String): String =
+            text.replace(Regex("[\\r\\n\\t<>]+"), " ").replace(Regex(" +"), " ").trim().take(60)
+
         fun errorResult(reason: String, message: String): JsonObject = buildJsonObject {
             put("ok", false)
             put("error", buildJsonObject {

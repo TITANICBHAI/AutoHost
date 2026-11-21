@@ -100,7 +100,7 @@ class AgentRuntimeProvider(
                         }
                     },
                 )
-                val outcome = loop.run(agentConfig.goal)
+                val outcome = loop.run(AgentLoop.goalWithTasks(agentConfig.goal, agentConfig.tasks, agentConfig.taskNames))
                 val (status, reason, message) = when (outcome) {
                     is AgentLoop.Outcome.Succeeded -> Triple(
                         "SUCCEEDED", null as String?,

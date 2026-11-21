@@ -20,8 +20,16 @@ object ArgValidator {
      * Returns the SANITIZED arguments (declared keys only) or a typed error. The catalog schema
      * per key: `{}` (any primitive), `{"enum": [...]}`, `{"enum_of": "run_packages"}`,
      * `{"max": N}` (integer ≤ N); a trailing `?` in the KEY marks it optional.
+     *
+     * `enum_of` names WHICH of the run's lists the value must come from: `run_packages` (the target apps) or
+     * `run_tasks` (the saved tasks the person allowed for this run, INT-E1). Any other name fails closed.
      */
-    fun validate(tool: ToolCatalog.Tool, raw: JsonObject?, packages: Set<String>): AhResult<JsonObject> {
+    fun validate(
+        tool: ToolCatalog.Tool,
+        raw: JsonObject?,
+        packages: Set<String>,
+        tasks: Set<String> = emptySet(),
+    ): AhResult<JsonObject> {
         if (raw == null) {
             return AhResult.err(AhError.of(ErrorCode.INVALID_ARGS, "the call had no parseable arguments"))
         }
@@ -60,7 +68,18 @@ object ArgValidator {
                         }
                     }
                     spec.containsKey("enum_of") -> {
-                        if (primitive.content !in packages) {
+                        val listName = (spec["enum_of"] as? JsonPrimitive)?.content
+                        if (listName == "run_tasks") {
+                            if (primitive.content !in tasks) {
+                                return AhResult.err(
+                                    AhError.of(
+                                        ErrorCode.PERMISSION_DENIED,
+                                        "'${primitive.content}' is not one of the saved tasks allowed for this run",
+                                        reason = "CAPABILITY_NOT_GRANTED",
+                                    ),
+                                )
+                            }
+                        } else if (listName != "run_packages" || primitive.content !in packages) {
                             return AhResult.err(
                                 AhError.of(
                                     ErrorCode.PERMISSION_DENIED,

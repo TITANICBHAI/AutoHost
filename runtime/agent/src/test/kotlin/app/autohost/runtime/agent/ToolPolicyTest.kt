@@ -248,4 +248,83 @@ class ToolPolicyTest {
             ToolPolicy.check(input("ui_hide_keyboard", foregroundPkg = "com.unknown.test"), ctx()),
         )
     }
+
+    // --- INT-E1: run_task (a saved task the person allowed for this run) -------------------------
+
+    private fun taskInput(
+        id: String = "daily.upload",
+        foregroundPkg: String? = "com.normal.test",
+        sessionAllowed: Set<String> = emptySet(),
+        label: String? = "Daily upload",
+    ) = input(
+        "run_task",
+        argsJson = """{"task":"$id"}""",
+        foregroundPkg = foregroundPkg,
+        nodeLabel = label,
+        sessionAllowed = sessionAllowed,
+    )
+
+    @Test
+    fun `given a saved task when checked then it asks every time and the ask names the task`() {
+        val decision = ToolPolicy.check(taskInput(), ctx())
+        assertTrue(decision is ToolPolicy.Decision.Ask)
+        assertTrue((decision as ToolPolicy.Decision.Ask).reason.contains("Daily upload"))
+    }
+
+    @Test
+    fun `given the person allowed that one task for the run when checked then it starts without asking`() {
+        val decision = ToolPolicy.check(
+            taskInput(sessionAllowed = setOf(ToolPolicy.taskSubject("daily.upload"))),
+            ctx(),
+        )
+        assertEquals(ToolPolicy.Decision.Allow, decision)
+    }
+
+    @Test
+    fun `given another task or an app on the run list when a task is checked then it still asks`() {
+        val otherTask = ToolPolicy.check(
+            taskInput(sessionAllowed = setOf(ToolPolicy.taskSubject("other.task"))),
+            ctx(),
+        )
+        assertTrue(otherTask is ToolPolicy.Decision.Ask)
+        val anApp = ToolPolicy.check(taskInput(sessionAllowed = setOf("com.normal.test")), ctx())
+        assertTrue(anApp is ToolPolicy.Decision.Ask)
+    }
+
+    @Test
+    fun `given a task allowed for the run when a click in a cautious app is checked then the click still asks`() {
+        val decision = ToolPolicy.check(
+            input(
+                "ui_click",
+                argsJson = """{"id":"[1]"}""",
+                targetPkg = "com.unknown.test",
+                foregroundPkg = "com.unknown.test",
+                nodeLabel = "Go",
+                sessionAllowed = setOf(ToolPolicy.taskSubject("daily.upload")),
+            ),
+            ctx(),
+        )
+        assertTrue(decision is ToolPolicy.Decision.Ask)
+    }
+
+    @Test
+    fun `given a blocked app on screen when a saved task is checked then denied before anything asks`() {
+        val decision = ToolPolicy.check(taskInput(foregroundPkg = "com.bank.test"), ctx())
+        assertTrue(decision is ToolPolicy.Decision.Deny)
+        assertEquals("OBSERVATION_BLOCKED", (decision as ToolPolicy.Decision.Deny).reason)
+    }
+
+    @Test
+    fun `given a saved task started from outside the target apps when checked then it is only asked about`() {
+        // a saved task may be started from the launcher or from any app: the foreground is no package rule for it
+        val decision = ToolPolicy.check(taskInput(foregroundPkg = "com.elsewhere.test"), ctx())
+        assertTrue(decision is ToolPolicy.Decision.Ask)
+    }
+
+    @Test
+    fun `given run_task without a task when checked then denied as invalid`() {
+        val decision = ToolPolicy.check(input("run_task", argsJson = "{}"), ctx())
+        assertTrue(decision is ToolPolicy.Decision.Deny)
+        assertEquals("INVALID_ARGS", (decision as ToolPolicy.Decision.Deny).code)
+    }
 }

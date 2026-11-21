@@ -43,6 +43,9 @@ class ToolPipeline(
     private val revalidator: Revalidator,
     private val config: Config = Config(),
     private val log: PipelineLog = PipelineLog { _, _ -> },
+    /** INT-E1: the saved tasks the person allowed for this run (ids) and the names they know them by. */
+    private val tasks: Set<String> = emptySet(),
+    private val taskNames: Map<String, String> = emptyMap(),
 ) : AgentLoop.ToolExecutor {
 
     data class Config(
@@ -79,10 +82,16 @@ class ToolPipeline(
     /** Transient per-run session allow-list ("Allow for this run") — package-scoped. */
     private val sessionAllowed = mutableSetOf<String>()
 
+    /**
+     * INT-E1: saved tasks whose last start came back still RUNNING (the wait ran out). A task that is still going
+     * is never started a second time in the same run — a second upload would be a second upload.
+     */
+    private val stillRunning = mutableSetOf<String>()
+
     override suspend fun execute(call: ToolCall, ctx: AgentLoop.TurnContext): JsonObject {
         val tool = catalog.find(call.name)
             ?: return errResult("INVALID_ARGS", null, "unknown tool '${call.name}'")
-        val args = when (val validated = ArgValidator.validate(tool, call.arguments, packages)) {
+        val args = when (val validated = ArgValidator.validate(tool, call.arguments, packages, tasks)) {
             is AhResult.Ok<*> -> validated.value as JsonObject
             is AhResult.Err -> return errOf(validated.error)
         }
@@ -90,6 +99,17 @@ class ToolPipeline(
         val target = when (val resolved = resolveTarget(tool, args, ctx)) {
             is AhResult.Ok<*> -> resolved.value as TargetInfo
             is AhResult.Err -> return errOf(resolved.error)
+        }
+        // INT-E1: refuse a second start BEFORE anything asks the person (no point asking for what cannot happen)
+        if (tool.name == ToolPolicy.RUN_TASK) {
+            val taskId = args.str("task")
+            if (taskId != null && taskId in stillRunning) {
+                return errResult(
+                    "CAPABILITY_UNAVAILABLE", null,
+                    "task '${target.label ?: taskId}' was already started in this run and may still be going — " +
+                        "do not start it again; wait, then look at the screen",
+                )
+            }
         }
         val foreground = try {
             foregroundSource.current()
@@ -125,7 +145,14 @@ class ToolPipeline(
                         )
                     Approval.AllowOnce -> {}
                     Approval.AllowForRun -> {
-                        (target.pkg ?: foreground)?.let { sessionAllowed.add(it) }
+                        // a saved task is its own subject: "Allow for this run" on a task must NOT add the app that
+                        // happens to be on screen (that would silently loosen the click asks for that app)
+                        val subject: String? = if (tool.name == ToolPolicy.RUN_TASK) {
+                            args.str("task")?.let { ToolPolicy.taskSubject(it) }
+                        } else {
+                            target.pkg ?: foreground
+                        }
+                        subject?.let { sessionAllowed.add(it) }
                     }
                 }
                 // TOCTOU: the screen may have moved while the ask was up — re-validate before acting
@@ -142,7 +169,8 @@ class ToolPipeline(
                         return errResult("PERMISSION_DENIED", "OBSERVATION_BLOCKED", "the screen changed to a blocked app")
                     target.viaId && !re.stillResolvable ->
                         return errResult("STALE_NODE", null, "the approved target is gone — re-observe first")
-                    reFg != null && reFg !in packages ->
+                    // a saved task is not tied to the target apps: it may be started from anywhere
+                    reFg != null && reFg !in packages && tool.name != ToolPolicy.RUN_TASK ->
                         return errResult(
                             "PERMISSION_DENIED", "CAPABILITY_NOT_GRANTED",
                             "the foreground left this run's packages",
@@ -170,10 +198,24 @@ class ToolPipeline(
         }
         // the ONE action path — dispatch on the CAPABILITY id (the broker resolves
         // capability.method; the permission id is for policy/grants, not dispatch)
+        // INT-E1: a saved task waits for the task at most 90 s unless the model asked for less/more (cap 120 s in the
+        // catalog) — the broker's own default is 10 minutes, far past the agent's 180 s idle budget
+        val callArgs = if (tool.name == ToolPolicy.RUN_TASK && !args.containsKey("timeout_ms")) {
+            buildJsonObject {
+                for ((key, value) in args) put(key, value)
+                put("timeout_ms", DEFAULT_TASK_WAIT_MS)
+            }
+        } else {
+            args
+        }
         val envelope = try {
-            transport.call(tool.capability, tool.method, args)
+            transport.call(tool.capability, tool.method, callArgs)
         } catch (e: CancellationException) {
             throw e
+        }
+        if (tool.name == ToolPolicy.RUN_TASK) {
+            val taskId = args.str("task")
+            if (taskId != null && envelope.str("status") == "RUNNING") stillRunning.add(taskId)
         }
         log.on("result", buildJsonObject { put("tool", tool.name); put("ok", envelope["ok"]?.let { (it as? JsonPrimitive)?.content } == "true") })
         return cap(envelope, config.resultCharCap)
@@ -190,7 +232,11 @@ class ToolPipeline(
 
     private suspend fun askUser(tool: ToolCatalog.Tool, target: TargetInfo): Approval {
         val subject = target.label ?: target.pkg ?: tool.name
-        val message = "Allow ${tool.name} on \"${subject.take(40)}\"?"
+        val message = if (tool.name == ToolPolicy.RUN_TASK) {
+            "Start the saved task \"${subject.take(40)}\"?"
+        } else {
+            "Allow ${tool.name} on \"${subject.take(40)}\"?"
+        }
         val answer = try {
             transport.call(
                 "ui.prompt", "ask",
@@ -215,6 +261,19 @@ class ToolPipeline(
     }
 
     private fun resolveTarget(tool: ToolCatalog.Tool, args: JsonObject, ctx: AgentLoop.TurnContext): AhResult<TargetInfo> {
+        // INT-E1: a saved task has no screen target; its label is the name the person gave it
+        if (tool.name == ToolPolicy.RUN_TASK) {
+            val taskId = args.str("task")
+                ?: return AhResult.err(
+                    app.autohost.core.model.AhError.of(
+                        app.autohost.core.model.ErrorCode.INVALID_ARGS,
+                        "run_task needs the id of a saved task",
+                    ),
+                )
+            return AhResult.ok(
+                TargetInfo(pkg = null, label = taskNames[taskId] ?: taskId, isPassword = false, viaId = false),
+            )
+        }
         // app_* tools carry the destination explicitly
         args.str("package")?.let { pkg ->
             return AhResult.ok(TargetInfo(pkg = pkg, label = pkg, isPassword = false, viaId = false))
@@ -259,6 +318,9 @@ class ToolPipeline(
     }
 
     companion object {
+        /** INT-E1: how long run_task waits when the model gave no timeout (under the agent's 180 s idle budget). */
+        const val DEFAULT_TASK_WAIT_MS = 90_000L
+
         fun errResult(code: String, reason: String?, message: String): JsonObject = buildJsonObject {
             put("ok", false)
             put("error", buildJsonObject {

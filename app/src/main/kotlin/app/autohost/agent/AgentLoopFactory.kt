@@ -24,6 +24,7 @@ import app.autohost.runtime.agent.ObservationFilter
 import app.autohost.runtime.agent.RunBudget
 import app.autohost.runtime.agent.ToolCatalog
 import app.autohost.runtime.agent.ToolPipeline
+import app.autohost.runtime.agent.ToolPolicy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -77,12 +78,17 @@ class AgentLoopFactory(
             gateway.chat(agentConfig.provider ?: "", request, budget.remainingWallClockMs())
         }
 
-        val catalog = ToolCatalog.load()
+        // INT-E1: with no saved tasks allowed, the model is not even shown run_task
+        val catalog = ToolCatalog.load().let { loaded ->
+            if (agentConfig.tasks.isEmpty()) loaded.without(setOf(ToolPolicy.RUN_TASK)) else loaded
+        }
         val pipeline = ToolPipeline(
             catalog = catalog,
             transport = transport,
             budget = budget,
             packages = agentConfig.packages.toSet(),
+            tasks = agentConfig.tasks.toSet(),
+            taskNames = agentConfig.taskNames,
             sensitivity = sensitivity,
             foregroundSource = { foregroundOf(transport) },
             revalidator = { _, target ->
