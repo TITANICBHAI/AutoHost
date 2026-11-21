@@ -1,7 +1,7 @@
-# CI digest - run 47 - branch work/s02-green - commit 39cef7a
+# CI digest - run 48 - branch work/s02-green - commit 7aaeb74
 tests step outcome: failure
 
-## Verdict: RED - 1419 tests ran, 0 failed, 0 Kotlin compile errors, 1 failed Gradle tasks, 4 modules with no results
+## Verdict: RED - 1450 tests ran, 0 failed, 0 Kotlin compile errors, 1 failed Gradle tasks, 4 modules with no results
 
 ## Failed Gradle tasks
 - :app:testCoreLiteDebugUnitTest
@@ -50,11 +50,11 @@ tests step outcome: failure
 - core/engine: 299 / 0 / 2
 - core/llm: 36 / 0 / 0
 - core/model: 47 / 0 / 0
-- runtime/agent: 175 / 0 / 0
+- runtime/agent: 206 / 0 / 0
 - runtime/flow: 117 / 0 / 24
 - runtime/js: 41 / 0 / 0
 
-## Style baseline (report only): 21652 ktlint/detekt findings
+## Style baseline (report only): 21805 ktlint/detekt findings
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:14:1 Class body should not start with blank line
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:32 Newline expected after opening parenthesis
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:50 Parameter should start on a newline
