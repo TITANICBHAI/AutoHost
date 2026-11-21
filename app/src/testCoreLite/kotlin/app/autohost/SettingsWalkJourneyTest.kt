@@ -27,6 +27,9 @@ import org.robolectric.annotation.Config
  * The control test proves the Back check can fail: on the first screen Back does leave the app. Same window and
  * conventions as [AgentChatJourneyTest]: 3600 dp tall so nothing needs scrolling, every wait and click names itself
  * when it fails.
+ *
+ * One app launch walks all the rows (INT-T3): the nine single-row tests each launched the whole app and, with the
+ * other journey tests, took the app's test step past its 8 minute limit. A failure still names the row and the step.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "w411dp-h3600dp")
@@ -87,25 +90,20 @@ class SettingsWalkJourneyTest {
         body(scenario)
     }
 
-    /**
-     * Opens [row] from the Settings list, waits for the screen's [opens] text, returns with the phone's Back button,
-     * and, when the screen has its own back button ([ownBack]), does it again with that button.
-     */
-    private fun walk(row: String, opens: String, ownBack: String? = null, opensSubstring: Boolean = false) =
-        onSettingsList { scenario ->
-            clickText(row)
-            waitUntilGone(HUB)
-            waitForText(opens, opensSubstring)
-            phoneBack(scenario, row)
-            waitForText(HUB)
-            if (ownBack != null) {
-                clickText(row)
-                waitUntilGone(HUB)
-                waitForText(opens, opensSubstring)
-                clickText(ownBack)
-                waitForText(HUB)
-            }
-        }
+    /** One Settings row: what the row says, what the screen it opens shows, and that screen's own back button if any. */
+    private data class Row(val row: String, val opens: String, val ownBack: String? = null, val opensSubstring: Boolean = false)
+
+    private val rows = listOf(
+        Row("AI model (your own key)", opens = "AI features", ownBack = "back"),
+        Row("Ask the agent", opens = "Target apps", opensSubstring = true),
+        Row("Runs and history", opens = "Runs", ownBack = "Back"),
+        Row("Quick macro", opens = "VALUES IT CAN BE GIVEN"),
+        Row("Schedules and triggers", opens = "Schedules", ownBack = "← Tasks"),
+        Row("Tiles, shortcuts and bubble", opens = "Surfaces", ownBack = "‹ Back"),
+        Row("What this phone allows", opens = "What this phone allows", ownBack = "← Back"),
+        Row("Health check", opens = "Setup & Health"),
+        Row("Security, backup and developer", opens = "SCHEDULER"),
+    )
 
     // ---- the control: the check that Back "did not close the app" can fail -------------------------------------------
 
@@ -118,34 +116,26 @@ class SettingsWalkJourneyTest {
         }
     }
 
-    // ---- one screen each ---------------------------------------------------------------------------------------------------
+    // ---- every screen the Settings list leads to ------------------------------------------------------------------------
 
-    @Test fun `AI model opens and Back returns to Settings`() =
-        walk("AI model (your own key)", opens = "AI features", ownBack = "back")
-
-    @Test fun `Ask the agent opens and Back returns to Settings`() =
-        walk("Ask the agent", opens = "Target apps", opensSubstring = true)
-
-    @Test fun `Runs and history opens and Back returns to Settings`() =
-        walk("Runs and history", opens = "Runs", ownBack = "Back")
-
-    @Test fun `Quick macro opens and Back returns to Settings`() =
-        walk("Quick macro", opens = "VALUES IT CAN BE GIVEN")
-
-    @Test fun `Schedules and triggers opens and Back returns to Settings`() =
-        walk("Schedules and triggers", opens = "Schedules", ownBack = "← Tasks")
-
-    @Test fun `Tiles, shortcuts and bubble opens and Back returns to Settings`() =
-        walk("Tiles, shortcuts and bubble", opens = "Surfaces", ownBack = "‹ Back")
-
-    @Test fun `What this phone allows opens and Back returns to Settings`() =
-        walk("What this phone allows", opens = "What this phone allows", ownBack = "← Back")
-
-    @Test fun `Health check opens and Back returns to Settings`() =
-        walk("Health check", opens = "Setup & Health")
-
-    @Test fun `Security, backup and developer opens and Back returns to Settings`() =
-        walk("Security, backup and developer", opens = "SCHEDULER")
+    @Test fun `every Settings screen opens and Back returns to the Settings list`() = onSettingsList { scenario ->
+        for (r in rows) {
+            at("row [${r.row}]") {
+                clickText(r.row)
+                waitUntilGone(HUB)
+                waitForText(r.opens, r.opensSubstring)
+                phoneBack(scenario, r.row)
+                waitForText(HUB)
+                r.ownBack?.let { ownBack ->
+                    clickText(r.row)
+                    waitUntilGone(HUB)
+                    waitForText(r.opens, r.opensSubstring)
+                    clickText(ownBack)
+                    waitForText(HUB)
+                }
+            }
+        }
+    }
 
     // ---- a screen reached from somewhere other than the Settings list goes back to where the person was ----------------
 

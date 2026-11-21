@@ -81,6 +81,30 @@ def parse_reports(root: Path):
     return per_module, failing
 
 
+def parse_times(root: Path, top: int = 8):
+    """-> (slowest [(seconds, module, 'Class.name')], seconds_per_module {module: seconds}) from the finished tasks' XML.
+
+    A task that the timeout stopped writes no XML, so a timed-out run shows no timings for that task (the STARTED tail
+    names where it was). INT-T3: added after the journey-test task grew to the edge of its 8 minute limit.
+    """
+    cases, totals = [], {}
+    for xml_path in sorted(root.glob("**/build/test-results/**/TEST-*.xml")):
+        try:
+            suite = ET.parse(xml_path).getroot()
+        except ET.ParseError:
+            continue
+        module = module_of(xml_path, root)
+        for case in suite.iter("testcase"):
+            try:
+                seconds = float(case.get("time") or 0)
+            except ValueError:
+                continue
+            totals[module] = totals.get(module, 0.0) + seconds
+            cases.append((seconds, module, f'{case.get("classname", "?").rsplit(".", 1)[-1]}.{case.get("name", "?")}'))
+    cases.sort(reverse=True)
+    return cases[:top], totals
+
+
 def modules_expected(tasks_file: Path | None) -> list:
     if not tasks_file or not tasks_file.exists():
         return []
@@ -113,7 +137,7 @@ def render_details(log: str, per_module: dict, failing: list) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render(log: str, per_module: dict, failing: list, expected: list, header: dict) -> str:
+def render(log: str, per_module: dict, failing: list, expected: list, header: dict, slow=None) -> str:
     errors = kotlin_errors(log)
     tasks = failed_tasks(log)
     tests = sum(r[0] for r in per_module.values())
@@ -145,6 +169,11 @@ def render(log: str, per_module: dict, failing: list, expected: list, header: di
     if per_module:
         lines += ["", "## Per module (tests / failed / skipped)"]
         lines += [f"- {m}: {r[0]} / {r[1]} / {r[2]}" for m, r in sorted(per_module.items())]
+    if slow and (slow[0] or slow[1]):
+        cases, totals = slow
+        lines += ["", "## Where the time went (finished tasks only; a task stopped by the timeout leaves no timings)"]
+        lines += [f"- {m}: {s:.0f} s of test time" for m, s in sorted(totals.items(), key=lambda kv: -kv[1])[:5]]
+        lines += [f"- slowest: {s:.1f} s {name} [{m}]" for s, m, name in cases]
     if len(lines) > MAX_LINES:
         lines = lines[: MAX_LINES - 1] + [f"... digest cut at {MAX_LINES} lines"]
     return "\n".join(lines) + "\n"
@@ -168,7 +197,8 @@ def main(argv=None) -> int:
     if args.details_out:
         Path(args.details_out).write_text(render_details(log, per_module, failing), encoding="utf-8")
     sys.stdout.write(render(log, per_module, failing, expected,
-                            {"run": args.run, "branch": args.branch, "sha": args.sha, "outcome": args.outcome}))
+                            {"run": args.run, "branch": args.branch, "sha": args.sha, "outcome": args.outcome},
+                            slow=parse_times(root)))
     return 0
 
 

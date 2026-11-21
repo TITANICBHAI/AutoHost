@@ -1,7 +1,7 @@
 # All JVM unit tests in ONE Gradle run, then ONE plain-text digest that a reader without access to the
 # Actions UI can fetch:   git fetch origin ci-results && git show origin/ci-results:latest.md
 # Replaces jvm-core.yml + jvm-capabilities.yml (21 sequential Gradle starts, ~100 minutes, two modules never run).
-# Hung tests are stopped by the per-task timeout in the root build.gradle.kts (8 min) and named in the digest, which
+# Hung tests are stopped by the per-task timeout in the root build.gradle.kts (8 min, 15 for the app) and named in the digest, which
 # keeps the intent of the old "one step per module" rule (X-17-anomaly) without paying for 21 Gradle starts.
 # Emulator jobs stay a permanent no-go (D-24).
 name: jvm-tests

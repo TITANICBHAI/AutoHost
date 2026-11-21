@@ -102,6 +102,33 @@ class CiDigestTest(unittest.TestCase):
         self.assertNotIn("Run with --stacktrace", details)
         self.assertIn("[m] C.t - msg", details)
 
+    def test_the_digest_shows_where_the_time_went_for_finished_tasks(self):
+        # INT-T3: the journey-test task grew to the edge of its 8 minute limit; the digest now names the slow tests
+        timed = """<?xml version="1.0"?>
+<testsuite name="a.Slow" tests="3" skipped="0" failures="0" errors="0">
+  <testcase name="quick" classname="a.Slow" time="0.2"/>
+  <testcase name="walks every screen" classname="a.Slow" time="41.5"/>
+  <testcase name="no time attribute" classname="a.Slow"/>
+</testsuite>"""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            put(root, "app/build/test-results/testCoreLiteDebugUnitTest/TEST-a.Slow.xml", timed)
+            per_module, failing = ci_digest.parse_reports(root)
+            text = ci_digest.render("", per_module, failing, [], {"run": "9", "branch": "b", "sha": "c", "outcome": "success"},
+                                    slow=ci_digest.parse_times(root))
+        self.assertIn("## Where the time went", text)
+        self.assertIn("- app: 42 s of test time", text)
+        self.assertIn("- slowest: 41.5 s Slow.walks every screen [app]", text)
+        self.assertLess(text.index("slowest: 41.5"), text.index("slowest: 0.2"))
+
+    def test_no_timing_section_when_no_report_was_written(self):
+        # a task stopped by the timeout writes no XML: the digest must not invent a timing section
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            text = ci_digest.render("", {}, [], [], {"run": "9", "branch": "b", "sha": "c", "outcome": "failure"},
+                                    slow=ci_digest.parse_times(root))
+        self.assertNotIn("Where the time went", text)
+
 
 if __name__ == "__main__":
     unittest.main()
