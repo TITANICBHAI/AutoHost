@@ -1,4 +1,4 @@
-# CI digest - run 49 - branch work/s02-green - commit 1e7b3c7
+# CI digest - run 50 - branch work/s02-green - commit 5c33edd
 tests step outcome: failure
 
 ## Verdict: RED - 1450 tests ran, 0 failed, 0 Kotlin compile errors, 1 failed Gradle tasks, 4 modules with no results
@@ -17,6 +17,24 @@ tests step outcome: failure
 - SettingsWalkJourneyTest > every Settings screen opens and Back returns to the Settings list STARTED
 - SettingsWalkJourneyTest > AI settings opened from the Agent tab go back to the chat STARTED
 - SettingsWalkJourneyTest > on the first screen the phone's Back button does leave the app STARTED
+
+## Where the test JVM was stuck (its last thread dump, kept at most a minute before the end)
+    test JVM 4219: 40 threads
+    "Test worker" #1 prio=5 os_prio=0 cpu=971.33ms elapsed=423.98s tid=0x00007a8114034d50 nid=0x107d waiting on condition [0x00007a81183fd000]
+    java.lang.Thread.State: WAITING (parking)
+    at jdk.internal.misc.Unsafe.park(java.base@17.0.21/Native Method)
+    - parking to wait for <0x0000000088e32e00> (a java.util.concurrent.FutureTask)
+    at java.util.concurrent.locks.LockSupport.park(java.base@17.0.21/LockSupport.java:211)
+    at java.util.concurrent.FutureTask.awaitDone(java.base@17.0.21/FutureTask.java:447)
+    at java.util.concurrent.FutureTask.get(java.base@17.0.21/FutureTask.java:190)
+    at org.robolectric.internal.bytecode.Sandbox.runOnMainThread(Sandbox.java:130)
+    at org.robolectric.internal.bytecode.Sandbox.runOnMainThread(Sandbox.java:99)
+    at org.robolectric.internal.SandboxTestRunner$5.evaluate(SandboxTestRunner.java:311)
+    at org.robolectric.internal.SandboxTestRunner$1.evaluate(SandboxTestRunner.java:176)
+    at org.junit.runners.ParentRunner.run(ParentRunner.java:413)
+    at org.robolectric.RobolectricTestRunner.run(RobolectricTestRunner.java:142)
+    at org.gradle.api.internal.tasks.testing.junit.JUnitTestClassExecutor.runTestClass(JUnitTestClassExecutor.java:112)
+    garbage-first heap total 237568K, used 181877K [0x0000000080000000, 0x0000000100000000)
 
 ## Modules that produced no test results (compile error, timeout, or no tests)
 - runtime/api
@@ -65,9 +83,9 @@ tests step outcome: failure
 - slowest: 10.0 s CdpBrowserProviderTest.close removes the forward [capabilities/browser]
 - slowest: 2.0 s SelectorBenchTest.find latency stays in single-digit milliseconds on large trees [core/model]
 - slowest: 1.5 s UiAutomationControllerTest.spawn failure with a dead runner is refused honestly [app]
-- slowest: 1.2 s AdbClientTest.keystore persists and restores the identity [capabilities/shell]
+- slowest: 1.4 s AdbClientTest.keystore persists and restores the identity [capabilities/shell]
 - slowest: 1.0 s LlmGatewayTest.given a 429 then a success when called then the retry lands and the usage is audited [core/llm]
-- slowest: 0.7 s AdbClientTest.auth signature verifies against the token with the public key [capabilities/shell]
+- slowest: 0.8 s AdbClientTest.auth signature verifies against the token with the public key [capabilities/shell]
 
 ## Style baseline (report only): 21807 ktlint/detekt findings
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:14:1 Class body should not start with blank line
