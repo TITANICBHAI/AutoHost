@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import app.autohost.AppGraph
+import app.autohost.agent.AgentRunStarter
 import app.autohost.core.common.AhResult
 import app.autohost.core.engine.orchestrator.RunRecord
 import app.autohost.core.llm.ProviderProfile
@@ -48,7 +49,10 @@ import app.autohost.ui2.ReasonCopy
 import app.autohost.ui2.pickers.AppChoice
 import app.autohost.ui2.pickers.AppPickerButton
 import app.autohost.ui2.pickers.PickerModel
+import app.autohost.ui2.pickers.TaskChoice
+import app.autohost.ui2.pickers.TaskPickerButton
 import app.autohost.ui2.pickers.rememberInstalledApps
+import app.autohost.ui2.pickers.rememberTaskChoices
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
@@ -85,6 +89,7 @@ fun AgentChatHost(
     var goal by remember { mutableStateOf("") }
     var packages by remember(store) { mutableStateOf(transcript.packages) }
     var profileId by remember(store) { mutableStateOf(transcript.profileId) }
+    var taskIds by remember(store) { mutableStateOf(transcript.tasks) }
     var profiles by remember { mutableStateOf(emptyList<ProviderProfile>()) }
     var aiEnabled by remember { mutableStateOf(false) }
     var refusal by remember { mutableStateOf<Refusal?>(null) }
@@ -93,6 +98,7 @@ fun AgentChatHost(
     var tick by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
     val apps = rememberInstalledApps(graph)
+    val taskChoices = rememberTaskChoices(graph)
     val records by graph.runStore.runs.collectAsState()
 
     LaunchedEffect(graph.aiFacts) {
@@ -104,6 +110,11 @@ fun AgentChatHost(
         if (installed.isNotEmpty()) packages = AgentChat.stillInstalled(packages, installed)
     }
     val appNames = remember(apps) { apps.associate { it.pkg to it.label } }
+    // a saved task that was deleted since it was ticked drops out; while the list is still empty nothing is dropped
+    val existingTasks = remember(taskChoices) { taskChoices.map { it.taskId }.toSet() }
+    LaunchedEffect(existingTasks) {
+        if (existingTasks.isNotEmpty()) taskIds = AgentChat.stillSaved(taskIds, existingTasks)
+    }
 
     // the runs this chat started that are still going; their events nudge the lines to redraw
     val activeIds = transcript.entries.map { it.runId }.filter { id -> records.firstOrNull { it.runId == id }?.active == true }
@@ -127,12 +138,15 @@ fun AgentChatHost(
         if (gate != AgentChat.Gate.Ready || starting || runningId != null) return@send
         val text = goal.trim()
         val chosenApps = packages
+        val chosenTasks = taskIds
         val model = chosenProfile
+        // only saved tasks that exist right now are handed over; the agent is never told about a deleted one
+        val allowed = AgentChat.allowedTasks(chosenTasks, taskChoices).map { AgentRunStarter.AllowedTask(it.taskId, it.name) }
         scope.launch {
             starting = true
             refusal = null
             val started: AhResult<RunRecord>? = try {
-                graph.agentRunStarter.start(text, chosenApps, model, JsonObject(emptyMap()))
+                graph.agentRunStarter.start(text, chosenApps, model, JsonObject(emptyMap()), allowed)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -142,7 +156,7 @@ fun AgentChatHost(
                 is AhResult.Ok -> {
                     transcript = transcript
                         .withEntry(ChatEntry(started.value.runId, text, started.value.startedAtMs))
-                        .withSetup(chosenApps, model)
+                        .withSetup(chosenApps, model, chosenTasks)
                     store.save(transcript)
                     goal = ""
                 }
@@ -184,6 +198,8 @@ fun AgentChatHost(
             gate = gate,
             apps = apps,
             packages = packages,
+            taskChoices = taskChoices,
+            taskIds = taskIds,
             profiles = profiles,
             chosenProfile = chosenProfile,
             open = setupOpen,
@@ -191,6 +207,8 @@ fun AgentChatHost(
             onToggle = { setupOpen = !setupOpen },
             onAddApp = { pkg -> if (pkg.isNotBlank() && pkg !in packages) packages = packages + pkg },
             onRemoveApp = { pkg -> packages = packages - pkg },
+            onAddTask = { id -> if (id.isNotBlank() && id !in taskIds && taskIds.size < AgentChat.MAX_TASKS) taskIds = taskIds + id },
+            onRemoveTask = { id -> taskIds = taskIds - id },
             onPickProfile = { profileId = it },
             onOpenAiSettings = onOpenAiSettings,
         )
@@ -323,14 +341,17 @@ private fun OutcomeCard(line: ChatLine.Outcome, onOpen: () -> Unit, onFix: (FixT
 }
 
 /**
- * What the agent needs before it can start: a model (and AI switched on), then the apps it may use. Collapsed to one
- * line once both are set; the person can change either from there.
+ * What the agent needs before it can start: a model (and AI switched on), then the apps it may use, and, once the person
+ * has saved tasks, which of those it may start (INT-E2). Collapsed to one line once the model and apps are set; the person
+ * can change any of them from there.
  */
 @Composable
 private fun SetupStrip(
     gate: AgentChat.Gate,
     apps: List<AppChoice>,
     packages: List<String>,
+    taskChoices: List<TaskChoice>,
+    taskIds: List<String>,
     profiles: List<ProviderProfile>,
     chosenProfile: String?,
     open: Boolean,
@@ -338,6 +359,8 @@ private fun SetupStrip(
     onToggle: () -> Unit,
     onAddApp: (String) -> Unit,
     onRemoveApp: (String) -> Unit,
+    onAddTask: (String) -> Unit,
+    onRemoveTask: (String) -> Unit,
     onPickProfile: (String) -> Unit,
     onOpenAiSettings: () -> Unit,
 ) {
@@ -356,7 +379,11 @@ private fun SetupStrip(
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             Text(
-                summary(packages, apps, modelName),
+                AgentChat.summaryLine(
+                    appNames = packages.map { PickerModel.appLabel(apps, it) ?: "an app" },
+                    taskNames = taskIds.map { PickerModel.taskName(taskChoices, it) ?: "a task" },
+                    modelName = modelName,
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
@@ -382,6 +409,27 @@ private fun SetupStrip(
                     }
                 }
                 AppPickerButton(label = "", pkg = "", apps = apps, hide = ownPackage, blankText = "+ Add an app", onPick = onAddApp)
+                // only once there is a saved task to offer (or one already ticked): a first-time person sees no empty section
+                if (taskChoices.isNotEmpty() || taskIds.isNotEmpty()) {
+                    Text("Saved tasks the agent may start", style = MaterialTheme.typography.labelLarge)
+                    if (taskIds.isNotEmpty()) {
+                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            for (id in taskIds) {
+                                FilterChip(
+                                    selected = true,
+                                    onClick = { onRemoveTask(id) },
+                                    label = { Text("${PickerModel.taskName(taskChoices, id) ?: "a task"}  ✕") },
+                                )
+                            }
+                        }
+                    }
+                    val notYetAllowed = taskChoices.filter { it.taskId !in taskIds }
+                    if (taskIds.size >= AgentChat.MAX_TASKS) {
+                        Text("That is the most saved tasks one message can allow.", style = MaterialTheme.typography.bodySmall)
+                    } else if (notYetAllowed.isNotEmpty()) {
+                        TaskPickerButton(label = "", taskId = "", tasks = notYetAllowed, blankText = "+ Add a task", onPick = onAddTask)
+                    }
+                }
                 if (profiles.size > 1) {
                     Text("AI model", style = MaterialTheme.typography.labelLarge)
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -397,12 +445,6 @@ private fun SetupStrip(
             }
         }
     }
-}
-
-/** "Apps: YouTube, Gemini · Model: Work key": names only, never a package or an id. */
-private fun summary(packages: List<String>, apps: List<AppChoice>, modelName: String?): String {
-    val appsPart = if (packages.isEmpty()) "No apps picked yet" else "Apps: " + packages.joinToString(", ") { PickerModel.appLabel(apps, it) ?: "an app" }
-    return if (modelName.isNullOrBlank()) appsPart else "$appsPart · Model: $modelName"
 }
 
 @Composable

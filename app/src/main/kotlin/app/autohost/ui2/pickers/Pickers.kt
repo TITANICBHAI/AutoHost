@@ -96,18 +96,24 @@ fun AppPickerButton(
     }
 }
 
-/** The same for tasks: shows the picked task by name; the list shows each task's name and what kind it is. */
+/**
+ * The same for tasks: shows the picked task by name; the list shows each task's name and what kind it is. A blank [label]
+ * makes the button read as just [blankText] or the picked name ("+ Add a task"), like [AppPickerButton].
+ */
 @Composable
 fun TaskPickerButton(
     label: String,
     taskId: String,
     tasks: List<TaskChoice>,
+    blankText: String = "choose a task",
     onPick: (String) -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
-    val shown = PickerModel.taskName(tasks, taskId) ?: "choose a task"
+    val shown = PickerModel.taskName(tasks, taskId) ?: blankText
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        OutlinedButton(onClick = { open = !open }, modifier = Modifier.fillMaxWidth()) { Text("$label: $shown") }
+        OutlinedButton(onClick = { open = !open }, modifier = Modifier.fillMaxWidth()) {
+            Text(if (label.isBlank()) shown else "$label: $shown")
+        }
         if (open) {
             var query by remember { mutableStateOf("") }
             val rows = remember(tasks, query) { PickerModel.tasks(tasks, query) }

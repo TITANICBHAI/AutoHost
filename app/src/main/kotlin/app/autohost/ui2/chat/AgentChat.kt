@@ -5,6 +5,7 @@ import app.autohost.core.llm.ProviderProfile
 import app.autohost.core.model.BrokerEvent
 import app.autohost.core.model.RunStatus
 import app.autohost.ui2.ReasonCopy
+import app.autohost.ui2.pickers.TaskChoice
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -104,6 +105,29 @@ object AgentChat {
     /** The remembered apps that are still installed. With no list yet (it is still loading) nothing is dropped. */
     fun stillInstalled(packages: List<String>, installed: Set<String>): List<String> =
         if (installed.isEmpty()) packages else packages.filter { it in installed }
+
+    /** The most saved tasks one message may allow the agent to start. The list rides in the goal text, so it stays short. */
+    const val MAX_TASKS = 12
+
+    /** The remembered saved tasks that still exist. With no list yet (still loading, or the person has none) nothing is dropped. */
+    fun stillSaved(ids: List<String>, existing: Set<String>): List<String> =
+        if (existing.isEmpty()) ids else ids.filter { it in existing }
+
+    /**
+     * The saved tasks a message may start (INT-E2): the ticked ones that exist right now, in the order they were ticked, at
+     * most [MAX_TASKS]. A ticked task that has been deleted since is left out, so the agent is never told about it and cannot
+     * start it (fail closed).
+     */
+    fun allowedTasks(ticked: List<String>, existing: List<TaskChoice>): List<TaskChoice> =
+        ticked.distinct().mapNotNull { id -> existing.firstOrNull { it.taskId == id } }.take(MAX_TASKS)
+
+    /** "Apps: YouTube, Gemini · Tasks: Daily clip · Model: Work key": names only, never a package or an id. */
+    fun summaryLine(appNames: List<String>, taskNames: List<String>, modelName: String?): String {
+        val parts = mutableListOf(if (appNames.isEmpty()) "No apps picked yet" else "Apps: " + appNames.joinToString(", "))
+        if (taskNames.isNotEmpty()) parts += "Tasks: " + taskNames.joinToString(", ")
+        if (!modelName.isNullOrBlank()) parts += "Model: $modelName"
+        return parts.joinToString(" · ")
+    }
 
     /** The catalog fix actions the chat can carry out. A fix not in this set draws no button (no dead buttons). */
     val supportedFixes: Set<String> = setOf("OPEN_AI_SETTINGS", "OPEN_PERMISSION_REVIEW", "OPEN_ACCESSIBILITY_SETTINGS")

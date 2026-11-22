@@ -5,6 +5,7 @@ import app.autohost.core.llm.ProviderProfile
 import app.autohost.core.model.BrokerEvent
 import app.autohost.core.model.RunStatus
 import app.autohost.ui2.ReasonCopy
+import app.autohost.ui2.pickers.TaskChoice
 import java.io.File
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
@@ -359,6 +360,44 @@ class AgentChatTest {
     @Test fun `remembered apps that were uninstalled are dropped once the list has loaded`() {
         assertEquals(listOf("a", "c"), AgentChat.stillInstalled(listOf("a", "b", "c"), setOf("a", "c", "d")))
         assertEquals(listOf("a", "b"), AgentChat.stillInstalled(listOf("a", "b"), emptySet()))
+    }
+
+    // ---- INT-E2: the saved tasks the agent may start ---------------------------------------------------------------------
+
+    private fun choice(id: String) = TaskChoice(id, "Task $id", "Macro")
+
+    @Test fun `remembered saved tasks that were deleted are dropped once the list has loaded`() {
+        assertEquals(listOf("a", "c"), AgentChat.stillSaved(listOf("a", "b", "c"), setOf("a", "c", "d")))
+        assertEquals(listOf("a", "b"), AgentChat.stillSaved(listOf("a", "b"), emptySet()))
+    }
+
+    @Test fun `only ticked tasks that exist are handed to the agent, in the order they were ticked`() {
+        val existing = listOf(choice("a"), choice("b"), choice("c"))
+        assertEquals(listOf("c", "a"), AgentChat.allowedTasks(listOf("c", "gone", "a", "c"), existing).map { it.taskId })
+        assertEquals("Task c", AgentChat.allowedTasks(listOf("c"), existing).single().name)
+        assertTrue(AgentChat.allowedTasks(emptyList(), existing).isEmpty())
+    }
+
+    @Test fun `with no list of tasks yet nothing is handed to the agent`() {
+        // the screen keeps a ticked task while the list loads, but a message never starts with one it cannot see
+        assertTrue(AgentChat.allowedTasks(listOf("a", "b"), emptyList()).isEmpty())
+    }
+
+    @Test fun `no more than the limit of tasks are handed over`() {
+        val existing = (1..30).map { choice("t$it") }
+        val handed = AgentChat.allowedTasks(existing.map { it.taskId }, existing)
+        assertEquals(AgentChat.MAX_TASKS, handed.size)
+        assertEquals("t1", handed.first().taskId)
+    }
+
+    @Test fun `the setup line names apps, tasks and the model and leaves out what is not there`() {
+        assertEquals("No apps picked yet", AgentChat.summaryLine(emptyList(), emptyList(), null))
+        assertEquals("Apps: YouTube, Gemini · Model: Work key", AgentChat.summaryLine(listOf("YouTube", "Gemini"), emptyList(), "Work key"))
+        assertEquals(
+            "Apps: Gemini · Tasks: Daily clip, Upload · Model: P1",
+            AgentChat.summaryLine(listOf("Gemini"), listOf("Daily clip", "Upload"), "P1"),
+        )
+        assertEquals("Apps: Gemini · Tasks: Daily clip", AgentChat.summaryLine(listOf("Gemini"), listOf("Daily clip"), "  "))
     }
 
     private fun repoFile(relative: String): File {

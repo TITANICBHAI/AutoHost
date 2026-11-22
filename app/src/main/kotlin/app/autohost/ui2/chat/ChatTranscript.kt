@@ -15,25 +15,33 @@ import kotlinx.serialization.json.put
 data class ChatEntry(val runId: String, val goal: String, val startedAtMs: Long)
 
 /**
- * What the Agent tab remembers between visits: the goals sent (newest last) and the apps and model used last, so the next
- * message needs no setup. Pure; [ChatTranscriptStore] keeps it. A damaged or unknown saved value reads as empty.
+ * What the Agent tab remembers between visits: the goals sent (newest last) and the apps, saved tasks and model used last,
+ * so the next message needs no setup. [tasks] are the saved tasks (by id) the agent may start (INT-E2). Pure;
+ * [ChatTranscriptStore] keeps it. A damaged or unknown saved value reads as empty.
  */
 data class ChatTranscript(
     val entries: List<ChatEntry> = emptyList(),
     val packages: List<String> = emptyList(),
     val profileId: String? = null,
+    val tasks: List<String> = emptyList(),
 ) {
     fun withEntry(entry: ChatEntry): ChatTranscript =
         copy(entries = (entries.filterNot { it.runId == entry.runId } + entry).takeLast(MAX_ENTRIES))
 
-    fun withSetup(packages: List<String>, profileId: String?): ChatTranscript =
-        copy(packages = packages.filter { it.isNotBlank() }.distinct(), profileId = profileId)
+    /** The setup the next message starts with. Leaving [tasks] out keeps the saved tasks that are remembered now. */
+    fun withSetup(packages: List<String>, profileId: String?, tasks: List<String> = this.tasks): ChatTranscript =
+        copy(
+            packages = packages.filter { it.isNotBlank() }.distinct(),
+            profileId = profileId,
+            tasks = tasks.filter { it.isNotBlank() }.distinct(),
+        )
 
     fun cleared(): ChatTranscript = copy(entries = emptyList())
 
     fun toJson(): String = buildJsonObject {
         put("v", 1)
         put("packages", buildJsonArray { packages.forEach { add(it) } })
+        put("tasks", buildJsonArray { tasks.forEach { add(it) } })
         profileId?.let { put("profile", it) }
         put(
             "entries",
@@ -66,7 +74,9 @@ data class ChatTranscript(
                 }
                 val packages = (root["packages"] as? JsonArray).orEmpty()
                     .mapNotNull { (it as? JsonPrimitive)?.content?.takeIf { pkg -> pkg.isNotBlank() } }
-                ChatTranscript(entries.takeLast(MAX_ENTRIES), packages.distinct(), root.str("profile"))
+                val tasks = (root["tasks"] as? JsonArray).orEmpty()
+                    .mapNotNull { (it as? JsonPrimitive)?.content?.takeIf { id -> id.isNotBlank() } }
+                ChatTranscript(entries.takeLast(MAX_ENTRIES), packages.distinct(), root.str("profile"), tasks.distinct())
             }.getOrDefault(ChatTranscript())
         }
 

@@ -343,7 +343,40 @@ class AgentChatJourneyTest {
         waitForText("Apps the agent may use")
         waitForText("+ Add an app")
         assertFalse("no package names for ordinary people", shown("package", substring = true))
+        assertFalse("a person with no saved tasks sees no empty tasks section", shown("Saved tasks the agent may start"))
         clickText("Done")
         waitUntilGone("Apps the agent may use")
+    }
+
+    // ---- INT-E2: the saved tasks the agent may start ---------------------------------------------------------------------
+
+    @Test fun `a saved task can be allowed for the agent from the setup panel and taken away again`() = withChat(
+        seed = {
+            app.graph.aiProfileStore.save(listOf(profile))
+            runBlocking { app.graph.refreshAiFacts(enabled = true, profiles = listOf(profile), cleartextLoopback = false) }
+            saveChat(ChatTranscript(packages = listOf(app.packageName), profileId = "p1"))
+            runBlocking {
+                app.graph.data.tasks.installVersion(
+                    taskId = "user.daily-clip", manifestJson = "{}", version = "1.0.0", bundlePath = "", sha256 = "",
+                    importReportJson = "{}", source = "template", name = "Daily clip",
+                )
+            }
+        },
+    ) {
+        waitForText("Model: P1", substring = true)
+        assertFalse("nothing is allowed until the person says so", shown("Tasks: Daily clip", substring = true))
+        clickText("Change")
+        waitForText("Saved tasks the agent may start")
+        clickText("+ Add a task")
+        clickText("Daily clip")
+        waitForText("Daily clip  ✕")
+        waitForText("Tasks: Daily clip", substring = true)
+        assertFalse("no id for ordinary people", shown("user.daily-clip", substring = true))
+        clickText("Daily clip  ✕")
+        waitUntilGone("Daily clip  ✕")
+        at("the summary stops naming the task") {
+            compose.waitUntil(timeoutMillis = 40_000) { !shown("Tasks: Daily clip", substring = true) }
+        }
+        waitForText("+ Add a task")
     }
 }

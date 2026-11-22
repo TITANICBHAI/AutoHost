@@ -14,8 +14,30 @@ class ChatTranscriptTest {
             entries = listOf(entry(1), ChatEntry("run-2", "say \"hi\" \\ and é \n twice", 5L)),
             packages = listOf("com.example.a", "com.example.b"),
             profileId = "p1",
+            tasks = listOf("user.macro.daily", "dev.upload"),
         )
         assertEquals(original, ChatTranscript.parse(original.toJson()))
+    }
+
+    @Test fun `a chat saved before saved tasks existed reads with none ticked`() {
+        val parsed = ChatTranscript.parse("""{"v":1,"packages":["p"],"profile":"x","entries":[]}""")
+        assertEquals(listOf("p"), parsed.packages)
+        assertEquals("x", parsed.profileId)
+        assertTrue(parsed.tasks.isEmpty())
+    }
+
+    @Test fun `ticked tasks drop blanks, repeats and values that are not text`() {
+        val parsed = ChatTranscript.parse("""{"tasks":["a","","a",{"x":1},["y"],"b"]}""")
+        assertEquals(listOf("a", "b"), parsed.tasks)
+        assertTrue(ChatTranscript.parse("""{"tasks":"not a list"}""").tasks.isEmpty())
+    }
+
+    @Test fun `setup keeps the ticked tasks unless it is given new ones, and clearing the chat keeps them`() {
+        val t = ChatTranscript(tasks = listOf("a", "b")).withEntry(entry(1))
+        assertEquals(listOf("a", "b"), t.withSetup(listOf("p"), "m").tasks)
+        assertEquals(listOf("c"), t.withSetup(listOf("p"), "m", listOf("c", "", "c")).tasks)
+        assertTrue(t.withSetup(listOf("p"), "m", emptyList()).tasks.isEmpty())
+        assertEquals(listOf("a", "b"), t.cleared().tasks)
     }
 
     @Test fun `nothing saved, blank text and damaged text all read as an empty chat`() {
