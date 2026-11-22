@@ -101,6 +101,7 @@ import app.autohost.service.RunForegroundService
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -399,6 +400,10 @@ class AppGraph(val application: Application) {
     val database: AutoHostDatabase by lazy {
         Room.databaseBuilder(application, AutoHostDatabase::class.java, AutoHostDatabase.NAME)
             .addMigrations(*Migrations.ALL)
+            // INT-T6: Room's own default is four threads shared by the whole process. This code bridges into suspend calls
+            // with runBlocking in many places, and a thread that waits like that while it sits on one of the four can leave
+            // none for the call it waits on: CI runs 47-51 hung exactly so. An executor that grows cannot be used up by waiters.
+            .setQueryExecutor(dispatchers.io.asExecutor())
             .build()
     }
     val secretRegistry = SecretRegistry()

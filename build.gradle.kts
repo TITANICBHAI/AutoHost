@@ -19,9 +19,10 @@ subprojects {
         // INT-T4: the app's test step hung for the whole limit in CI runs 47, 48 and 49 (8, 8 and 15 minutes), while a normal
         // run takes about 5 minutes from start to digest, so that step is stuck, not slow. 8 minutes for every module again.
         timeout.set(java.time.Duration.ofMinutes(8))
-        // Gradle starts a test JVM with 512 MB. The app's Robolectric + Compose journey tests keep a whole app alive per test;
-        // a JVM that is nearly full does not fail, it collects garbage back to back and looks hung. The workflow now keeps a
-        // thread dump and heap summary of every test JVM (jvm-tests.yml), so the next hang names its place.
+        // Gradle starts a test JVM with 512 MB. The app's Robolectric + Compose journey tests keep a whole app alive per test,
+        // so the app gets 2 GB of headroom. Memory was NOT the cause of the hang (CI run 51: 190 MB in use at the hang; the
+        // cause was Room's four-thread pool used up by threads that wait on it, see AppGraph.database). The workflow keeps a
+        // thread dump and heap summary of every test JVM (jvm-tests.yml), so a hang names its place.
         if (project.path == ":app") maxHeapSize = "2g"
         testLogging {
             events("started", "failed") // "started" lets tools/ci_digest.py name the test that hung

@@ -28,6 +28,7 @@ import app.autohost.ai.AiSettingsState
 import app.autohost.ai.AppProfileStore
 import app.autohost.core.llm.ProviderProfile
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * The wiring host: builds the [AppProfileStore] over the app graph's settings + secrets, hydrates
@@ -50,7 +51,8 @@ fun AiSettingsHost(graph: app.autohost.AppGraph, onBack: () -> Unit) {
 
     // hydrate once; the graph carries the AI facts (fail-closed booleans until set here)
     androidx.compose.runtime.LaunchedEffect(Unit) {
-        val profiles = store.load()
+        // INT-T6: store.load waits for the database with runBlocking, so it must not run on the UI thread
+        val profiles = withContext(graph.dispatchers.io) { store.load() }
         state.hydrate(
             enabled = graph.data.settings.bool(AppProfileStore.SETTING_ENABLED),
             profiles = profiles,
@@ -66,18 +68,24 @@ fun AiSettingsHost(graph: app.autohost.AppGraph, onBack: () -> Unit) {
 
     // persist on change (the store is the single source of truth; the state is the mirror)
     androidx.compose.runtime.LaunchedEffect(model) {
-        graph.data.settings.setBool(AppProfileStore.SETTING_ENABLED, model.enabled)
-        graph.data.settings.setBool(AppProfileStore.SETTING_KEEP_TRANSCRIPTS, model.keepTranscripts)
-        // X-14: the loopback switch persists through the AUDITED InsecureFeatures machinery —
-        // the screen toggle drives it; the enable/disable is audited by the existing path
-        if (model.cleartextLoopback != graph.loopbackCleartextAllowed()) {
-            graph.insecureSwitches.setFeature("ai_cleartext_loopback", model.cleartextLoopback)
+        // INT-T6: store.save waits for the database with runBlocking. An effect starts on the UI thread, so that froze the
+        // screen for a moment; and under the Compose test rule an effect carries on on the thread that finished its last
+        // suspend call, which is one of Room's four threads, so it parked that thread on a call that needs another of
+        // them (CI runs 47-51 hung that way). The whole write runs on the IO dispatcher instead.
+        withContext(graph.dispatchers.io) {
+            graph.data.settings.setBool(AppProfileStore.SETTING_ENABLED, model.enabled)
+            graph.data.settings.setBool(AppProfileStore.SETTING_KEEP_TRANSCRIPTS, model.keepTranscripts)
+            // X-14: the loopback switch persists through the AUDITED InsecureFeatures machinery —
+            // the screen toggle drives it; the enable/disable is audited by the existing path
+            if (model.cleartextLoopback != graph.loopbackCleartextAllowed()) {
+                graph.insecureSwitches.setFeature("ai_cleartext_loopback", model.cleartextLoopback)
+            }
+            store.save(model.profiles)
+            for ((profileId, on) in model.screenshots) {
+                graph.data.settings.setBool(AppProfileStore.settingScreenshots(profileId), on)
+            }
+            graph.refreshAiFacts(model.enabled, model.profiles, model.cleartextLoopback)
         }
-        store.save(model.profiles)
-        for ((profileId, on) in model.screenshots) {
-            graph.data.settings.setBool(AppProfileStore.settingScreenshots(profileId), on)
-        }
-        graph.refreshAiFacts(model.enabled, model.profiles, model.cleartextLoopback)
     }
 
     AiSettingsScreen(state = state, model = model, onBack = onBack)
