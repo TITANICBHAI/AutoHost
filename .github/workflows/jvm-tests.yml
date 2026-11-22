@@ -43,7 +43,8 @@ jobs:
           set -o pipefail
           # INT-T4: runs 47-49 hung inside :app:testCoreLiteDebugUnitTest for the whole limit (a normal run takes about 5
           # minutes in all) and a hung JVM says nothing. Every minute, keep the newest thread dump and heap summary of each
-          # Gradle test JVM; tools/ci_digest.py prints the test thread's stack from them when a task timed out.
+          # Gradle test JVM (and the one before it, .prev); tools/ci_digest.py prints the stack of the thread that runs the
+          # test body from them when a task timed out (INT-T5: run 50 showed only the 'Test worker' thread that waits for it).
           mkdir -p /tmp/threads
           (
             while true; do
@@ -52,7 +53,7 @@ jobs:
                 {
                   timeout 40 jcmd "$pid" Thread.print
                   timeout 20 jcmd "$pid" GC.heap_info
-                } > "/tmp/threads/$pid.new" 2>&1 && mv "/tmp/threads/$pid.new" "/tmp/threads/$pid.txt" || true
+                } > "/tmp/threads/$pid.new" 2>&1 && { mv -f "/tmp/threads/$pid.txt" "/tmp/threads/$pid.prev" 2>/dev/null; mv "/tmp/threads/$pid.new" "/tmp/threads/$pid.txt"; } || true
               done
             done
           ) &

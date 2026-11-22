@@ -132,15 +132,26 @@ class CiDigestTest(unittest.TestCase):
     # ---- INT-T4: where a hung test JVM was stuck ----------------------------------------------------------------------
 
     @staticmethod
-    def dump(deadlock: bool = False) -> str:
+    def dump(deadlock: bool = False, cpu: str = "51300.9", first_frame: str = "jdk.internal.misc.Unsafe.park(java.base@17.0.13/Native Method)") -> str:
         filler = "".join(f"\tat java.base.Filler.m{i}(Filler.java:{i})\n" for i in range(20))
         text = (
             "Full thread dump OpenJDK 64-Bit Server VM (17.0.13+11 mixed mode, sharing):\n\n"
-            '"Test worker" #1 prio=5 os_prio=0 cpu=1234.5ms elapsed=700.1s tid=0x00007f nid=0x1a2b waiting on condition  [0x00007f]\n'
+            # run 50's real dump: the 'Test worker' thread only waits for Robolectric's main thread
+            '"Test worker" #1 prio=5 os_prio=0 cpu=971.33ms elapsed=423.98s tid=0x00007f nid=0x1a2b waiting on condition  [0x00007f]\n'
             "   java.lang.Thread.State: WAITING (parking)\n"
             "\tat jdk.internal.misc.Unsafe.park(java.base@17.0.13/Native Method)\n"
+            "\tat org.robolectric.internal.bytecode.Sandbox.runOnMainThread(Sandbox.java:130)\n\n"
+            # the thread that runs the test body
+            f'"SDK 35" #31 prio=5 os_prio=0 cpu={cpu}ms elapsed=420.0s tid=0x00007e nid=0x1a3c waiting on condition  [0x00007e]\n'
+            "   java.lang.Thread.State: WAITING (parking)\n"
+            f"\tat {first_frame}\n"
             f"{filler}"
             "\tat app.autohost.SettingsWalkJourneyTest.waitForText(SettingsWalkJourneyTest.kt:52)\n\n"
+            # another thread inside our code
+            '"DefaultDispatcher-worker-2" #40 daemon prio=5 os_prio=0 cpu=12.0ms elapsed=100.0s tid=0x00007d nid=0x1a4d runnable  [0x00007d]\n'
+            "   java.lang.Thread.State: RUNNABLE\n"
+            "\tat java.net.SocketInputStream.socketRead0(java.base@17.0.13/Native Method)\n"
+            "\tat app.autohost.shell.Fake.read(Fake.kt:9)\n\n"
             '"Reference Handler" #2 daemon prio=10 os_prio=0\n'
             "   java.lang.Thread.State: RUNNABLE\n"
             "\tat java.lang.ref.Reference.waitForReferencePendingList(java.base@17.0.13/Native Method)\n\n"
@@ -165,13 +176,30 @@ class CiDigestTest(unittest.TestCase):
             put(Path(tmp), "threads/4242.txt", self.dump())
             text = self.timed_out_digest(Path(tmp) / "threads")
         self.assertIn("## Where the test JVM was stuck", text)
-        self.assertIn("test JVM 4242: 2 threads", text)
+        self.assertIn("test JVM 4242: 4 threads", text)
+        self.assertIn('"Test worker" #1', text)  # the thread that only waits
+        self.assertIn('"SDK 35" #31', text)  # the thread that runs the test body
         self.assertIn("Unsafe.park", text)  # the call it is blocked in
         self.assertIn("deeper down, frames of ours:", text)
         self.assertIn("SettingsWalkJourneyTest.waitForText(SettingsWalkJourneyTest.kt:52)", text)  # the test step
         self.assertNotIn("Filler.m19", text)  # frames in between are cut
         self.assertIn("total 2097152K, used 2051000K", text)  # a full heap looks like a hang
-        self.assertNotIn("Reference Handler", text)  # only the test thread
+        self.assertNotIn("Reference Handler", text)  # JVM housekeeping is left out
+        self.assertIn("app.autohost.shell.Fake.read(Fake.kt:9)", text)  # another thread inside our code
+        self.assertLess(text.index('"SDK 35"'), text.index("DefaultDispatcher-worker-2"))  # the test body first
+        self.assertIn("(no earlier dump of this thread)", text)
+
+    def test_a_stuck_thread_is_compared_with_the_dump_before_it(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            put(Path(tmp), "threads/5.prev", self.dump(cpu="51000.1"))
+            put(Path(tmp), "threads/5.txt", self.dump(cpu="51300.9"))
+            moving = self.timed_out_digest(Path(tmp) / "threads")
+            sleeping = "java.lang.Thread.sleep(java.base@17.0.13/Native Method)"
+            put(Path(tmp), "threads/5.prev", self.dump(cpu="51000.1", first_frame=sleeping))
+            changed = self.timed_out_digest(Path(tmp) / "threads")
+        self.assertIn("(about a minute earlier: cpu 51000 -> 51301 ms, same top frames)", moving)  # a busy loop burns cpu
+        self.assertIn("(about a minute earlier: cpu 51000 -> 51301 ms, different top frames)", changed)
+        self.assertNotIn("test JVM 5.prev", moving)  # the older dump is only a comparison, never a JVM of its own
 
     def test_a_deadlock_the_jvm_found_is_quoted(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -205,11 +233,12 @@ class CiDigestTest(unittest.TestCase):
 
     def test_the_stuck_section_is_capped(self):
         frames = "".join(f"\tat app.autohost.Deep.m{j}(Deep.kt:{j})\n" for j in range(300))
-        many = '"Test worker" #1\n   java.lang.Thread.State: RUNNABLE\n' + frames + "\n"
+        many = "".join(f'"SDK 35 copy {i}" #{i}\n   java.lang.Thread.State: RUNNABLE\n{frames}\n' for i in range(8))
         with tempfile.TemporaryDirectory() as tmp:
             put(Path(tmp), "threads/3.txt", many)
             stuck = ci_digest.stuck_stacks(Path(tmp) / "threads")
         self.assertLessEqual(len(stuck), ci_digest.MAX_STUCK_LINES)
+        self.assertEqual(ci_digest.MAX_STUCK_THREADS, len([ln for ln in stuck if ln.startswith('"SDK 35 copy')]))
 
 
 def put_and_path(root: Path, rel: str, text: str) -> Path:

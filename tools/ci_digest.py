@@ -16,7 +16,7 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-MAX_LINES = 150
+MAX_LINES = 200  # was 150 until the thread dump of a hung test JVM (INT-T5) needed room
 MAX_COMPILE_ERRORS = 40
 MAX_FAILED_TASKS = 25
 MAX_FAILING_TESTS = 40
@@ -24,10 +24,12 @@ MAX_STARTED_LINES = 10
 LINE_CUT = 220
 MAX_STACK_TOP = 14  # frames of the test thread shown from the top: the call it is blocked in
 MAX_STACK_OURS = 10  # further frames inside app.autohost: the test step it is in
-MAX_STUCK_LINES = 50
+MAX_STUCK_THREADS = 3  # threads printed per test JVM: the test body's thread and up to two others inside app.autohost
+MAX_STUCK_LINES = 90
 MAX_DUMP_AGE_S = 150  # a dump this much older than the newest one belongs to a JVM that had already finished
 
 _PATH_PREFIX = re.compile(r"file:///.*?/work/[^/]+/[^/]+/")
+_CPU_MS = re.compile(r"cpu=([0-9.]+)ms")
 
 
 def short(text: str, limit: int = LINE_CUT) -> str:
@@ -75,12 +77,50 @@ def _thread_blocks(dump: str) -> list:
     return blocks
 
 
-def stuck_stacks(threads_dir: Path | None) -> list:
-    """-> digest lines saying where each test JVM was when it was last looked at (INT-T4).
+def _thread_name(block: list) -> str:
+    parts = block[0].split('"')
+    return parts[1] if len(parts) >= 3 else ""
 
-    The workflow keeps one `jcmd Thread.print` + `GC.heap_info` text per Gradle test JVM and refreshes it every minute.
-    Of the dumps refreshed within MAX_DUMP_AGE_S of the newest one this prints the test thread's top frames, its frames
-    inside app.autohost (they name the test step it is in), the JVM's own deadlock report if it found one, and the heap line.
+
+def _cpu_ms(block: list):
+    found = _CPU_MS.search(block[0])
+    return float(found.group(1)) if found else None
+
+
+def _top_frames(block: list, count: int = 6) -> list:
+    """The first frames of a thread without the times of its header: two dumps of one thread compare by these."""
+    return [ln.strip() for ln in block[1:] if ln.strip().startswith("at ")][:count]
+
+
+def _is_ours(block: list) -> bool:
+    return any("app.autohost" in ln for ln in block)
+
+
+def _is_test_main_thread(block: list) -> bool:
+    """The thread Robolectric runs the test body on (named 'SDK 35' or '... Main Thread'); 'Test worker' only waits for it."""
+    name = _thread_name(block).lower()
+    return name.startswith("sdk ") or "main thread" in name
+
+
+def _since_previous(block: list, previous: list) -> str:
+    """One line: did this thread move since the dump taken about a minute before? A busy loop burns cpu, a stuck wait does not."""
+    before = next((b for b in previous if _thread_name(b) == _thread_name(block)), None)
+    if before is None:
+        return "(no earlier dump of this thread)"
+    now_cpu, then_cpu = _cpu_ms(block), _cpu_ms(before)
+    cpu = f"cpu {then_cpu:.0f} -> {now_cpu:.0f} ms" if now_cpu is not None and then_cpu is not None else "cpu unknown"
+    same = "same top frames" if _top_frames(block) == _top_frames(before) else "different top frames"
+    return f"(about a minute earlier: {cpu}, {same})"
+
+
+def stuck_stacks(threads_dir: Path | None) -> list:
+    """-> digest lines saying where each test JVM was when it was last looked at (INT-T4, INT-T5).
+
+    The workflow keeps one `jcmd Thread.print` + `GC.heap_info` text per Gradle test JVM, refreshed every minute, and the
+    one before it (`<pid>.prev`). Of the dumps refreshed within MAX_DUMP_AGE_S of the newest one this prints the 'Test worker'
+    header (it only waits for Robolectric's main thread), then the thread that runs the test body and any other thread inside
+    app.autohost: top frames, our frames deeper down (they name the test step) and whether the thread moved since the dump
+    before. Then the JVM's own deadlock report if it found one, and the heap line.
     """
     if not threads_dir or not threads_dir.is_dir():
         return []
@@ -92,17 +132,20 @@ def stuck_stacks(threads_dir: Path | None) -> list:
     for path in [d for d in dumps if newest - d.stat().st_mtime <= MAX_DUMP_AGE_S][:2]:
         text = path.read_text(encoding="utf-8", errors="replace")
         blocks = _thread_blocks(text)
-        mine = [b for b in blocks if b[0].startswith('"Test worker"')]
-        if not mine:
-            mine = [b for b in blocks if any("org.junit" in ln for ln in b)]
+        earlier = path.with_suffix(".prev")
+        previous = _thread_blocks(earlier.read_text(encoding="utf-8", errors="replace")) if earlier.exists() else []
         out.append(f"test JVM {path.stem}: {len(blocks)} threads")
-        for block in mine[:1]:
+        out += [short(b[0]) for b in blocks if _thread_name(b) == "Test worker"][:1]
+        busy = [b for b in blocks if _thread_name(b) != "Test worker" and (_is_test_main_thread(b) or _is_ours(b))]
+        busy.sort(key=lambda b: not _is_test_main_thread(b))  # the thread of the test body first
+        for block in busy[:MAX_STUCK_THREADS]:
             out.append(short(block[0]))
             out += [short(ln) for ln in block[1:MAX_STACK_TOP]]
             ours = [ln for ln in block[MAX_STACK_TOP:] if "app.autohost" in ln]
             if ours:
                 out.append("... deeper down, frames of ours:")
                 out += [short(ln) for ln in ours[:MAX_STACK_OURS]]
+            out.append(_since_previous(block, previous))
         if "Found one Java-level deadlock" in text:
             tail = text.split("Found one Java-level deadlock", 1)[1].splitlines()[:14]
             out += ["JAVA-LEVEL DEADLOCK:"] + [short(ln) for ln in tail if ln.strip()]
