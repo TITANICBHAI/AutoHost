@@ -1246,18 +1246,24 @@ class AppGraph(val application: Application) {
      * store (locks apply to the child exactly like any other run).
      */
     private val chainRunner = object : app.autohost.core.engine.host.TasksRunProvider.ChainRunner {
-        override fun start(taskId: String, profileId: String?, args: JsonObject?, depth: Int): String? {
+        override fun start(taskId: String, profileId: String?, args: JsonObject?, depth: Int, parentRunId: String): String? {
             val payload = buildJsonObject {
                 put("chain_depth", depth)
-                put("parent_run", "tasks.run")
+                put("parent_run", parentRunId)
                 args?.let { put("args", it) }
             }
-            return kotlinx.coroutines.runBlocking {
+            val childRunId = kotlinx.coroutines.runBlocking {
                 startRun(taskId, profileId, "chain", payload)
+            } ?: return null
+            chainChildren.started(parentRunId, childRunId)
+            // INT-E3: the parent may have been stopped while the child was starting, after the observer took its entry
+            if (runStore.runs.value.firstOrNull { it.runId == parentRunId }?.status == RunStatus.CANCELLED) {
+                orchestrator.cancel(childRunId)
             }
+            return childRunId
         }
 
-        override fun await(runId: String, timeoutMs: Long): app.autohost.core.engine.host.TasksRunProvider.ChainRunner.Outcome {
+        override suspend fun await(runId: String, timeoutMs: Long): app.autohost.core.engine.host.TasksRunProvider.ChainRunner.Outcome {
             val deadline = clock.nowMs() + timeoutMs
             while (clock.nowMs() < deadline) {
                 val run = runStore.runs.value.firstOrNull { it.runId == runId }
@@ -1268,11 +1274,17 @@ class AppGraph(val application: Application) {
                         app.autohost.core.engine.host.TasksRunProvider.resultText(run.result),
                     )
                 }
-                Thread.sleep(200)
+                kotlinx.coroutines.delay(200) // not Thread.sleep: a stopped caller must be able to leave the wait at once
             }
             return app.autohost.core.engine.host.TasksRunProvider.ChainRunner.Outcome.Timeout
         }
     }
+
+    /**
+     * INT-E3: which runs each run started through tasks.run. When a run is stopped (the chat's Stop, a script's Stop,
+     * the global stop), the run observer below stops the tasks it started; a run that ends any other way leaves them going.
+     */
+    private val chainChildren = app.autohost.core.engine.host.ChainChildren()
 
     private val tasksRunProvider = app.autohost.core.engine.host.TasksRunProvider(chainRunner)
 
@@ -1545,6 +1557,9 @@ class AppGraph(val application: Application) {
                         idleBudgetCache.remove(run.runId)
                         runUiActing.remove(run.runId)
                         bubble.forget(run.runId)
+                        // INT-E3: a stopped run takes the tasks it started with it; any other ending leaves them going
+                        val startedByIt = chainChildren.take(run.runId)
+                        if (run.status == RunStatus.CANCELLED) startedByIt.forEach { orchestrator.cancel(it) }
                     }
                     previousStatuses = previousStatuses + (run.runId to run.status.name)
                 }

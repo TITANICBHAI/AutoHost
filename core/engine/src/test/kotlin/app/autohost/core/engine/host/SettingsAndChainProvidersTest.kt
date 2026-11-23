@@ -51,13 +51,15 @@ class SettingsAndChainProvidersTest {
     private class FakeRunner : TasksRunProvider.ChainRunner {
         var outcome: TasksRunProvider.ChainRunner.Outcome = TasksRunProvider.ChainRunner.Outcome.Terminal("SUCCEEDED", "ok")
         val starts = mutableListOf<Triple<String, String?, Int>>()
+        val parents = mutableListOf<String>()
         var refuse = false
-        override fun start(taskId: String, profileId: String?, args: JsonObject?, depth: Int): String? {
+        override fun start(taskId: String, profileId: String?, args: JsonObject?, depth: Int, parentRunId: String): String? {
             if (refuse) return null
             starts.add(Triple(taskId, profileId, depth))
+            parents.add(parentRunId)
             return "child-${starts.size}"
         }
-        override fun await(runId: String, timeoutMs: Long) = outcome
+        override suspend fun await(runId: String, timeoutMs: Long) = outcome
     }
 
     private fun grantsWith(task: String, depth: Int = 0) = mapOf(
@@ -151,6 +153,25 @@ class SettingsAndChainProvidersTest {
             "run", buildJsonObject { put("task", "task-b") },
         )
         assertEquals("{\"code\":\"OK\",\"data\":{}}", result.result!!.jsonObject["result"]!!.jsonPrimitive.content)
+    }
+
+    @Test fun `the chain call tells the runner which run is starting the child`() = runBlocking {
+        val runner = FakeRunner()
+        TasksRunProvider(runner).invoke(
+            CallContext("parent-run", "t", null, grantsWith("task-b"), 0),
+            "run", buildJsonObject { put("task", "task-b") },
+        )
+        assertEquals(listOf("parent-run"), runner.parents)
+    }
+
+    @Test fun `a refused chain call starts nothing and tells the runner nothing`() = runBlocking {
+        val runner = FakeRunner()
+        TasksRunProvider(runner).invoke(
+            CallContext("parent-run", "t", null, grantsWith("task-a"), 0),
+            "run", buildJsonObject { put("task", "task-b") },
+        )
+        assertTrue(runner.starts.isEmpty())
+        assertTrue(runner.parents.isEmpty())
     }
 
     private fun ctx() = CallContext("r", "t", null, emptyMap(), 0)

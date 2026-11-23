@@ -27,11 +27,14 @@ class TasksRunProvider(private val runner: ChainRunner) : CapabilityProvider {
 
     /** The app-side run chain: start + await terminal status. */
     interface ChainRunner {
-        /** Starts the child run; null = task unknown or refused. `depth` rides the payload. */
-        fun start(taskId: String, profileId: String?, args: JsonObject?, depth: Int): String?
+        /**
+         * Starts the child run; null = task unknown or refused. `depth` rides the payload. [parentRunId] is the run that
+         * asks (INT-E3: stopping that run stops this one).
+         */
+        fun start(taskId: String, profileId: String?, args: JsonObject?, depth: Int, parentRunId: String): String?
 
-        /** Blocks until the run reaches a terminal status or the deadline. */
-        fun await(runId: String, timeoutMs: Long): Outcome
+        /** Waits until the run reaches a terminal status or the deadline; gives up at once when the caller is cancelled. */
+        suspend fun await(runId: String, timeoutMs: Long): Outcome
 
         sealed class Outcome {
             data class Terminal(val status: String, val result: String?) : Outcome()
@@ -80,7 +83,7 @@ class TasksRunProvider(private val runner: ChainRunner) : CapabilityProvider {
         }
         val profile = (args["profile"] as? JsonPrimitive)?.content
         val callArgs = args["args"] as? JsonObject
-        val runId = runner.start(task, profile, callArgs, depth + 1)
+        val runId = runner.start(task, profile, callArgs, depth + 1, ctx.runId)
             ?: return Envelope.err(ErrorCode.NOT_FOUND, "task \"$task\" is not installed or refused")
         val timeout = ((args["timeout_ms"] as? JsonPrimitive)?.content?.toLongOrNull() ?: 600_000L)
             .coerceIn(1_000L, MAX_AWAIT_MS)
