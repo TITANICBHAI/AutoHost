@@ -1,6 +1,7 @@
 package app.autohost
 
 import android.content.Context
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -11,6 +12,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -70,6 +72,25 @@ class AgentChatJourneyTest {
 
     private fun clickText(text: String) = at("click [$text]") {
         compose.onAllNodes(hasText(text) and hasClickAction()).onFirst().performClick()
+    }
+
+    /**
+     * Clicks through the node's own click action instead of a touch at its centre. The task list opens inside the setup
+     * panel, which is capped at 340 dp and scrolls: a touch on a row that is partly scrolled out of view hits nothing and
+     * says nothing (CI run 53: the chip never appeared after the row was clicked).
+     */
+    private fun clickByAction(text: String) = at("click [$text]") {
+        compose.onAllNodes(hasText(text) and hasClickAction()).onFirst().performSemanticsAction(SemanticsActions.OnClick)
+    }
+
+    /** Waits for [text]; when it never comes, the failure says which of the [probes] (name to text) are on screen. */
+    private fun waitForTextOrSay(text: String, probes: Map<String, String>) = at("wait for [$text]") {
+        try {
+            compose.waitUntil(timeoutMillis = 40_000) { shown(text) }
+        } catch (e: Throwable) {
+            val seen = probes.entries.joinToString(" ") { "${it.key}=${if (shown(it.value, substring = true)) "Y" else "n"}" }
+            throw AssertionError("on screen: $seen", e)
+        }
     }
 
     private fun waitForTabBar() = at("wait for the tab bar") {
@@ -368,11 +389,17 @@ class AgentChatJourneyTest {
         clickText("Change")
         waitForText("Saved tasks the agent may start")
         clickText("+ Add a task")
-        clickText("Daily clip")
-        waitForText("Daily clip  ✕")
+        clickByAction("Daily clip")
+        waitForTextOrSay(
+            "Daily clip  ✕",
+            mapOf(
+                "chip" to "Daily clip  ✕", "generic" to "a task  ✕", "summary" to "Tasks: Daily clip",
+                "section" to "Saved tasks the agent may start", "add" to "+ Add a task", "search" to "Search",
+            ),
+        )
         waitForText("Tasks: Daily clip", substring = true)
         assertFalse("no id for ordinary people", shown("user.daily-clip", substring = true))
-        clickText("Daily clip  ✕")
+        clickByAction("Daily clip  ✕")
         waitUntilGone("Daily clip  ✕")
         at("the summary stops naming the task") {
             compose.waitUntil(timeoutMillis = 40_000) { !shown("Tasks: Daily clip", substring = true) }
