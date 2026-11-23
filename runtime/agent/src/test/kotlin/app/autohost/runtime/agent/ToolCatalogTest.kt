@@ -72,8 +72,11 @@ class ToolCatalogTest {
         for (spec in specs) {
             val fn = spec.jsonObject["function"]!!.jsonObject
             assertEquals("function", spec.jsonObject["type"]!!.jsonPrimitive.content)
-            assertTrue(fn["parameters"]!!.jsonObject.containsKey("properties"))
-            assertEquals("false", fn["parameters"]!!.jsonObject["additionalProperties"]!!.jsonPrimitive.content)
+            val parameters = fn["parameters"]!!.jsonObject
+            assertEquals("object", parameters["type"]!!.jsonPrimitive.content)
+            assertTrue(parameters.containsKey("properties"))
+            // INT-A1: no additionalProperties (Gemini's own API refuses the key); ArgValidator refuses unknown arguments
+            assertFalse(parameters.containsKey("additionalProperties"))
         }
     }
 

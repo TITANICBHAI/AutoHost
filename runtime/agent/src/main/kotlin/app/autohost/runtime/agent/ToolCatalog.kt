@@ -38,9 +38,12 @@ class ToolCatalog private constructor(private val tools: Map<String, Tool>) {
      */
     fun without(names: Set<String>): ToolCatalog = ToolCatalog(tools.filterKeys { it !in names })
 
-    /** The typed tool list for `ChatRequest.tools` (P13-10's loop builds the request from this). */
+    /**
+     * The typed tool list for `ChatRequest.tools` (P13-10's loop builds the request from this). INT-A1: each tool's
+     * `parameters` is a real object schema ([ToolSchema]); before, the catalog's own whitelist form was sent as it stood.
+     */
     fun specs(): List<ToolSpec> = tools.values.sortedBy { it.name }.map { tool ->
-        ToolSpec(name = tool.name, description = tool.description, parameters = tool.args)
+        ToolSpec(name = tool.name, description = tool.description, parameters = ToolSchema.parameters(tool.args))
     }
 
     /** The OpenAI `tools[]` array for the request (function specs with JSON-schema parameters). */
@@ -51,11 +54,7 @@ class ToolCatalog private constructor(private val tools: Map<String, Tool>) {
                 put("function", kotlinx.serialization.json.buildJsonObject {
                     put("name", kotlinx.serialization.json.JsonPrimitive(tool.name))
                     put("description", kotlinx.serialization.json.JsonPrimitive(tool.description))
-                    put("parameters", kotlinx.serialization.json.buildJsonObject {
-                        put("type", kotlinx.serialization.json.JsonPrimitive("object"))
-                        put("properties", tool.args)
-                        put("additionalProperties", kotlinx.serialization.json.JsonPrimitive(false))
-                    })
+                    put("parameters", ToolSchema.parameters(tool.args))
                 })
             }
         },
