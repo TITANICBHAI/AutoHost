@@ -1,16 +1,21 @@
-# CI digest - run 58 - branch work/s02-green - commit cd1d551
-tests step outcome: success
+# CI digest - run 59 - branch work/s02-green - commit 9430184
+tests step outcome: failure
 
-## Verdict: GREEN - 1742 tests ran, 0 failed, 0 Kotlin compile errors, 0 failed Gradle tasks, 4 modules with no results
+## Verdict: RED - 1246 tests ran, 0 failed, 0 Kotlin compile errors, 2 failed Gradle tasks, 6 modules with no results
+
+## Failed Gradle tasks
+- :app:testCorePyDebugUnitTest
+- :app:testCoreLiteDebugUnitTest
 
 ## Modules that produced no test results (compile error, timeout, or no tests)
 - runtime/api
 - runtime/python
 - plugin-sdk
 - testing/fixture-app
+- app
+- app
 
 ## Per module (tests / failed / skipped)
-- app: 512 / 0 / 0
 - capabilities/a11y: 114 / 0 / 0
 - capabilities/app: 32 / 0 / 0
 - capabilities/audio: 8 / 0 / 0
@@ -35,26 +40,26 @@ tests step outcome: success
 - core/engine: 305 / 0 / 2
 - core/llm: 36 / 0 / 0
 - core/model: 47 / 0 / 0
-- runtime/agent: 211 / 0 / 0
+- runtime/agent: 227 / 0 / 0
 - runtime/flow: 117 / 0 / 24
 - runtime/js: 41 / 0 / 0
 
 ## Where the time went (finished tasks only; a task stopped by the timeout leaves no timings)
 - core/llm: 32 s of test time
-- app: 26 s of test time
-- capabilities/browser: 21 s of test time
-- capabilities/shell: 5 s of test time
-- core/engine: 4 s of test time
+- capabilities/browser: 20 s of test time
+- capabilities/shell: 3 s of test time
+- core/model: 3 s of test time
+- core/engine: 2 s of test time
 - slowest: 30.0 s HttpUrlConnectionEngineTest.given a hung server when the call is cancelled then it returns within about a second [core/llm]
 - slowest: 10.2 s CdpBrowserProviderTest.navigate forwards through the shell then evaluates the page [capabilities/browser]
 - slowest: 10.0 s CdpBrowserProviderTest.close removes the forward [capabilities/browser]
-- slowest: 8.2 s AddTaskDialogJourneyTest.Add a task opens a pop-up with three ways to add one and Close shuts it [app]
 - slowest: 2.0 s SelectorBenchTest.find latency stays in single-digit milliseconds on large trees [core/model]
-- slowest: 1.5 s UiAutomationControllerTest.spawn failure with a dead runner is refused honestly [app]
-- slowest: 1.5 s UiAutomationControllerTest.spawn failure with a dead runner is refused honestly [app]
-- slowest: 1.2 s SettingsWalkJourneyTest.every Settings screen opens and Back returns to the Settings list [app]
+- slowest: 1.0 s LlmGatewayTest.given a 429 then a success when called then the retry lands and the usage is audited [core/llm]
+- slowest: 0.7 s AdbClientTest.legacy adbd falls back to merged shell output with null exit code [capabilities/shell]
+- slowest: 0.6 s NotificationsProviderTest.wait_for times out honestly when nothing matches [capabilities/notifications]
+- slowest: 0.6 s AdbClientTest.keystore persists and restores the identity [capabilities/shell]
 
-## Style baseline (report only): 22008 ktlint/detekt findings
+## Style baseline (report only): 22122 ktlint/detekt findings
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:14:1 Class body should not start with blank line
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:32 Newline expected after opening parenthesis
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:50 Parameter should start on a newline
