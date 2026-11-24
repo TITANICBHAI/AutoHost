@@ -89,6 +89,7 @@ class AgentLoopFactory(
             packages = agentConfig.packages.toSet(),
             tasks = agentConfig.tasks.toSet(),
             taskNames = agentConfig.taskNames,
+            taskInputs = agentConfig.taskInputs.mapValues { it.value.toSet() },
             sensitivity = sensitivity,
             foregroundSource = { foregroundOf(transport) },
             revalidator = { _, target ->

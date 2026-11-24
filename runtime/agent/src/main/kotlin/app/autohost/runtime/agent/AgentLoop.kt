@@ -356,6 +356,9 @@ class AgentLoop(
         const val NUDGE = "You produced no tool call. Either call exactly one tool or call finish."
         private const val STALE_SCREEN_NOTE = "[a stale observation was removed from history; the latest screen is below]"
 
+        /** INT-E4: at most this many value names are listed per task (the same number run_task's `inputs` may hold). */
+        private const val MAX_LISTED_INPUTS = 8
+
         fun untrustedScreen(generation: Int, text: String): String =
             "<untrusted_screen gen=\"$generation\">\n$text\n</untrusted_screen>"
 
@@ -369,9 +372,19 @@ class AgentLoop(
          * task can carry any text, so each is cut to one short line with no angle brackets (it can never close the
          * `<goal>` block or start a new paragraph of instructions).
          */
-        fun goalWithTasks(goal: String, tasks: List<String>, names: Map<String, String>): String {
+        fun goalWithTasks(
+            goal: String,
+            tasks: List<String>,
+            names: Map<String, String>,
+            inputs: Map<String, List<String>> = emptyMap(),
+        ): String {
             if (tasks.isEmpty()) return goal
-            val lines = tasks.joinToString("\n") { id -> "- ${oneLine(id)}: ${oneLine(names[id] ?: id)}" }
+            val lines = tasks.joinToString("\n") { id ->
+                // INT-E4: a task that takes values lists their names after it, e.g. `(takes: title, description)`
+                val takes = inputs[id].orEmpty().take(MAX_LISTED_INPUTS).map { oneLine(it) }.filter { it.isNotEmpty() }
+                "- ${oneLine(id)}: ${oneLine(names[id] ?: id)}" +
+                    if (takes.isEmpty()) "" else " (takes: ${takes.joinToString(", ")})"
+            }
             return goal + "\n\nSaved tasks you may start with run_task (pass the id on the left):\n" + lines
         }
 

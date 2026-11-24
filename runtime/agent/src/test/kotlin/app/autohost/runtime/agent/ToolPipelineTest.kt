@@ -4,11 +4,13 @@ import app.autohost.core.llm.ToolCall
 import app.autohost.core.model.Bounds
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -305,11 +307,15 @@ class ToolPipelineTest {
     private val allowedTasks = setOf("daily.upload", "make.video")
     private val taskNames = mapOf("daily.upload" to "Daily upload", "make.video" to "Make the video")
 
+    /** INT-E4: only the upload task takes values; the video task takes none. */
+    private val declaredInputs = mapOf("daily.upload" to setOf("title", "description"))
+
     private fun taskPipeline(
         transport: FakeTransport = FakeTransport(),
         revalidator: FakeRevalidator = FakeRevalidator(),
         foreground: String? = "com.normal.test",
         tasks: Set<String> = allowedTasks,
+        taskInputs: Map<String, Set<String>> = declaredInputs,
     ) = ToolPipeline(
         catalog = catalog,
         transport = transport,
@@ -320,6 +326,7 @@ class ToolPipelineTest {
         revalidator = revalidator,
         tasks = tasks,
         taskNames = taskNames,
+        taskInputs = taskInputs,
     )
 
     private fun answer(transport: FakeTransport, button: String) {
@@ -345,11 +352,108 @@ class ToolPipelineTest {
     }
 
     @Test
-    fun `given the model passes its own args object when run_task is executed then INVALID_ARGS (a task gets no model-made inputs yet)`() = runBlocking {
+    fun `given the model passes its own args object when run_task is executed then INVALID_ARGS (values go through inputs, never a raw args object)`() = runBlocking {
         val transport = FakeTransport()
         val result = taskPipeline(transport).execute(call("run_task", """{"task":"daily.upload","args":{"x":1}}"""), ctx)
         assertEquals("INVALID_ARGS", errOf(result).first)
         assertEquals(0, transport.calls.size)
+    }
+
+    // --- INT-E4: values the agent hands a saved task ----------------------------------------------
+
+    @Test
+    fun `given values the task declares when run_task is executed then the person sees them and the broker gets them as args`() = runBlocking {
+        val transport = FakeTransport()
+        answer(transport, "Allow once")
+        transport.responses["tasks.run.run"] = buildJsonObject {
+            put("run_id", "r1")
+            put("status", "SUCCEEDED")
+        }
+        val result = taskPipeline(transport).execute(
+            call("run_task", """{"task":"daily.upload","inputs":["title=My cat video","description=Two\nlines here"]}"""),
+            ctx,
+        )
+        assertEquals("SUCCEEDED", (result["status"] as JsonPrimitive).content)
+        val askMessage = (transport.calls[0].third["message"] as JsonPrimitive).content
+        assertTrue(askMessage, askMessage.contains("title: My cat video"))
+        assertTrue(askMessage, askMessage.contains("description: Two lines here"))
+        val started = taskCalls(transport).single().third
+        assertFalse("the model's own name for them never reaches the broker", started.containsKey("inputs"))
+        val given = started["args"] as JsonObject
+        assertEquals("My cat video", (given["title"] as JsonPrimitive).content)
+        assertEquals("Two\nlines here", (given["description"] as JsonPrimitive).content)
+        assertEquals("daily.upload", (started["task"] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `given a value name the task does not declare when run_task is executed then INVALID_ARGS before anyone is asked`() = runBlocking {
+        val transport = FakeTransport()
+        val result = taskPipeline(transport).execute(
+            call("run_task", """{"task":"daily.upload","inputs":["title=x","password=hunter2"]}"""),
+            ctx,
+        )
+        assertEquals("INVALID_ARGS", errOf(result).first)
+        val message = ((result["error"] as JsonObject)["message"] as JsonPrimitive).content
+        assertTrue(message, message.contains("title") && message.contains("description") && message.contains("password"))
+        assertEquals(0, transport.calls.size)
+    }
+
+    @Test
+    fun `given a task that takes no values when it is given some then INVALID_ARGS and nothing is asked`() = runBlocking {
+        val transport = FakeTransport()
+        val result = taskPipeline(transport).execute(call("run_task", """{"task":"make.video","inputs":["title=x"]}"""), ctx)
+        assertEquals("INVALID_ARGS", errOf(result).first)
+        assertEquals(0, transport.calls.size)
+    }
+
+    @Test
+    fun `given allow for this run on a task when a later call carries values then the person is asked again`() = runBlocking {
+        val transport = FakeTransport()
+        answer(transport, "Allow for this run")
+        val p = taskPipeline(transport)
+        p.execute(call("run_task", """{"task":"daily.upload"}"""), ctx)
+        p.execute(call("run_task", """{"task":"daily.upload"}"""), ctx)
+        assertEquals("without values the task is not asked about twice", 1, transport.askCalls())
+        p.execute(call("run_task", """{"task":"daily.upload","inputs":["title=First"]}"""), ctx)
+        p.execute(call("run_task", """{"task":"daily.upload","inputs":["title=Second"]}"""), ctx)
+        assertEquals("every call with values asks", 3, transport.askCalls())
+    }
+
+    @Test
+    fun `given values on a call when the person is asked then Allow for this run is not on offer`() = runBlocking {
+        val transport = FakeTransport()
+        answer(transport, "Allow once")
+        val p = taskPipeline(transport)
+        p.execute(call("run_task", """{"task":"daily.upload","inputs":["title=x"]}"""), ctx)
+        p.execute(call("run_task", """{"task":"daily.upload"}"""), ctx)
+        val asks = transport.calls.filter { it.first == "ui.prompt" }
+        val withValues = (asks[0].third["choices"] as JsonArray).map { (it as JsonPrimitive).content }
+        val without = (asks[1].third["choices"] as JsonArray).map { (it as JsonPrimitive).content }
+        assertEquals(listOf("Allow once", "Deny"), withValues)
+        assertTrue(without.contains("Allow for this run"))
+    }
+
+    @Test
+    fun `given more values than fit in the question when the person is asked then three are shown and the rest counted`() = runBlocking {
+        val transport = FakeTransport()
+        answer(transport, "Allow once")
+        val p = taskPipeline(transport, taskInputs = mapOf("daily.upload" to setOf("a", "b", "c", "d", "e")))
+        p.execute(call("run_task", """{"task":"daily.upload","inputs":["a=1","b=2","c=3","d=4","e=5"]}"""), ctx)
+        val message = (transport.calls[0].third["message"] as JsonPrimitive).content
+        assertTrue(message, message.contains("a: 1") && message.contains("c: 3"))
+        assertFalse(message, message.contains("d: 4"))
+        assertTrue(message, message.contains("2 more"))
+    }
+
+    @Test
+    fun `given a very long value when the person is asked then it is cut to one short line`() = runBlocking {
+        val transport = FakeTransport()
+        answer(transport, "Allow once")
+        val long = "word ".repeat(200)
+        taskPipeline(transport).execute(call("run_task", """{"task":"daily.upload","inputs":["description=$long"]}"""), ctx)
+        val message = (transport.calls[0].third["message"] as JsonPrimitive).content
+        assertTrue(message, message.length < 200)
+        assertEquals("one line per value", 3, message.lines().size)
     }
 
     @Test

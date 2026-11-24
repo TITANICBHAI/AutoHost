@@ -79,4 +79,66 @@ class ArgValidatorTest {
         val result = ArgValidator.validate(tool, raw("""{"value":"a"}"""), setOf("a"), setOf("a"))
         assertFalse(result.isOk)
     }
+
+    // --- INT-E4: inputs, a list of "name=value" texts the model hands a saved task ---------------
+
+    private fun entries(count: Int) = (1..count).joinToString(",") { "\"n$it=v\"" }
+
+    private fun validateInputs(inputs: String): AhResult<JsonObject> = ArgValidator.validate(
+        catalog.find("run_task")!!,
+        raw("""{"task":"daily.upload","inputs":$inputs}"""),
+        emptySet(),
+        setOf("daily.upload"),
+    )
+
+    @Test
+    fun `given name=value texts when run_task is validated then they come out as an object of name to text`() {
+        val result = validateInputs("""["title=My cat video","description=Line one\nLine two"]""")
+        assertTrue(result.isOk)
+        val clean = result.getOrNull()!!
+        val inputs = clean["inputs"] as JsonObject
+        assertEquals("My cat video", (inputs["title"] as JsonPrimitive).content)
+        assertEquals("Line one\nLine two", (inputs["description"] as JsonPrimitive).content)
+        assertEquals(setOf("task", "inputs"), clean.keys)
+    }
+
+    @Test
+    fun `given a value with an equals sign when validated then only the first one splits name from value`() {
+        val result = validateInputs("""["link=https://x.test/a?b=c"," spaced name =  keep my spaces "]""")
+        val inputs = result.getOrNull()!!["inputs"] as JsonObject
+        assertEquals("https://x.test/a?b=c", (inputs["link"] as JsonPrimitive).content)
+        assertEquals("  keep my spaces ", (inputs["spaced name"] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `given no inputs or an empty list when validated then the key is simply absent`() {
+        assertFalse(validateInputs("[]").getOrNull()!!.containsKey("inputs"))
+        val tool = catalog.find("run_task")!!
+        val without = ArgValidator.validate(tool, raw("""{"task":"daily.upload"}"""), emptySet(), setOf("daily.upload"))
+        assertFalse(without.getOrNull()!!.containsKey("inputs"))
+    }
+
+    @Test
+    fun `given inputs that are not a list of texts when validated then INVALID_ARGS`() {
+        for (bad in listOf("\"title=x\"", "{\"title\":\"x\"}", "[5]", "[true]", "[null]", "[[\"a=b\"]]", "[{\"title\":\"x\"}]")) {
+            val result = validateInputs(bad)
+            assertFalse(bad, result.isOk)
+            assertEquals(bad, "INVALID_ARGS", result.errorOrNull()?.code)
+        }
+    }
+
+    @Test
+    fun `given too many, nameless, repeated or overlong entries when validated then INVALID_ARGS`() {
+        assertFalse(validateInputs("[${entries(9)}]").isOk)
+        assertTrue(validateInputs("[${entries(8)}]").isOk)
+        assertFalse(validateInputs("""["=value"]""").isOk)
+        assertFalse(validateInputs("""["noequals"]""").isOk)
+        assertFalse(validateInputs("""["   =value"]""").isOk)
+        assertFalse(validateInputs("""["a=1","a=2"]""").isOk)
+        val longName = "n".repeat(ArgValidator.MAX_PAIR_NAME)
+        val longValue = "x".repeat(ArgValidator.MAX_PAIR_VALUE)
+        assertTrue(validateInputs("[\"$longName=$longValue\"]").isOk)
+        assertFalse(validateInputs("[\"${longName}n=v\"]").isOk)
+        assertFalse(validateInputs("[\"t=${longValue}x\"]").isOk)
+    }
 }

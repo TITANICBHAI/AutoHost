@@ -23,6 +23,8 @@ object ToolSchema {
 
     private const val APPS_HELP = "Package name of one of the apps this run may use."
     private const val TASKS_HELP = "Id of one of the saved tasks this run may start."
+    private const val PAIRS_HELP =
+        "Values to give the task, each written as name=value, for example title=My video. Use only the names listed for that task."
 
     /** The object schema for a tool's whitelist arguments (a tool without arguments gets an empty `properties`). */
     fun parameters(args: JsonObject): JsonObject {
@@ -58,6 +60,11 @@ object ToolSchema {
                 put("type", "integer")
                 put("minimum", 0)
                 (spec["max"] as? JsonPrimitive)?.content?.toIntOrNull()?.let { put("maximum", it) }
+            }
+            spec.containsKey("pairs") -> {
+                put("type", "array")
+                put("items", buildJsonObject { put("type", "string") })
+                put("description", PAIRS_HELP)
             }
             else -> put("type", "string")
         }

@@ -51,8 +51,11 @@ class AgentRunStarter(
         val uiRunActive: Boolean,
     )
 
-    /** INT-E1: a saved task the person ticked for a run — the id the broker checks and the name they know it by. */
-    data class AllowedTask(val id: String, val name: String)
+    /**
+     * INT-E1: a saved task the person ticked for a run: the id the broker checks and the name they know it by.
+     * INT-E4: [inputs] are the value names the task says it takes; the agent may hand it those and nothing else.
+     */
+    data class AllowedTask(val id: String, val name: String, val inputs: List<String> = emptyList())
 
     /**
      * @param agentOverride host-written extra `config.agent` keys (budgets/tools/confirm) —
@@ -74,6 +77,16 @@ class AgentRunStarter(
             if (tasks.isNotEmpty()) {
                 put("tasks", JsonArray(tasks.map { JsonPrimitive(it.id) }))
                 put("task_names", buildJsonObject { tasks.forEach { put(it.id, it.name) } })
+                if (tasks.any { it.inputs.isNotEmpty() }) {
+                    put(
+                        "task_inputs",
+                        buildJsonObject {
+                            tasks.filter { it.inputs.isNotEmpty() }.forEach { task ->
+                                put(task.id, JsonArray(task.inputs.map { JsonPrimitive(it) }))
+                            }
+                        },
+                    )
+                }
             }
             agentOverride.forEach { (key, value) -> put(key, value) }
         }

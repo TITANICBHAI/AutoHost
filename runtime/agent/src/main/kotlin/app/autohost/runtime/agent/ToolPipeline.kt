@@ -46,6 +46,8 @@ class ToolPipeline(
     /** INT-E1: the saved tasks the person allowed for this run (ids) and the names they know them by. */
     private val tasks: Set<String> = emptySet(),
     private val taskNames: Map<String, String> = emptyMap(),
+    /** INT-E4: the value names each allowed task says it takes (task id to names); the model may hand over only these. */
+    private val taskInputs: Map<String, Set<String>> = emptyMap(),
 ) : AgentLoop.ToolExecutor {
 
     data class Config(
@@ -103,6 +105,23 @@ class ToolPipeline(
         // INT-E1: refuse a second start BEFORE anything asks the person (no point asking for what cannot happen)
         if (tool.name == ToolPolicy.RUN_TASK) {
             val taskId = args.str("task")
+            // INT-E4: the model may hand a task only the values that task says it takes; checked before anything asks the person
+            val given = (args["inputs"] as? JsonObject)?.keys.orEmpty()
+            if (taskId != null && given.isNotEmpty()) {
+                val declared = taskInputs[taskId].orEmpty()
+                val unknown = given.filter { it !in declared }
+                if (unknown.isNotEmpty()) {
+                    val label = target.label ?: taskId
+                    return errResult(
+                        "INVALID_ARGS", null,
+                        if (declared.isEmpty()) {
+                            "task '$label' takes no values: start it without inputs"
+                        } else {
+                            "task '$label' takes only these values: ${declared.joinToString(", ")} (not ${unknown.joinToString(", ")})"
+                        },
+                    )
+                }
+            }
             if (taskId != null && taskId in stillRunning) {
                 return errResult(
                     "CAPABILITY_UNAVAILABLE", null,
@@ -117,7 +136,7 @@ class ToolPipeline(
             throw e
         }
         val decision = ToolPolicy.check(
-            ToolPolicy.Input(tool, args, target.pkg, foreground, target.label, target.isPassword, sessionAllowed),
+            ToolPolicy.Input(tool, args, target.pkg, foreground, target.label, target.isPassword, allowedForThisCall(tool, args)),
             ToolPolicy.Context(packages, sensitivity),
         )
         log.on("policy", buildJsonObject {
@@ -135,7 +154,7 @@ class ToolPipeline(
             is ToolPolicy.Decision.Deny -> return errResult(decision.code, decision.reason, decision.message)
             is ToolPolicy.Decision.Allow -> {}
             is ToolPolicy.Decision.Ask -> {
-                when (val approval = askUser(tool, target)) {
+                when (val approval = askUser(tool, target, args)) {
                     Approval.Denied ->
                         return errResult("PERMISSION_DENIED", "APPROVAL_DENIED", "the user denied this action")
                     Approval.Timeout ->
@@ -200,14 +219,7 @@ class ToolPipeline(
         // capability.method; the permission id is for policy/grants, not dispatch)
         // INT-E1: a saved task waits for the task at most 90 s unless the model asked for less/more (cap 120 s in the
         // catalog) — the broker's own default is 10 minutes, far past the agent's 180 s idle budget
-        val callArgs = if (tool.name == ToolPolicy.RUN_TASK && !args.containsKey("timeout_ms")) {
-            buildJsonObject {
-                for ((key, value) in args) put(key, value)
-                put("timeout_ms", DEFAULT_TASK_WAIT_MS)
-            }
-        } else {
-            args
-        }
+        val callArgs = if (tool.name == ToolPolicy.RUN_TASK) taskCallArgs(args) else args
         val envelope = try {
             transport.call(tool.capability, tool.method, callArgs)
         } catch (e: CancellationException) {
@@ -230,20 +242,23 @@ class ToolPipeline(
         data object Timeout : Approval
     }
 
-    private suspend fun askUser(tool: ToolCatalog.Tool, target: TargetInfo): Approval {
+    private suspend fun askUser(tool: ToolCatalog.Tool, target: TargetInfo, args: JsonObject): Approval {
         val subject = target.label ?: target.pkg ?: tool.name
+        val withValues = tool.name == ToolPolicy.RUN_TASK && args.containsKey("inputs")
         val message = if (tool.name == ToolPolicy.RUN_TASK) {
-            "Start the saved task \"${subject.take(40)}\"?"
+            "Start the saved task \"${subject.take(40)}\"?" + valuesText(args)
         } else {
             "Allow ${tool.name} on \"${subject.take(40)}\"?"
         }
+        // INT-E4: with values there is no "Allow for this run": each set of values is asked about on its own
+        val offered = if (withValues) config.approvalChoices.filter { it != ALLOW_FOR_RUN } else config.approvalChoices
         val answer = try {
             transport.call(
                 "ui.prompt", "ask",
                 buildJsonObject {
                     put("kind", "choice")
                     put("message", message)
-                    put("choices", JsonArray(config.approvalChoices.map { JsonPrimitive(it) }))
+                    put("choices", JsonArray(offered.map { JsonPrimitive(it) }))
                     put("timeout_ms", config.approvalTimeoutMs)
                 },
             )
@@ -258,6 +273,39 @@ class ToolPipeline(
             "Deny" -> Approval.Denied
             else -> Approval.Denied // an unknown answer is a deny — fail closed
         }
+    }
+
+    /**
+     * INT-E4: "Allow for this run" covers a task started WITHOUT values. A call that carries values is asked about every
+     * time: the person approved a task, not whatever text the model (or a page it read) wants to hand it later.
+     */
+    private fun allowedForThisCall(tool: ToolCatalog.Tool, args: JsonObject): Set<String> =
+        if (tool.name == ToolPolicy.RUN_TASK && args.containsKey("inputs")) {
+            sessionAllowed - ToolPolicy.taskSubject(args.str("task").orEmpty())
+        } else {
+            sessionAllowed
+        }
+
+    /** INT-E4: what the broker's `tasks.run` is given: the model's `inputs` as the broker's own `args`, and the wait. */
+    private fun taskCallArgs(args: JsonObject): JsonObject = buildJsonObject {
+        for ((key, value) in args) put(if (key == "inputs") "args" else key, value)
+        if (!args.containsKey("timeout_ms")) put("timeout_ms", DEFAULT_TASK_WAIT_MS)
+    }
+
+    /** INT-E4: the values the model wants to hand over, one short line each, so the person sees what the task is given. */
+    private fun valuesText(args: JsonObject): String {
+        val given = args["inputs"] as? JsonObject ?: return ""
+        if (given.isEmpty()) return ""
+        val shown = given.entries.take(MAX_SHOWN_VALUES).joinToString("\n") { (name, value) ->
+            "$name: ${shortLine((value as? JsonPrimitive)?.content.orEmpty(), MAX_SHOWN_VALUE_CHARS)}"
+        }
+        val more = given.size - MAX_SHOWN_VALUES
+        return "\nWith these values:\n" + shown + if (more > 0) "\n(and $more more)" else ""
+    }
+
+    private fun shortLine(text: String, max: Int): String {
+        val flat = text.replace(Regex("\\s+"), " ").trim()
+        return if (flat.length <= max) flat else flat.take(max - 1) + "..."
     }
 
     private fun resolveTarget(tool: ToolCatalog.Tool, args: JsonObject, ctx: AgentLoop.TurnContext): AhResult<TargetInfo> {
@@ -320,6 +368,11 @@ class ToolPipeline(
     companion object {
         /** INT-E1: how long run_task waits when the model gave no timeout (under the agent's 180 s idle budget). */
         const val DEFAULT_TASK_WAIT_MS = 90_000L
+
+        /** INT-E4: how many values the approval question lists (the rest are counted) and how much of each it shows. */
+        private const val MAX_SHOWN_VALUES = 3
+        private const val MAX_SHOWN_VALUE_CHARS = 60
+        private const val ALLOW_FOR_RUN = "Allow for this run"
 
         fun errResult(code: String, reason: String?, message: String): JsonObject = buildJsonObject {
             put("ok", false)

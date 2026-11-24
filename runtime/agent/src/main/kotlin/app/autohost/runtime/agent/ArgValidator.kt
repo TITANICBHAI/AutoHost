@@ -4,6 +4,7 @@ import app.autohost.core.common.AhResult
 import app.autohost.core.model.AhError
 import app.autohost.core.model.ErrorCode
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -23,6 +24,10 @@ object ArgValidator {
      *
      * `enum_of` names WHICH of the run's lists the value must come from: `run_packages` (the target apps) or
      * `run_tasks` (the saved tasks the person allowed for this run, INT-E1). Any other name fails closed.
+     *
+     * INT-E4: `{"pairs": N}` is the one spec that takes a list instead of a primitive: up to N texts written
+     * `name=value`. The sanitized result holds them as an object (name to text) under the same key, and an empty list
+     * is dropped. Which names are allowed is not decided here (that depends on the task): the pipeline checks it.
      */
     fun validate(
         tool: ToolCatalog.Tool,
@@ -46,6 +51,16 @@ object ArgValidator {
                         return AhResult.err(
                             AhError.of(ErrorCode.INVALID_ARGS, "missing required argument '$key'"),
                         )
+                    }
+                    continue
+                }
+                if (spec.containsKey("pairs")) {
+                    val limit = (spec["pairs"] as? JsonPrimitive)?.content?.toIntOrNull() ?: 0
+                    val pairs = LinkedHashMap<String, String>()
+                    val problem = readPairs(key, value, limit, pairs)
+                    if (problem != null) return AhResult.err(AhError.of(ErrorCode.INVALID_ARGS, problem))
+                    if (pairs.isNotEmpty()) {
+                        put(key, buildJsonObject { for ((name, text) in pairs) put(name, JsonPrimitive(text)) })
                     }
                     continue
                 }
@@ -109,5 +124,31 @@ object ArgValidator {
             }
         }
         return AhResult.ok(sanitized)
+    }
+
+    /** INT-E4: the longest name and value a task value may have (a video description is long; nothing needs more). */
+    const val MAX_PAIR_NAME = 40
+    const val MAX_PAIR_VALUE = 4_000
+
+    /**
+     * Reads `["name=value", ...]` into [out]. Returns the problem in words for the model, or null when the list is fine.
+     * The name is what stands before the first `=` (trimmed); the value is everything after it, as it is.
+     */
+    private fun readPairs(key: String, value: JsonElement, limit: Int, out: MutableMap<String, String>): String? {
+        val list = value as? JsonArray ?: return "argument '$key' must be a list of \"name=value\" texts"
+        if (list.size > limit) return "argument '$key' may hold at most $limit values"
+        for (item in list) {
+            val text = (item as? JsonPrimitive)?.takeIf { it.isString }?.content
+                ?: return "every entry of '$key' must be a \"name=value\" text"
+            val cut = text.indexOf('=')
+            val name = if (cut > 0) text.substring(0, cut).trim() else ""
+            if (name.isEmpty() || name.length > MAX_PAIR_NAME) {
+                return "every entry of '$key' needs a name before the '=' (at most $MAX_PAIR_NAME characters)"
+            }
+            val content = text.substring(cut + 1)
+            if (content.length > MAX_PAIR_VALUE) return "the value of '$name' is longer than $MAX_PAIR_VALUE characters"
+            if (out.put(name, content) != null) return "'$name' is given twice"
+        }
+        return null
     }
 }

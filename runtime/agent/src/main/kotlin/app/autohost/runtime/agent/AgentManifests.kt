@@ -140,6 +140,8 @@ data class AgentConfig(
     val tasks: List<String> = emptyList(),
     /** INT-E1: the name the person knows each allowed task by (id → name); only for the prompt and the approval. */
     val taskNames: Map<String, String> = emptyMap(),
+    /** INT-E4: the value names each allowed task says it takes (id to names); the model may hand over only these. */
+    val taskInputs: Map<String, List<String>> = emptyMap(),
 ) {
     companion object {
         fun from(config: JsonObject): AgentConfig {
@@ -177,6 +179,14 @@ data class AgentConfig(
                     ?: emptyList(),
                 taskNames = (agent["task_names"] as? JsonObject)
                     ?.mapNotNull { (id, name) -> (name as? JsonPrimitive)?.content?.let { id to it } }
+                    ?.toMap()
+                    ?: emptyMap(),
+                taskInputs = (agent["task_inputs"] as? JsonObject)
+                    ?.mapNotNull { (id, names) ->
+                        (names as? kotlinx.serialization.json.JsonArray)
+                            ?.mapNotNull { (it as? JsonPrimitive)?.content }
+                            ?.let { id to it }
+                    }
                     ?.toMap()
                     ?: emptyMap(),
             )

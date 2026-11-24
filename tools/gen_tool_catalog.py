@@ -43,7 +43,9 @@ ALLOWLIST: dict[str, dict] = {
     # INT-E1: the one tool that starts something the PERSON saved (a macro or a script). `enum_of: run_tasks` is the
     # list the person ticked for this run (the broker's tasks.run grant carries the same list); timeout_ms stays
     # under the agent's own 180 s idle budget so a long task cannot make the agent look dead.
-    "run_task":         {"capability": "tasks.run", "method": "run", "permission": "tasks.run", "args": {"task": {"enum_of": "run_tasks"}, "timeout_ms?": {"max": 120000}}},
+    # INT-E4: `pairs: 8` = up to 8 "name=value" texts the model hands the task. The validator checks their shape, the
+    # pipeline checks every name against what that task says it takes, and the broker calls them `args`.
+    "run_task":         {"capability": "tasks.run", "method": "run", "permission": "tasks.run", "args": {"task": {"enum_of": "run_tasks"}, "inputs?": {"pairs": 8}, "timeout_ms?": {"max": 120000}}},
     "ask_user":         {"capability": "ui.prompt", "method": "ask", "permission": "ui.prompt", "args": {"message": {}, "kind": {"enum": ["text", "choice", "confirm"]}, "choices?": {}}},
     "finish":          {"capability": None, "method": None, "permission": None, "host": True, "args": {"status": {"enum": ["done", "blocked", "failed"]}, "summary": {}}},
     "todo_write":       {"capability": None, "method": None, "permission": None, "host": True, "args": {"items": {}}},
@@ -66,7 +68,7 @@ DESCRIPTIONS: dict[str, str] = {
     "app_foreground": "Report which app is in the foreground (scope-filtered).",
     "app_query": "Ask whether one of this run's target apps is installed and its state.",
     "app_wait_foreground": "Wait until one of this run's target apps is in the foreground.",
-    "run_task": "Start one of the saved tasks (a macro or a script) the user allowed for this run, by its id, and wait for its result. Status RUNNING means it is still going: never start the same task twice, wait and look at the screen instead.",
+    "run_task": "Start one of the saved tasks (a macro or a script) the user allowed for this run, by its id, and wait for its result. To give it values, pass inputs as name=value texts, using only the names listed for that task. Status RUNNING means it is still going: never start the same task twice, wait and look at the screen instead.",
     "ask_user": "Ask the user a question (text, choice or confirm).",
     "finish": "Claim the goal is done, blocked or failed. The host verifies; claiming is not the verdict.",
     "todo_write": "Update your scratchpad todo list (kept in context, no device effect).",

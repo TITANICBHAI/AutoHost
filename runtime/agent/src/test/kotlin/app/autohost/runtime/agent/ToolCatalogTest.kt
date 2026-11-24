@@ -35,8 +35,9 @@ class ToolCatalogTest {
         assertEquals("tasks.run", tool.permission)
         assertEquals("run_tasks", tool.args["task"]!!.jsonObject["enum_of"]!!.jsonPrimitive.content)
         assertEquals("120000", tool.args["timeout_ms?"]!!.jsonObject["max"]!!.jsonPrimitive.content)
-        // the model never sees the broker's other knobs: no profile, no free-form args object
-        assertEquals(setOf("task", "timeout_ms?"), tool.args.keys)
+        assertEquals("8", tool.args["inputs?"]!!.jsonObject["pairs"]!!.jsonPrimitive.content)
+        // the model never sees the broker's other knobs: no profile, no free-form args object (its values go in `inputs`)
+        assertEquals(setOf("task", "inputs?", "timeout_ms?"), tool.args.keys)
     }
 
     @Test

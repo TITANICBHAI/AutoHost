@@ -19,7 +19,7 @@ class ToolSchemaTest {
 
     @Test
     fun `given every catalog tool when its parameters are built then each is an object schema in plain JSON Schema words`() {
-        val knownKeywords = setOf("type", "enum", "description", "minimum", "maximum")
+        val knownKeywords = setOf("type", "enum", "description", "minimum", "maximum", "items")
         for (tool in catalog.specs()) {
             val parameters = tool.parameters
             assertEquals("${tool.name}: type", "object", parameters["type"]!!.jsonPrimitive.content)
@@ -75,5 +75,15 @@ class ToolSchemaTest {
         assertTrue(properties["task"]!!.jsonObject["description"]!!.jsonPrimitive.content.contains("saved tasks"))
         assertEquals("string", properties["free"]!!.jsonObject["type"]!!.jsonPrimitive.content)
         assertEquals(listOf("mode", "pkg", "task", "free"), built["required"]!!.jsonArray.map { it.jsonPrimitive.content })
+    }
+
+    @Test
+    fun `given a list of name=value texts when converted then the model is told it is an array of strings`() {
+        val built = ToolSchema.parameters(spec("""{"inputs?":{"pairs":8}}"""))
+        val inputs = built["properties"]!!.jsonObject["inputs"]!!.jsonObject
+        assertEquals("array", inputs["type"]!!.jsonPrimitive.content)
+        assertEquals("string", inputs["items"]!!.jsonObject["type"]!!.jsonPrimitive.content)
+        assertTrue(inputs["description"]!!.jsonPrimitive.content.contains("name=value"))
+        assertFalse(built.containsKey("required"))
     }
 }
