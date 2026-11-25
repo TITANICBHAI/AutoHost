@@ -29,7 +29,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.io.File
@@ -140,17 +139,18 @@ class AgentLoopFactory(
     }
 
     /** The REAL foreground package — for POLICY (deny decisions); the model sees the filtered view (§5.2 (4)). */
-    private suspend fun foregroundOf(transport: BinderAgentTransport): String? {
-        val env = transport.call("device.app", "foreground", JsonObject(emptyMap()))
-        return (env["result"] as? JsonObject)?.get("package")?.let { (it as? JsonPrimitive)?.content }
-    }
+    private suspend fun foregroundOf(transport: BinderAgentTransport): String? =
+        AgentEnvelopes.foregroundPackage(transport.call("device.app", "foreground", JsonObject(emptyMap())))
 
     /** Snapshot → §8 floor. A withheld observation becomes an honest EMPTY screen with its reason. */
     private suspend fun floorFilteredSnapshot(transport: BinderAgentTransport, agentConfig: AgentConfig): JsonObject {
-        val snapshot = transport.call(
-            "device.ui", "snapshot",
-            buildJsonObject { put("compact", false) },
-        ).let { envelope -> (envelope["result"] as? JsonObject) ?: JsonObject(emptyMap()) }
+        // INT-A3: the transport's result carries the provider's fields at the top level (plus `ok`), never under a `result` key
+        val snapshot = AgentEnvelopes.fields(
+            transport.call(
+                "device.ui", "snapshot",
+                buildJsonObject { put("compact", false) },
+            ),
+        )
         val filtered = ObservationFilter.filterSnapshot(snapshot, agentConfig.packages.toSet(), sensitivity)
         return if (!filtered.withheld) {
             filtered.observation ?: snapshot
@@ -169,9 +169,10 @@ class AgentLoopFactory(
 
 /**
  * The token-bound transport over the broker binder — the ONE action path for everything the
- * agent runtime does (model tools, approvals, observations). Envelope errors surface as an
- * error-shaped JsonObject (ok=false), matching what the pipeline/model expect; a refused call
- * never throws except for cancellation.
+ * agent runtime does (model tools, approvals, observations). A call that worked comes back as
+ * `{"ok": true, <the provider's fields>}` and one that failed as an error-shaped JsonObject
+ * (ok=false), the shape the loop, the pipeline and the model read (INT-A3: see [AgentEnvelopes]);
+ * a refused call never throws except for cancellation.
  */
 class BinderAgentTransport(
     private val runToken: String,
@@ -191,22 +192,7 @@ class BinderAgentTransport(
         val envelope = runCatching {
             AhJson.json.decodeFromString(Envelope.serializer(), raw)
         }.getOrNull() ?: return errorEnvelope("INTERNAL", "unparsable broker envelope")
-        return if (envelope.ok) {
-            when (val result = envelope.result) {
-                is JsonObject -> result
-                null -> JsonObject(emptyMap())
-                else -> buildJsonObject { put("value", result) }
-            }
-        } else {
-            buildJsonObject {
-                put("ok", false)
-                put("error", buildJsonObject {
-                    put("code", envelope.error?.code ?: "INTERNAL")
-                    envelope.error?.reason?.let { put("reason", it) }
-                    put("message", envelope.error?.message ?: "")
-                })
-            }
-        }
+        return AgentEnvelopes.toolResult(envelope)
     }
 
     private fun errorEnvelope(code: String, message: String): JsonObject = buildJsonObject {
