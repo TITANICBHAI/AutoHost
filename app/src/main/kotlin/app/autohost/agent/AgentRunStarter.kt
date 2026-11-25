@@ -70,27 +70,7 @@ class AgentRunStarter(
         agentOverride: JsonObject = JsonObject(emptyMap()),
         tasks: List<AllowedTask> = emptyList(),
     ): AhResult<RunRecord> {
-        val agentObject = buildJsonObject {
-            put("goal", goal)
-            put("packages", JsonArray(packages.map { JsonPrimitive(it) }))
-            profileId?.let { put("provider", it) }
-            if (tasks.isNotEmpty()) {
-                put("tasks", JsonArray(tasks.map { JsonPrimitive(it.id) }))
-                put("task_names", buildJsonObject { tasks.forEach { put(it.id, it.name) } })
-                if (tasks.any { it.inputs.isNotEmpty() }) {
-                    put(
-                        "task_inputs",
-                        buildJsonObject {
-                            tasks.filter { it.inputs.isNotEmpty() }.forEach { task ->
-                                put(task.id, JsonArray(task.inputs.map { JsonPrimitive(it) }))
-                            }
-                        },
-                    )
-                }
-            }
-            agentOverride.forEach { (key, value) -> put(key, value) }
-        }
-        val config = buildJsonObject { put("agent", agentObject) }
+        val config = configFor(goal, packages, profileId, agentOverride, tasks)
         val agentConfig = AgentConfig.from(config)
         val manifest = AgentManifests.synthesize(packages, agentConfig.budgets.maxWallClockS, agentConfig.tasks)
         val grants = grantsFor(manifest, config)
@@ -127,5 +107,42 @@ class AgentRunStarter(
                 triggerType = "manual",
             ),
         )
+    }
+
+    companion object {
+        /**
+         * The run's `config` object, `{"agent": {...}}`. Pure, so a test can read back what [AgentConfig] makes of it:
+         * the goal, the target apps, the model, and (INT-E1/E4) the saved tasks the agent may start with their names and the
+         * value names each one takes. `task_inputs` is written only for a task that takes values. [agentOverride] keys win.
+         */
+        fun configFor(
+            goal: String,
+            packages: List<String>,
+            profileId: String?,
+            agentOverride: JsonObject,
+            tasks: List<AllowedTask>,
+        ): JsonObject {
+            val agentObject = buildJsonObject {
+                put("goal", goal)
+                put("packages", JsonArray(packages.map { JsonPrimitive(it) }))
+                profileId?.let { put("provider", it) }
+                if (tasks.isNotEmpty()) {
+                    put("tasks", JsonArray(tasks.map { JsonPrimitive(it.id) }))
+                    put("task_names", buildJsonObject { tasks.forEach { put(it.id, it.name) } })
+                    if (tasks.any { it.inputs.isNotEmpty() }) {
+                        put(
+                            "task_inputs",
+                            buildJsonObject {
+                                tasks.filter { it.inputs.isNotEmpty() }.forEach { task ->
+                                    put(task.id, JsonArray(task.inputs.map { JsonPrimitive(it) }))
+                                }
+                            },
+                        )
+                    }
+                }
+                agentOverride.forEach { (key, value) -> put(key, value) }
+            }
+            return buildJsonObject { put("agent", agentObject) }
+        }
     }
 }

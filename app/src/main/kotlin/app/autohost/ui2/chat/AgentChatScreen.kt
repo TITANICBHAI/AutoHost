@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import app.autohost.AppGraph
 import app.autohost.agent.AgentRunStarter
+import app.autohost.agent.TaskValueNames
 import app.autohost.core.common.AhResult
 import app.autohost.core.engine.orchestrator.RunRecord
 import app.autohost.core.llm.ProviderProfile
@@ -56,6 +57,7 @@ import app.autohost.ui2.pickers.rememberTaskChoices
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 
 private const val START_FAILED = "AutoHost could not start the agent. Check the AI settings and try again."
@@ -141,11 +143,15 @@ fun AgentChatHost(
         val chosenTasks = taskIds
         val model = chosenProfile
         // only saved tasks that exist right now are handed over; the agent is never told about a deleted one
-        val allowed = AgentChat.allowedTasks(chosenTasks, taskChoices).map { AgentRunStarter.AllowedTask(it.taskId, it.name) }
+        val ticked = AgentChat.allowedTasks(chosenTasks, taskChoices)
+        val devTasks = graph.devTasks.tasks.value
         scope.launch {
             starting = true
             refusal = null
             val started: AhResult<RunRecord>? = try {
+                // each macro's value names are read from its own file: off the main thread, and not at all when no task is ticked
+                val allowed: List<AgentRunStarter.AllowedTask> =
+                    if (ticked.isEmpty()) emptyList() else withContext(graph.dispatchers.io) { TaskValueNames.allowed(ticked, devTasks) }
                 graph.agentRunStarter.start(text, chosenApps, model, JsonObject(emptyMap()), allowed)
             } catch (e: CancellationException) {
                 throw e
