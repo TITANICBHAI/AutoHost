@@ -225,7 +225,8 @@ class ToolPipeline(
         val callArgs = if (tool.name == ToolPolicy.RUN_TASK) {
             taskCallArgs(args)
         } else {
-            target.ref?.let { handle -> withRef(args, handle) } ?: args
+            // INT-A5: and the words the model gave for `selector` / `expect` become the structured selector the service takes
+            SelectorText.forPhoneService(target.ref?.let { handle -> withRef(args, handle) } ?: args)
         }
         val envelope = try {
             transport.call(tool.capability, tool.method, callArgs)
@@ -364,6 +365,14 @@ class ToolPipeline(
             }
         }
         args.str("selector")?.let { selector ->
+            if (selector.isBlank()) {
+                return AhResult.err(
+                    app.autohost.core.model.AhError.of(
+                        app.autohost.core.model.ErrorCode.INVALID_ARGS,
+                        "the selector is empty: give the words the element shows",
+                    ),
+                )
+            }
             return AhResult.ok(TargetInfo(pkg = null, label = selector, isPassword = false, viaId = false))
         }
         return AhResult.ok(TargetInfo(pkg = null, label = null, isPassword = false, viaId = false))

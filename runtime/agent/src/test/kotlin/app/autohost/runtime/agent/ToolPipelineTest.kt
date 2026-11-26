@@ -1,7 +1,11 @@
 package app.autohost.runtime.agent
 
+import app.autohost.core.common.AhJson
 import app.autohost.core.llm.ToolCall
 import app.autohost.core.model.Bounds
+import app.autohost.core.model.Selector
+import app.autohost.core.model.SelectorEngine
+import app.autohost.core.model.UiNode
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -202,7 +206,8 @@ class ToolPipelineTest {
         // INT-A4: the phone service is given the screen item's own handle, never the model's [n] number
         assertEquals("ref-1", (brokerArgs["ref"] as JsonPrimitive).content)
         assertFalse(brokerArgs.containsKey("id"))
-        assertEquals("shown", (brokerArgs["expect"] as JsonPrimitive).content)
+        // INT-A5: words for "what should show up afterwards" reach the phone service as a structured selector
+        assertTrue(brokerArgs["expect"] is JsonObject)
         assertTrue(!brokerArgs.containsKey("nonexistent"))
     }
 
@@ -255,6 +260,40 @@ class ToolPipelineTest {
         val transport = FakeTransport()
         pipeline(transport).execute(call("ui_click", """{"selector":"Next"}"""), ctx)
         assertFalse(transport.calls.single().third.containsKey("ref"))
+    }
+
+    // --- INT-A5: the words the model gives for a selector reach the phone service as a structured selector ---
+
+    @Test
+    fun `given words for a selector when waiting for an element then the phone service gets a selector that finds it`() = runBlocking {
+        val transport = FakeTransport()
+        val result = pipeline(transport).execute(call("ui_wait_for", """{"selector":"done"}"""), ctx)
+        assertNull(errOf(result).first)
+        val sent = transport.calls.single()
+        assertEquals("wait_for", sent.second)
+        val selector = AhJson.json.decodeFromJsonElement(Selector.serializer(), sent.third["selector"] as JsonObject)
+        val screen = listOf(
+            UiNode(0, -1, 0, "com.normal.test", "android.widget.Button", "", "Done", "", Bounds(0, 0, 100, 50), setOf("clickable")),
+            UiNode(1, -1, 0, "com.normal.test", "android.widget.Button", "", "Cancel", "", Bounds(0, 60, 100, 110), setOf("clickable")),
+        )
+        assertEquals(listOf(0), SelectorEngine.findAll(screen, selector).map { it.index })
+    }
+
+    @Test
+    fun `given words for what should show after a click when executed then expect is a selector too`() = runBlocking {
+        val transport = FakeTransport()
+        pipeline(transport).execute(call("ui_click", """{"id":"[1]","expect":"Saved"}"""), ctx)
+        val sent = transport.calls.single().third
+        assertTrue(sent["expect"] is JsonObject)
+        assertEquals("ref-1", (sent["ref"] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `given an empty selector when executed then INVALID_ARGS and the phone service is never called`() = runBlocking {
+        val transport = FakeTransport()
+        val result = pipeline(transport).execute(call("ui_find", """{"selector":"  "}"""), ctx)
+        assertEquals("INVALID_ARGS", errOf(result).first)
+        assertEquals(0, transport.brokerCalls())
     }
 
     @Test

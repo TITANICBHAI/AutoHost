@@ -126,7 +126,7 @@
     "selector?": {}
    },
    "capability": "device.ui",
-   "description": "Click an element by its observation id or selector.",
+   "description": "Click an element: id is its [n] number on the screen, or selector is the words it shows. expect (optional) is text that should be on the screen once the click is done.",
    "method": "click",
    "name": "ui_click",
    "permission": "device.ui.act",
@@ -138,7 +138,7 @@
     "selector": {}
    },
    "capability": "device.ui",
-   "description": "Search the current screen for elements matching a selector.",
+   "description": "Search the current screen for elements whose text or description contains the selector (the words the element shows; case does not matter).",
    "method": "find",
    "name": "ui_find",
    "permission": "device.ui.observe",
@@ -159,7 +159,7 @@
     "selector?": {}
    },
    "capability": "device.ui",
-   "description": "Long-press an element by its observation id or selector.",
+   "description": "Long-press an element: id is its [n] number on the screen, or selector is the words it shows.",
    "method": "long_click",
    "name": "ui_long_click",
    "permission": "device.ui.act",
@@ -194,7 +194,7 @@
     "selector": {}
    },
    "capability": "device.ui",
-   "description": "Scroll in a direction until an element matching the selector is visible.",
+   "description": "Scroll in a direction until an element whose text or description contains the selector (the words it shows) is visible.",
    "method": "scroll_until",
    "name": "ui_scroll_until",
    "permission": "device.ui.act",
@@ -208,7 +208,7 @@
     "verify?": {}
    },
    "capability": "device.ui",
-   "description": "Type text into an editable element (never use this for passwords).",
+   "description": "Type text into an editable element: id is its [n] number on the screen, or selector is the words it shows (never use this for passwords).",
    "method": "set_text",
    "name": "ui_set_text",
    "permission": "device.ui.act",
@@ -231,7 +231,7 @@
     }
    },
    "capability": "device.ui",
-   "description": "Wait until an element matching the selector appears.",
+   "description": "Wait until an element whose text or description contains the selector (the words it shows) appears.",
    "method": "wait_for",
    "name": "ui_wait_for",
    "permission": "device.ui.observe",
