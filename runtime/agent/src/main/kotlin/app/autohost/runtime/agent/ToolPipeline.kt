@@ -67,6 +67,7 @@ class ToolPipeline(
         val isPassword: Boolean,
         val viaId: Boolean,     // resolved through the ViewIndex → re-validatable
         val node: Int? = null,  // the [n] id when viaId
+        val ref: String? = null, // INT-A4: the phone service's own handle for that screen item (null = none known)
     )
 
     /** The post-approval TOCTOU re-check (§10): production re-resolves through the live screen. */
@@ -219,7 +220,13 @@ class ToolPipeline(
         // capability.method; the permission id is for policy/grants, not dispatch)
         // INT-E1: a saved task waits for the task at most 90 s unless the model asked for less/more (cap 120 s in the
         // catalog) — the broker's own default is 10 minutes, far past the agent's 180 s idle budget
-        val callArgs = if (tool.name == ToolPolicy.RUN_TASK) taskCallArgs(args) else args
+        // INT-A4: the model names a screen item by its [n] number; the phone service knows it by the handle (ref) its
+        // snapshot gave it, and answers "needs 'ref' or 'selector'" to a bare id, so the number is swapped for the handle here
+        val callArgs = if (tool.name == ToolPolicy.RUN_TASK) {
+            taskCallArgs(args)
+        } else {
+            target.ref?.let { handle -> withRef(args, handle) } ?: args
+        }
         val envelope = try {
             transport.call(tool.capability, tool.method, callArgs)
         } catch (e: CancellationException) {
@@ -292,6 +299,12 @@ class ToolPipeline(
         if (!args.containsKey("timeout_ms")) put("timeout_ms", DEFAULT_TASK_WAIT_MS)
     }
 
+    /** INT-A4: [args] with the model's `id` taken out and the phone service's own handle for that screen item put in. */
+    private fun withRef(args: JsonObject, ref: String): JsonObject = buildJsonObject {
+        for ((key, value) in args) if (key != "id") put(key, value)
+        put("ref", ref)
+    }
+
     /** INT-E4: the values the model wants to hand over, one short line each, so the person sees what the task is given. */
     private fun valuesText(args: JsonObject): String {
         val given = args["inputs"] as? JsonObject ?: return ""
@@ -344,6 +357,7 @@ class ToolPipeline(
                         isPassword = "password" in entry.value.flags,
                         viaId = true,
                         node = n,
+                        ref = entry.value.ref.ifEmpty { null },
                     ),
                 )
                 is AhResult.Err -> AhResult.err(entry.error)

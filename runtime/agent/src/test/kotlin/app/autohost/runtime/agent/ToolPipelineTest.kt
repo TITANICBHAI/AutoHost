@@ -199,9 +199,62 @@ class ToolPipelineTest {
         assertEquals(1, transport.brokerCalls())
         assertEquals(1, revalidator.asked.size) // the TOCTOU ran
         val brokerArgs = transport.calls[1].third
-        assertEquals("[1]", (brokerArgs["id"] as JsonPrimitive).content)
+        // INT-A4: the phone service is given the screen item's own handle, never the model's [n] number
+        assertEquals("ref-1", (brokerArgs["ref"] as JsonPrimitive).content)
+        assertFalse(brokerArgs.containsKey("id"))
         assertEquals("shown", (brokerArgs["expect"] as JsonPrimitive).content)
         assertTrue(!brokerArgs.containsKey("nonexistent"))
+    }
+
+    // --- INT-A4: the model's [n] number reaches the phone service as the screen item's own handle ----------
+
+    @Test
+    fun `given a click by number when executed then the phone service gets the item's ref and no id`() = runBlocking {
+        val transport = FakeTransport()
+        val result = pipeline(transport).execute(call("ui_click", """{"id":"[1]"}"""), ctx)
+        assertNull(errOf(result).first)
+        val sent = transport.calls.single()
+        assertEquals("device.ui", sent.first)
+        assertEquals("click", sent.second)
+        assertEquals("ref-1", (sent.third["ref"] as JsonPrimitive).content)
+        assertFalse(sent.third.containsKey("id"))
+    }
+
+    @Test
+    fun `given a long press by number when executed then the phone service gets the item's ref and no id`() = runBlocking {
+        val transport = FakeTransport()
+        val result = pipeline(transport).execute(call("ui_long_click", """{"id":"[1]"}"""), ctx)
+        assertNull(errOf(result).first)
+        val sent = transport.calls.single()
+        assertEquals("long_click", sent.second)
+        assertEquals("ref-1", (sent.third["ref"] as JsonPrimitive).content)
+        assertFalse(sent.third.containsKey("id"))
+    }
+
+    @Test
+    fun `given typing by number when executed then the text goes along with the item's ref`() = runBlocking {
+        val transport = FakeTransport()
+        val result = pipeline(transport).execute(call("ui_set_text", """{"id":"[1]","text":"hello"}"""), ctx)
+        assertNull(errOf(result).first)
+        val sent = transport.calls.single()
+        assertEquals("set_text", sent.second)
+        assertEquals("ref-1", (sent.third["ref"] as JsonPrimitive).content)
+        assertEquals("hello", (sent.third["text"] as JsonPrimitive).content)
+        assertFalse(sent.third.containsKey("id"))
+    }
+
+    @Test
+    fun `given the number is written without brackets when executed then it still reaches the phone service as the ref`() = runBlocking {
+        val transport = FakeTransport()
+        pipeline(transport).execute(call("ui_click", """{"id":"1"}"""), ctx)
+        assertEquals("ref-1", (transport.calls.single().third["ref"] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `given a selector and no number when executed then no ref is made up`() = runBlocking {
+        val transport = FakeTransport()
+        pipeline(transport).execute(call("ui_click", """{"selector":"Next"}"""), ctx)
+        assertFalse(transport.calls.single().third.containsKey("ref"))
     }
 
     @Test
