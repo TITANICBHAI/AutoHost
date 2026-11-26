@@ -56,6 +56,13 @@ class ToolPipelineTest {
         }
     }
 
+    private class FakePauser : ToolPipeline.Pauser {
+        val waits = mutableListOf<Long>()
+        override suspend fun pause(ms: Long) {
+            waits.add(ms)
+        }
+    }
+
     private fun budget(maxActions: Int = 10) = RunBudget(
         RunBudget.Limits(50, 600_000, 100, 10_000_000, maxActions, maxOutputTokens = 256),
     ) { 0 }
@@ -65,6 +72,7 @@ class ToolPipelineTest {
         budget: RunBudget = budget(),
         revalidator: FakeRevalidator = FakeRevalidator(),
         foreground: String? = "com.normal.test",
+        pauser: FakePauser = FakePauser(),
     ) = ToolPipeline(
         catalog = catalog,
         transport = transport,
@@ -73,6 +81,7 @@ class ToolPipelineTest {
         sensitivity = sensitivity,
         foregroundSource = { foreground },
         revalidator = revalidator,
+        pauser = pauser,
     )
 
     private fun call(name: String, argsJson: String = "{}", id: String = "c1") =
@@ -385,6 +394,41 @@ class ToolPipelineTest {
         // the host tool did not consume the action budget
         p.execute(call("ui_click", """{"id":"[1]"}"""), ctx)
         assertEquals(1, transport.brokerCalls())
+    }
+
+    // --- INT-A7: the wait tool really waits ----------------------------------------------------------
+
+    @Test
+    fun `given wait when executed then it pauses for that many seconds and never touches the phone service`() = runBlocking {
+        val transport = FakeTransport()
+        val pauser = FakePauser()
+        val result = pipeline(transport, pauser = pauser).execute(call("wait", """{"seconds":3}"""), ctx)
+        assertEquals(listOf(3_000L), pauser.waits)
+        assertEquals("3", (result["waited_seconds"] as JsonPrimitive).content)
+        assertEquals(0, transport.calls.size)
+    }
+
+    @Test
+    fun `given wait for no time when executed then it still pauses one second`() = runBlocking {
+        val pauser = FakePauser()
+        pipeline(pauser = pauser).execute(call("wait", """{"seconds":0}"""), ctx)
+        assertEquals(listOf(1_000L), pauser.waits)
+    }
+
+    @Test
+    fun `given wait for longer than allowed when executed then INVALID_ARGS and nothing is waited`() = runBlocking {
+        val pauser = FakePauser()
+        val result = pipeline(pauser = pauser).execute(call("wait", """{"seconds":11}"""), ctx)
+        assertEquals("INVALID_ARGS", errOf(result).first)
+        assertTrue(pauser.waits.isEmpty())
+    }
+
+    @Test
+    fun `given the todo list when executed then it does not wait`() = runBlocking {
+        val pauser = FakePauser()
+        val result = pipeline(pauser = pauser).execute(call("todo_write", """{"items":"a"}"""), ctx)
+        assertEquals("true", (result["ok"] as JsonPrimitive).content)
+        assertTrue(pauser.waits.isEmpty())
     }
 
     @Test

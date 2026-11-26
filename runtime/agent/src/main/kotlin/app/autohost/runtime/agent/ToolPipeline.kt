@@ -4,6 +4,7 @@ import app.autohost.core.common.AhResult
 import app.autohost.core.llm.ToolCall
 import app.autohost.core.model.AhError
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -48,6 +49,8 @@ class ToolPipeline(
     private val taskNames: Map<String, String> = emptyMap(),
     /** INT-E4: the value names each allowed task says it takes (task id to names); the model may hand over only these. */
     private val taskInputs: Map<String, Set<String>> = emptyMap(),
+    /** INT-A7: how a `wait` call really waits (a seam, so tests do not sleep). */
+    private val pauser: Pauser = Pauser { ms -> delay(ms) },
 ) : AgentLoop.ToolExecutor {
 
     data class Config(
@@ -80,6 +83,11 @@ class ToolPipeline(
     /** The pipeline's own log/audit channel (P13-15 wires it into the event log). */
     fun interface PipelineLog {
         fun on(event: String, data: JsonObject)
+    }
+
+    /** INT-A7: how the `wait` tool really waits. */
+    fun interface Pauser {
+        suspend fun pause(ms: Long)
     }
 
     /** Transient per-run session allow-list ("Allow for this run") — package-scoped. */
@@ -210,10 +218,14 @@ class ToolPipeline(
         // host tools (finish/todo_write/wait) have no broker method — the loop handles finish and
         // the host handles the rest; they never touch the transport and never cost an action
         if (tool.capability == null || tool.permission == null || tool.method == null) {
+            // INT-A7: `wait` really waits. It used to answer at once, so an agent waiting for a slow screen looked again at
+            // an unchanged one and spent its turns doing it
+            val waited = if (tool.name == WAIT_TOOL) waitSeconds(args) else null
+            if (waited != null) pauser.pause(waited * 1_000L)
             return buildJsonObject {
                 put("ok", true)
                 put("host", true)
-                put("note", "host tool — handled by the host, not the broker")
+                if (waited != null) put("waited_seconds", waited) else put("note", "host tool — handled by the host, not the broker")
             }
         }
         // the ONE action path — dispatch on the CAPABILITY id (the broker resolves
@@ -308,6 +320,9 @@ class ToolPipeline(
         put("ref", ref)
     }
 
+    /** INT-A7: how long a `wait` call asks for: 1 to 10 seconds (the catalog already refuses more than 10). */
+    private fun waitSeconds(args: JsonObject): Int = (args.str("seconds")?.toIntOrNull() ?: 1).coerceIn(1, MAX_WAIT_SECONDS)
+
     /** INT-E4: the values the model wants to hand over, one short line each, so the person sees what the task is given. */
     private fun valuesText(args: JsonObject): String {
         val given = args["inputs"] as? JsonObject ?: return ""
@@ -393,6 +408,10 @@ class ToolPipeline(
     companion object {
         /** INT-E1: how long run_task waits when the model gave no timeout (under the agent's 180 s idle budget). */
         const val DEFAULT_TASK_WAIT_MS = 90_000L
+
+        /** INT-A7: the host tool that pauses the run for a moment, and its cap in seconds (the same cap as the catalog's). */
+        private const val WAIT_TOOL = "wait"
+        private const val MAX_WAIT_SECONDS = 10
 
         /** INT-E4: how many values the approval question lists (the rest are counted) and how much of each it shows. */
         private const val MAX_SHOWN_VALUES = 3
