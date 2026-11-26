@@ -60,7 +60,9 @@ class AgentView(
 
     fun render(snapshot: JsonObject, generation: Int): Rendered {
         val pkg = snapshot.str("package") ?: ""
-        val keyboard = if (snapshot.str("keyboard") == "visible") "visible" else "hidden"
+        // INT-A8: the phone service sends a JSON Boolean (`"keyboard": true`); the word "visible" is the older
+        // shape the first tests used. Both mean the keyboard is open (it used to be hidden for ever).
+        val keyboard = if (snapshot.str("keyboard").let { it == "visible" || it == "true" }) "visible" else "hidden"
         val nodes = snapshot.nodes()
         val kept = nodes.filter { keep(it) }
         val truncatedByCount = kept.size > maxNodes

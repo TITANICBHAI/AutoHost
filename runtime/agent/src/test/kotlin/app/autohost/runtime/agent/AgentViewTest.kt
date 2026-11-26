@@ -26,6 +26,35 @@ class AgentViewTest {
             """{"package":"$pkg","keyboard":"$keyboard","node_count":${nodes.size},"nodes":[${nodes.joinToString(",") { it.toString() }}]}""",
         ).jsonObject
 
+    /** INT-A8: a snapshot whose keyboard member is exactly what the caller writes (empty = no member at all). */
+    private fun snapshotWithKeyboard(keyboardMember: String) = Json.parseToJsonElement(
+        "{\"package\":\"com.x\",$keyboardMember\"node_count\":0,\"nodes\":[]}",
+    ).jsonObject
+
+    @Test
+    fun `given the phone service reports keyboard true when rendered then the header says visible`() {
+        val rendered = view.render(snapshotWithKeyboard("\"keyboard\":true,"), generation = 1)
+        assertTrue(rendered.text, rendered.text.startsWith("SCREEN gen=1 app=com.x keyboard=visible "))
+    }
+
+    @Test
+    fun `given the phone service reports keyboard false when rendered then the header says hidden`() {
+        val rendered = view.render(snapshotWithKeyboard("\"keyboard\":false,"), generation = 1)
+        assertTrue(rendered.text, rendered.text.startsWith("SCREEN gen=1 app=com.x keyboard=hidden "))
+    }
+
+    @Test
+    fun `given the older word shape visible when rendered then the header still says visible`() {
+        val rendered = view.render(snapshotWithKeyboard("\"keyboard\":\"visible\","), generation = 1)
+        assertTrue(rendered.text, rendered.text.startsWith("SCREEN gen=1 app=com.x keyboard=visible "))
+    }
+
+    @Test
+    fun `given no keyboard member when rendered then the header says hidden`() {
+        val rendered = view.render(snapshotWithKeyboard(""), generation = 1)
+        assertTrue(rendered.text, rendered.text.startsWith("SCREEN gen=1 app=com.x keyboard=hidden "))
+    }
+
     @Test
     fun `given a snapshot when rendered then the header and lines use generation-local ids`() {
         val rendered = view.render(snapshot(node("ref-1", "Switch", "dnd", "Do Not Disturb", flags = "clickable,checked")), generation = 7)
