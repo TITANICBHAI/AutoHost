@@ -1,7 +1,13 @@
-# CI digest - run 67 - branch work/s02-green - commit e212063
-tests step outcome: success
+# CI digest - run 68 - branch work/s02-green - commit 5ee2309
+tests step outcome: failure
 
-## Verdict: GREEN - 1836 tests ran, 0 failed, 0 Kotlin compile errors, 0 failed Gradle tasks, 4 modules with no results
+## Verdict: RED - 1836 tests ran, 1 failed, 0 Kotlin compile errors, 1 failed Gradle tasks, 4 modules with no results
+
+## Failed Gradle tasks
+- :app:testCoreLiteDebugUnitTest
+
+## Failing tests (first 40 of 1)
+- [app] SettingsWalkJourneyTest.every Settings screen opens and Back returns to the Settings list - java.lang.IllegalArgumentException: performMeasureAndLayout called during measure layout
 
 ## Modules that produced no test results (compile error, timeout, or no tests)
 - runtime/api
@@ -10,7 +16,7 @@ tests step outcome: success
 - testing/fixture-app
 
 ## Per module (tests / failed / skipped)
-- app: 564 / 0 / 0
+- app: 564 / 1 / 0
 - capabilities/a11y: 114 / 0 / 0
 - capabilities/app: 32 / 0 / 0
 - capabilities/audio: 8 / 0 / 0
@@ -40,17 +46,17 @@ tests step outcome: success
 - runtime/js: 41 / 0 / 0
 
 ## Where the time went (finished tasks only; a task stopped by the timeout leaves no timings)
+- app: 84 s of test time
 - core/llm: 32 s of test time
-- app: 27 s of test time
 - capabilities/browser: 20 s of test time
 - capabilities/shell: 5 s of test time
-- core/engine: 3 s of test time
+- core/model: 3 s of test time
+- slowest: 61.3 s SettingsWalkJourneyTest.every Settings screen opens and Back returns to the Settings list [app]
 - slowest: 30.0 s HttpUrlConnectionEngineTest.given a hung server when the call is cancelled then it returns within about a second [core/llm]
 - slowest: 10.2 s CdpBrowserProviderTest.navigate forwards through the shell then evaluates the page [capabilities/browser]
 - slowest: 10.0 s CdpBrowserProviderTest.close removes the forward [capabilities/browser]
-- slowest: 8.2 s AddTaskDialogJourneyTest.Add a task opens a pop-up with three ways to add one and Close shuts it [app]
+- slowest: 7.3 s AddTaskDialogJourneyTest.Add a task opens a pop-up with three ways to add one and Close shuts it [app]
 - slowest: 2.0 s SelectorBenchTest.find latency stays in single-digit milliseconds on large trees [core/model]
-- slowest: 1.7 s AdbClientTest.keystore persists and restores the identity [capabilities/shell]
 - slowest: 1.5 s UiAutomationControllerTest.spawn failure with a dead runner is refused honestly [app]
 - slowest: 1.5 s UiAutomationControllerTest.spawn failure with a dead runner is refused honestly [app]
 
