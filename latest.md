@@ -1,7 +1,7 @@
-# CI digest - run 62 - branch work/s02-green - commit b2ac04d
+# CI digest - run 63 - branch work/s02-green - commit db861b6
 tests step outcome: success
 
-## Verdict: GREEN - 1810 tests ran, 0 failed, 0 Kotlin compile errors, 0 failed Gradle tasks, 4 modules with no results
+## Verdict: GREEN - 1815 tests ran, 0 failed, 0 Kotlin compile errors, 0 failed Gradle tasks, 4 modules with no results
 
 ## Modules that produced no test results (compile error, timeout, or no tests)
 - runtime/api
@@ -35,26 +35,26 @@ tests step outcome: success
 - core/engine: 305 / 0 / 2
 - core/llm: 36 / 0 / 0
 - core/model: 47 / 0 / 0
-- runtime/agent: 227 / 0 / 0
+- runtime/agent: 232 / 0 / 0
 - runtime/flow: 117 / 0 / 24
 - runtime/js: 41 / 0 / 0
 
 ## Where the time went (finished tasks only; a task stopped by the timeout leaves no timings)
 - core/llm: 32 s of test time
-- app: 27 s of test time
+- app: 22 s of test time
 - capabilities/browser: 20 s of test time
 - capabilities/shell: 3 s of test time
 - core/model: 3 s of test time
 - slowest: 30.0 s HttpUrlConnectionEngineTest.given a hung server when the call is cancelled then it returns within about a second [core/llm]
-- slowest: 11.9 s AddTaskDialogJourneyTest.Add a task opens a pop-up with three ways to add one and Close shuts it [app]
 - slowest: 10.1 s CdpBrowserProviderTest.navigate forwards through the shell then evaluates the page [capabilities/browser]
 - slowest: 10.0 s CdpBrowserProviderTest.close removes the forward [capabilities/browser]
+- slowest: 6.7 s AddTaskDialogJourneyTest.Add a task opens a pop-up with three ways to add one and Close shuts it [app]
 - slowest: 2.0 s SelectorBenchTest.find latency stays in single-digit milliseconds on large trees [core/model]
 - slowest: 1.5 s UiAutomationControllerTest.spawn failure with a dead runner is refused honestly [app]
 - slowest: 1.5 s UiAutomationControllerTest.spawn failure with a dead runner is refused honestly [app]
 - slowest: 1.1 s SettingsWalkJourneyTest.every Settings screen opens and Back returns to the Settings list [app]
 
-## Style baseline (report only): 22212 ktlint/detekt findings
+## Style baseline (report only): 22234 ktlint/detekt findings
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:6:1 Unused import
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:11:1 Unused import
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:12:1 Unused import
