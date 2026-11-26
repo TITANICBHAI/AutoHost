@@ -54,7 +54,9 @@
   },
   {
    "args": {
-    "choices?": {},
+    "choices?": {
+     "list": 4
+    },
     "kind": {
      "enum": [
       "text",
@@ -65,7 +67,7 @@
     "message": {}
    },
    "capability": "ui.prompt",
-   "description": "Ask the user a question (text, choice or confirm).",
+   "description": "Ask the user a question and wait for the answer. kind is text (they type an answer), confirm (yes or no) or choice (they pick one of choices: a list of 2 to 4 short answers).",
    "method": "ask",
    "name": "ask_user",
    "permission": "ui.prompt",

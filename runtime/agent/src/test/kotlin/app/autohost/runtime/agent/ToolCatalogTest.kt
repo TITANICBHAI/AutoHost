@@ -41,6 +41,15 @@ class ToolCatalogTest {
     }
 
     @Test
+    fun `given ask_user when inspected then choices is a list of at most four short texts, which is what the prompt screen reads`() {
+        val tool = catalog.find("ask_user")!!
+        assertEquals("ui.prompt", tool.capability)
+        assertEquals("ask", tool.method)
+        assertEquals("4", tool.args["choices?"]!!.jsonObject["list"]!!.jsonPrimitive.content)
+        assertEquals(setOf("message", "kind", "choices?"), tool.args.keys)
+    }
+
+    @Test
     fun `given a catalog without run_task when listed then the model sees every other tool and not that one`() {
         val trimmed = catalog.without(setOf("run_task"))
         assertEquals(catalog.names() - "run_task", trimmed.names())

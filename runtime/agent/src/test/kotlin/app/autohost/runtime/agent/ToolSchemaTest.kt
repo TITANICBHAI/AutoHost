@@ -86,4 +86,16 @@ class ToolSchemaTest {
         assertTrue(inputs["description"]!!.jsonPrimitive.content.contains("name=value"))
         assertFalse(built.containsKey("required"))
     }
+
+    @Test
+    fun `given a list of short texts when converted then the model is told it is an optional array of strings (INT-A2)`() {
+        val built = ToolSchema.parameters(
+            spec("""{"message":{},"kind":{"enum":["text","choice","confirm"]},"choices?":{"list":4}}"""),
+        )
+        val choices = built["properties"]!!.jsonObject["choices"]!!.jsonObject
+        assertEquals("array", choices["type"]!!.jsonPrimitive.content)
+        assertEquals("string", choices["items"]!!.jsonObject["type"]!!.jsonPrimitive.content)
+        assertTrue(choices["description"]!!.jsonPrimitive.content.contains("Short texts"))
+        assertEquals(listOf("message", "kind"), built["required"]!!.jsonArray.map { it.jsonPrimitive.content })
+    }
 }

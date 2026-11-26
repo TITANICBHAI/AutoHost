@@ -28,6 +28,9 @@ object ArgValidator {
      * INT-E4: `{"pairs": N}` is the one spec that takes a list instead of a primitive: up to N texts written
      * `name=value`. The sanitized result holds them as an object (name to text) under the same key, and an empty list
      * is dropped. Which names are allowed is not decided here (that depends on the task): the pipeline checks it.
+     *
+     * INT-A2: `{"list": N}` is the other list spec: up to N short texts (1 to [MAX_LIST_ENTRY] characters each, trimmed,
+     * no repeats) kept as a list, which is what the prompt screen reads for `ask_user`'s `choices`. An empty list is dropped.
      */
     fun validate(
         tool: ToolCatalog.Tool,
@@ -62,6 +65,14 @@ object ArgValidator {
                     if (pairs.isNotEmpty()) {
                         put(key, buildJsonObject { for ((name, text) in pairs) put(name, JsonPrimitive(text)) })
                     }
+                    continue
+                }
+                if (spec.containsKey("list")) {
+                    val limit = (spec["list"] as? JsonPrimitive)?.content?.toIntOrNull() ?: 0
+                    val items = ArrayList<String>()
+                    val problem = readList(key, value, limit, items)
+                    if (problem != null) return AhResult.err(AhError.of(ErrorCode.INVALID_ARGS, problem))
+                    if (items.isNotEmpty()) put(key, JsonArray(items.map { JsonPrimitive(it) }))
                     continue
                 }
                 val primitive = value as? JsonPrimitive
@@ -148,6 +159,25 @@ object ArgValidator {
             val content = text.substring(cut + 1)
             if (content.length > MAX_PAIR_VALUE) return "the value of '$name' is longer than $MAX_PAIR_VALUE characters"
             if (out.put(name, content) != null) return "'$name' is given twice"
+        }
+        return null
+    }
+
+    /** INT-A2: the longest text one entry of a `list` argument may be (a button on a small screen shows nothing longer). */
+    const val MAX_LIST_ENTRY = 60
+
+    /** Reads `["a", "b"]` into [out], each entry trimmed. Returns the problem in words for the model, or null when the list is fine. */
+    private fun readList(key: String, value: JsonElement, limit: Int, out: MutableList<String>): String? {
+        val list = value as? JsonArray ?: return "argument '$key' must be a list of short texts"
+        if (list.size > limit) return "argument '$key' may hold at most $limit entries"
+        for (item in list) {
+            val text = (item as? JsonPrimitive)?.takeIf { it.isString }?.content?.trim()
+                ?: return "every entry of '$key' must be a text"
+            if (text.isEmpty() || text.length > MAX_LIST_ENTRY) {
+                return "every entry of '$key' must be 1 to $MAX_LIST_ENTRY characters"
+            }
+            if (text in out) return "'$text' is given twice in '$key'"
+            out.add(text)
         }
         return null
     }

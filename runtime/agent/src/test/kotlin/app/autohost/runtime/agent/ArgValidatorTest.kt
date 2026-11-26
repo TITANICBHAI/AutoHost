@@ -2,6 +2,7 @@ package app.autohost.runtime.agent
 
 import app.autohost.core.common.AhResult
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -140,5 +141,54 @@ class ArgValidatorTest {
         assertTrue(validateInputs("[\"$longName=$longValue\"]").isOk)
         assertFalse(validateInputs("[\"${longName}n=v\"]").isOk)
         assertFalse(validateInputs("[\"t=${longValue}x\"]").isOk)
+    }
+
+    // --- INT-A2: choices, a short list of answers the person picks from --------------------------
+
+    private fun validateAsk(choices: String): AhResult<JsonObject> = ArgValidator.validate(
+        catalog.find("ask_user")!!,
+        raw("""{"message":"Which video?","kind":"choice","choices":$choices}"""),
+        emptySet(),
+    )
+
+    @Test
+    fun `given a list of short answers when ask_user is validated then it stays a list of those texts, trimmed`() {
+        val result = validateAsk("""["Cat video"," Dog video ","Neither"]""")
+        assertTrue(result.isOk)
+        val clean = result.getOrNull()!!
+        val choices = clean["choices"] as JsonArray
+        assertEquals(listOf("Cat video", "Dog video", "Neither"), choices.map { (it as JsonPrimitive).content })
+        assertEquals(setOf("message", "kind", "choices"), clean.keys)
+    }
+
+    @Test
+    fun `given no choices or an empty list when ask_user is validated then the key is simply absent`() {
+        assertFalse(validateAsk("[]").getOrNull()!!.containsKey("choices"))
+        val tool = catalog.find("ask_user")!!
+        val without = ArgValidator.validate(tool, raw("""{"message":"Sure?","kind":"confirm"}"""), emptySet())
+        assertTrue(without.isOk)
+        assertFalse(without.getOrNull()!!.containsKey("choices"))
+    }
+
+    @Test
+    fun `given choices that are not a list of texts when ask_user is validated then INVALID_ARGS`() {
+        val bad = listOf("\"Yes, No\"", "{\"a\":\"Yes\"}", "[5]", "[true]", "[null]", "[[\"Yes\"]]", "[{\"a\":\"Yes\"}]", "[\"\"]", "[\"   \"]")
+        for (choices in bad) {
+            val result = validateAsk(choices)
+            assertFalse(choices, result.isOk)
+            assertEquals(choices, "INVALID_ARGS", result.errorOrNull()?.code)
+        }
+    }
+
+    @Test
+    fun `given too many, repeated or overlong choices when ask_user is validated then INVALID_ARGS`() {
+        assertTrue(validateAsk("""["a","b","c","d"]""").isOk)
+        assertFalse(validateAsk("""["a","b","c","d","e"]""").isOk)
+        assertFalse(validateAsk("""["a","b","a"]""").isOk)
+        assertFalse(validateAsk("""["a"," a "]""").isOk)
+        val atLimit = "x".repeat(ArgValidator.MAX_LIST_ENTRY)
+        val overLimit = "x".repeat(ArgValidator.MAX_LIST_ENTRY + 1)
+        assertTrue(validateAsk("[\"$atLimit\"]").isOk)
+        assertFalse(validateAsk("[\"$overLimit\"]").isOk)
     }
 }

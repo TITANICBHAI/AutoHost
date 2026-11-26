@@ -26,6 +26,8 @@ object ToolSchema {
     private const val PAIRS_HELP =
         "Values to give the task, each written as name=value, for example title=My video. Use only the names listed for that task."
 
+    private val LIST_HELP = "Short texts, one per entry, at most ${ArgValidator.MAX_LIST_ENTRY} characters each."
+
     /** The object schema for a tool's whitelist arguments (a tool without arguments gets an empty `properties`). */
     fun parameters(args: JsonObject): JsonObject {
         val required = ArrayList<String>()
@@ -65,6 +67,11 @@ object ToolSchema {
                 put("type", "array")
                 put("items", buildJsonObject { put("type", "string") })
                 put("description", PAIRS_HELP)
+            }
+            spec.containsKey("list") -> {
+                put("type", "array")
+                put("items", buildJsonObject { put("type", "string") })
+                put("description", LIST_HELP)
             }
             else -> put("type", "string")
         }

@@ -279,6 +279,36 @@ class ToolPipelineTest {
         assertEquals("ref-1", (transport.calls.single().third["ref"] as JsonPrimitive).content)
     }
 
+    // --- INT-A2: a choice question reaches the prompt screen as a list of answers, and the pick comes back -------
+
+    @Test
+    fun `given a choice question when executed then the prompt screen gets the answers as a list and the pick comes back`() = runBlocking {
+        val transport = FakeTransport()
+        transport.responses["ui.prompt.ask"] = buildJsonObject { put("ok", true); put("answered", true); put("choice", "Dog video") }
+        val result = pipeline(transport).execute(
+            call("ask_user", """{"message":"Which video?","kind":"choice","choices":["Cat video"," Dog video "]}"""),
+            ctx,
+        )
+        assertNull(errOf(result).first)
+        val sent = transport.calls.single()
+        assertEquals("ui.prompt", sent.first)
+        assertEquals("ask", sent.second)
+        assertEquals("choice", (sent.third["kind"] as JsonPrimitive).content)
+        assertEquals(listOf("Cat video", "Dog video"), (sent.third["choices"] as JsonArray).map { (it as JsonPrimitive).content })
+        assertEquals("Dog video", (result["choice"] as JsonPrimitive).content)
+    }
+
+    @Test
+    fun `given a choice question with the answers written as one text when executed then it is refused before the person is asked`() = runBlocking {
+        val transport = FakeTransport()
+        val result = pipeline(transport).execute(
+            call("ask_user", """{"message":"Which video?","kind":"choice","choices":"Cat video, Dog video"}"""),
+            ctx,
+        )
+        assertEquals("INVALID_ARGS", errOf(result).first)
+        assertEquals(0, transport.calls.size)
+    }
+
     @Test
     fun `given a selector and no number when executed then no ref is made up`() = runBlocking {
         val transport = FakeTransport()
