@@ -57,6 +57,8 @@ class ToolPipeline(
         val resultCharCap: Int = 12_000,
         val approvalTimeoutMs: Long = 60_000,
         val approvalChoices: List<String> = listOf("Allow once", "Allow for this run", "Deny"),
+        /** INT-A9: how long the person has to answer the model's own question (under the run's 180 s idle budget). */
+        val askTimeoutMs: Long = 120_000,
     )
 
     /** The current foreground package — the host-supplied observation (ADR-098 (4) rules apply). */
@@ -238,7 +240,11 @@ class ToolPipeline(
             taskCallArgs(args)
         } else {
             // INT-A5: and the words the model gave for `selector` / `expect` become the structured selector the service takes
-            SelectorText.forPhoneService(target.ref?.let { handle -> withRef(args, handle) } ?: args)
+            val forService = SelectorText.forPhoneService(target.ref?.let { handle -> withRef(args, handle) } ?: args)
+            // INT-A9: the prompt waits 5 minutes unless told otherwise, and the run's idle watchdog gives up after 3: a
+            // question left unanswered would end the run as "stopped making progress" instead of reaching the model as
+            // "no answer". The model cannot pass a time (the catalog has none), so the window is set here.
+            if (tool.name == ASK_USER_TOOL) withAskWindow(forService, config.askTimeoutMs) else forService
         }
         val envelope = try {
             transport.call(tool.capability, tool.method, callArgs)
@@ -315,6 +321,12 @@ class ToolPipeline(
     }
 
     /** INT-A4: [args] with the model's `id` taken out and the phone service's own handle for that screen item put in. */
+    /** INT-A9: [args] with the prompt's answer window set (any `timeout_ms` already there is replaced). */
+    private fun withAskWindow(args: JsonObject, ms: Long): JsonObject = buildJsonObject {
+        for ((key, value) in args) if (key != "timeout_ms") put(key, value)
+        put("timeout_ms", ms)
+    }
+
     private fun withRef(args: JsonObject, ref: String): JsonObject = buildJsonObject {
         for ((key, value) in args) if (key != "id") put(key, value)
         put("ref", ref)
@@ -411,6 +423,9 @@ class ToolPipeline(
 
         /** INT-A7: the host tool that pauses the run for a moment, and its cap in seconds (the same cap as the catalog's). */
         private const val WAIT_TOOL = "wait"
+
+        /** INT-A9: the model's own question to the person. */
+        private const val ASK_USER_TOOL = "ask_user"
         private const val MAX_WAIT_SECONDS = 10
 
         /** INT-E4: how many values the approval question lists (the rest are counted) and how much of each it shows. */

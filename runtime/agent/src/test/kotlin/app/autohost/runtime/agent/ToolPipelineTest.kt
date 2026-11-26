@@ -309,6 +309,28 @@ class ToolPipelineTest {
         assertEquals(0, transport.calls.size)
     }
 
+    // --- INT-A9: a question the person does not answer in time must reach the model as "no answer" ---------------
+
+    @Test
+    fun `given a question when executed then the prompt is given an answer window that ends before the run's idle budget`() = runBlocking {
+        val transport = FakeTransport()
+        pipeline(transport).execute(call("ask_user", """{"message":"Which name?","kind":"text"}"""), ctx)
+        val window = (transport.calls.single().third["timeout_ms"] as JsonPrimitive).content.toLong()
+        assertEquals(ToolPipeline.Config().askTimeoutMs, window)
+        assertTrue("window $window ms must end before the idle watchdog", window < AgentManifests.IDLE_TIMEOUT_SECONDS * 1_000L)
+    }
+
+    @Test
+    fun `given a question where the model names its own wait when executed then it is refused (the host decides the window)`() = runBlocking {
+        val transport = FakeTransport()
+        val result = pipeline(transport).execute(
+            call("ask_user", """{"message":"Which name?","kind":"text","timeout_ms":3600000}"""),
+            ctx,
+        )
+        assertEquals("INVALID_ARGS", errOf(result).first)
+        assertEquals(0, transport.calls.size)
+    }
+
     @Test
     fun `given a selector and no number when executed then no ref is made up`() = runBlocking {
         val transport = FakeTransport()
