@@ -275,7 +275,9 @@ class ToolPipeline(
         }
         val answered = answer.str("answered")?.toBooleanStrictOrNull() == true
         if (!answered) return Approval.Timeout // timeout, dismissed, cancelled — all deny and stop
-        return when (answer.str("button")) {
+        // INT-A6: a choice prompt answers {answered, choice} (PromptActivity); only the separate "dialog" kind says `button`.
+        // Reading `button` here read every answer as nothing, so every approval came back as a deny.
+        return when (answer.str("choice")) {
             "Allow once" -> Approval.AllowOnce
             "Allow for this run" -> Approval.AllowForRun
             "Deny" -> Approval.Denied

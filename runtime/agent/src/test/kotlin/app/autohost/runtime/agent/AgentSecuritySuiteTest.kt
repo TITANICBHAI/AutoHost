@@ -68,7 +68,7 @@ class AgentSecuritySuiteTest {
 
     private class RecordingTransport : BrokerTransport {
         val calls = mutableListOf<Triple<String, String, JsonObject>>()
-        var askAnswer: JsonObject = buildJsonObject { put("answered", true); put("button", "Allow once") }
+        var askAnswer: JsonObject = buildJsonObject { put("answered", true); put("choice", "Allow once") }
         override suspend fun call(permission: String, method: String, args: JsonObject): JsonObject {
             calls.add(Triple(permission, method, args))
             return if (permission == "ui.prompt") askAnswer else buildJsonObject { put("ok", true) }
@@ -182,7 +182,7 @@ class AgentSecuritySuiteTest {
             ),
         )
         val transport = RecordingTransport()
-        transport.askAnswer = buildJsonObject { put("answered", true); put("button", "Deny") }
+        transport.askAnswer = buildJsonObject { put("answered", true); put("choice", "Deny") }
         runLoop(llm, pipeline(transport))
         assertEquals(0, transport.brokerCalls())
         val seen = toolResultsSeenByModel(llm)

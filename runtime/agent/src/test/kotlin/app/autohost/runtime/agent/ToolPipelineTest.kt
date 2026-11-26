@@ -174,7 +174,22 @@ class ToolPipelineTest {
     @Test
     fun `given the user denies when executed then APPROVAL_DENIED and the model may continue`() = runBlocking {
         val transport = FakeTransport()
-        transport.responses["ui.prompt.ask"] = buildJsonObject { put("answered", true); put("button", "Deny") }
+        transport.responses["ui.prompt.ask"] = buildJsonObject { put("answered", true); put("choice", "Deny") }
+        val unknownCtx = AgentLoop.TurnContext(
+            1,
+            AgentView.ViewIndex(1, mapOf(1 to AgentView.Entry("ref-1", "com.unknown.test", setOf("clickable"), Bounds(0, 0, 100, 50), "Go"))),
+            null,
+        )
+        val result = pipeline(transport).execute(call("ui_click", """{"id":"[1]"}"""), unknownCtx)
+        assertEquals("APPROVAL_DENIED", errOf(result).second)
+        assertEquals(0, transport.brokerCalls())
+    }
+
+    @Test
+    fun `given an answer that names its choice the old way when executed then it is a deny, never an allow`() = runBlocking {
+        // INT-A6: the real choice prompt answers {answered, choice}; an answer in any other shape never counts as an allow
+        val transport = FakeTransport()
+        transport.responses["ui.prompt.ask"] = buildJsonObject { put("answered", true); put("button", "Allow once") }
         val unknownCtx = AgentLoop.TurnContext(
             1,
             AgentView.ViewIndex(1, mapOf(1 to AgentView.Entry("ref-1", "com.unknown.test", setOf("clickable"), Bounds(0, 0, 100, 50), "Go"))),
@@ -188,7 +203,7 @@ class ToolPipelineTest {
     @Test
     fun `given allow once when executed then the TOCTOU passes and the broker gets the sanitized args`() = runBlocking {
         val transport = FakeTransport()
-        transport.responses["ui.prompt.ask"] = buildJsonObject { put("answered", true); put("button", "Allow once") }
+        transport.responses["ui.prompt.ask"] = buildJsonObject { put("answered", true); put("choice", "Allow once") }
         val revalidator = FakeRevalidator()
         val unknownCtx = AgentLoop.TurnContext(
             1,
@@ -299,7 +314,7 @@ class ToolPipelineTest {
     @Test
     fun `given allow for this run when executed then the next same-package action does not ask again`() = runBlocking {
         val transport = FakeTransport()
-        transport.responses["ui.prompt.ask"] = buildJsonObject { put("answered", true); put("button", "Allow for this run") }
+        transport.responses["ui.prompt.ask"] = buildJsonObject { put("answered", true); put("choice", "Allow for this run") }
         val p = pipeline(transport)
         val unknownCtx = AgentLoop.TurnContext(
             1,
@@ -315,7 +330,7 @@ class ToolPipelineTest {
     @Test
     fun `given the screen moved to a blocked app during the ask when revalidated then OBSERVATION_BLOCKED`() = runBlocking {
         val transport = FakeTransport()
-        transport.responses["ui.prompt.ask"] = buildJsonObject { put("answered", true); put("button", "Allow once") }
+        transport.responses["ui.prompt.ask"] = buildJsonObject { put("answered", true); put("choice", "Allow once") }
         val revalidator = FakeRevalidator(
             ToolPipeline.Revalidator.Revalidation("com.bank.test", "com.normal.test", true),
         )
@@ -332,7 +347,7 @@ class ToolPipelineTest {
     @Test
     fun `given the approved target gone when revalidated then STALE_NODE`() = runBlocking {
         val transport = FakeTransport()
-        transport.responses["ui.prompt.ask"] = buildJsonObject { put("answered", true); put("button", "Allow once") }
+        transport.responses["ui.prompt.ask"] = buildJsonObject { put("answered", true); put("choice", "Allow once") }
         val revalidator = FakeRevalidator(
             ToolPipeline.Revalidator.Revalidation("com.normal.test", null, false),
         )
@@ -422,7 +437,7 @@ class ToolPipelineTest {
     )
 
     private fun answer(transport: FakeTransport, button: String) {
-        transport.responses["ui.prompt.ask"] = buildJsonObject { put("answered", true); put("button", button) }
+        transport.responses["ui.prompt.ask"] = buildJsonObject { put("answered", true); put("choice", button) }
     }
 
     private fun taskCalls(transport: FakeTransport) = transport.calls.filter { it.first == "tasks.run" }
