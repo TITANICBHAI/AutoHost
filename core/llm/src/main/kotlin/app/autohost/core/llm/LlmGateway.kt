@@ -37,8 +37,11 @@ class LlmGateway(
         val outcome: String, // "ok" | the LlmError class simple name
     )
 
-    /** The chat entry point. [deadlineMs] is the run's remaining wall-clock budget. */
-    suspend fun chat(profileId: String, request: ChatRequest, deadlineMs: Long): LlmResult<ChatResponse> {
+    /**
+     * The chat entry point. [deadlineMs] is the run's remaining wall-clock budget. The model id in [asked] is replaced by
+     * the profile's (INT-A12): the profile is what the person set up, and the callers' own ids are placeholders.
+     */
+    suspend fun chat(profileId: String, asked: ChatRequest, deadlineMs: Long): LlmResult<ChatResponse> {
         val profile = profiles.load().firstOrNull { it.id == profileId }
             ?: return LlmResults.err(LlmError.NotConfigured)
         if (profile.egressAcceptedAtMs == null) return LlmResults.err(LlmError.NotConfigured)
@@ -50,6 +53,10 @@ class LlmGateway(
             ?: return LlmResults.err(LlmError.NotConfigured)
         profiles.registerKeyForRedaction(key)
 
+        // INT-A12: the profile names the model. The agent loop's own default id is the placeholder "autohost-agent", so
+        // every agent request reached a real provider with a model it did not know and was refused. From here on
+        // `request` is the one that is sent and audited.
+        val request = if (asked.model == profile.model) asked else asked.copy(model = profile.model)
         val wire = ChatCodec.encodeRequest(request, profile.maxTokensField).toString()
         val wireBytes = wire.encodeToByteArray()
         val url = BaseUrlValidator.chatEndpoint(baseUrl)

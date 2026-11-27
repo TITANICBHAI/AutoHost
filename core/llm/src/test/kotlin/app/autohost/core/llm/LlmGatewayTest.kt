@@ -3,6 +3,7 @@ package app.autohost.core.llm
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -100,6 +101,24 @@ class LlmGatewayTest {
         val result = gw.chat("prov-1", request, deadlineMs = 60_000)
         assertTrue(result.okOrNull() != null)
         assertEquals(2, calls) // one retry after the 429
+    }
+
+    @Test
+    fun `given a request that names another model when called then the wire request carries the profile's model and the audit says so`() = runBlocking {
+        // INT-A12: the agent loop's default model id is only a placeholder; the profile is what the person set up
+        var sent: String? = null
+        val audit = RecordingAudit()
+        val gw = LlmGateway(FakeProfiles(), { _, _, body, _ ->
+            sent = body.decodeToString()
+            HttpResponse(200, emptyMap(), """{"choices":[{"message":{"content":"ok"},"finish_reason":"stop"}]}""")
+        }, audit, nowMs = { 1_000L }, urlEnv = {
+            BaseUrlValidator.UrlEnv(cleartextLoopbackEnabled = true, debugBuild = false)
+        })
+        val placeholder = ChatRequest("autohost-agent", listOf(ChatMessage.User("goal")), maxOutputTokens = 64)
+        assertTrue(gw.chat("prov-1", placeholder, deadlineMs = 30_000).okOrNull() != null)
+        val model = Json.parseToJsonElement(sent!!).jsonObject["model"]!!.jsonPrimitive.content
+        assertEquals("test-model", model)
+        assertEquals("test-model", audit.events.single().model)
     }
 
     @Test

@@ -25,7 +25,7 @@
 **One protocol:** OpenAI-compatible **Chat Completions**, **non-streaming**: `POST {base}/chat/completions`.
 Why non-streaming: a half-received tool call can never be executed; cancellation is `disconnect()`; no SSE parser; no partial-state bugs (android-agent keeps a partial tool call after a dropped stream — `reference/findings/android_agent.md`). Cost: no token streaming — the UI shows a "thinking" state.
 
-Request body (fields present when applicable): `model`, `messages[]` (`system|user|assistant|tool`), `tools[]` = `{type:"function", function:{name, description, parameters(JSON Schema)}}`, `tool_choice:"auto"`, the output-limit field named by the profile (`max_tokens` **or** `max_completion_tokens`), optional `temperature`, optional `parallel_tool_calls:false` when the profile says the endpoint accepts it, `stream:false`.
+Request body (fields present when applicable): `model` (always the profile's model id: the gateway stamps it into every request, whatever the caller put there; INT-A12), `messages[]` (`system|user|assistant|tool`), `tools[]` = `{type:"function", function:{name, description, parameters(JSON Schema)}}`, `tool_choice:"auto"`, the output-limit field named by the profile (`max_tokens` **or** `max_completion_tokens`), optional `temperature`, optional `parallel_tool_calls:false` when the profile says the endpoint accepts it, `stream:false`.
 Response: `choices[0].message{content, tool_calls[{id, type, function{name, arguments(string)}}]}`, `choices[0].finish_reason` (`stop|tool_calls|length|content_filter`), optional `usage{prompt_tokens, completion_tokens, total_tokens}`.
 
 Contract sketch (not code to paste):
