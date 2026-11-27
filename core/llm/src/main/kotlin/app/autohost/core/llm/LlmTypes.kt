@@ -48,6 +48,12 @@ data class ToolCall(
     val name: String,
     val argumentsJson: String,
     val arguments: JsonObject?,
+    /**
+     * INT-A10: the provider's own `extra_content` object for this call, kept as it came and sent back unchanged with the
+     * call in the next request. Gemini 3 and 4 (OpenAI-compatible endpoint) put `extra_content.google.thought_signature`
+     * on the first tool call of each step and answer HTTP 400 when it is not returned; other providers send none (null).
+     */
+    val extraContent: JsonObject? = null,
 )
 
 data class Usage(

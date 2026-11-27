@@ -112,6 +112,54 @@ class ChatCodecTest {
         assertEquals("{not json", response.toolCalls[0].argumentsJson)
     }
 
+    // ---- INT-A10: a provider's per-call extras (Gemini 3's thought signature) go back unchanged --------------------
+
+    private val geminiBody = """{"choices":[{"message":{"role":"assistant","tool_calls":[
+        {"id":"function-call-1","type":"function","function":{"name":"ui_click","arguments":"{}"},
+         "extra_content":{"google":{"thought_signature":"SIG-A"}}},
+        {"id":"function-call-2","type":"function","function":{"name":"ui_scroll","arguments":"{}"}}]},"finish_reason":"tool_calls"}]}"""
+
+    @Test
+    fun `given a Gemini 3 style tool call with a thought signature when decoded then the extra content is kept on that call only`() {
+        val response = ChatCodec.decodeResponse(geminiBody, 1, 1).okOrNull()!!
+        val signature = response.toolCalls[0].extraContent!!["google"]!!.jsonObject["thought_signature"]!!.jsonPrimitive.content
+        assertEquals("SIG-A", signature)
+        assertNull(response.toolCalls[1].extraContent)
+    }
+
+    @Test
+    fun `given decoded tool calls when the next request is encoded then the extra content goes back unchanged on the same call`() {
+        val calls = ChatCodec.decodeResponse(geminiBody, 1, 1).okOrNull()!!.toolCalls
+        val request = ChatRequest(
+            model = "m",
+            messages = listOf(
+                ChatMessage.User("go"),
+                ChatMessage.Assistant(null, calls),
+                ChatMessage.Tool("function-call-1", "ok"),
+                ChatMessage.Tool("function-call-2", "skipped"),
+            ),
+            maxOutputTokens = 10,
+        )
+        val sent = ChatCodec.encodeRequest(request, "max_tokens")["messages"]!!.jsonArray[1].jsonObject["tool_calls"]!!.jsonArray
+        val signature = sent[0].jsonObject["extra_content"]!!.jsonObject["google"]!!.jsonObject["thought_signature"]!!.jsonPrimitive.content
+        assertEquals("SIG-A", signature)
+        assertEquals(setOf("id", "type", "function", "extra_content"), sent[0].jsonObject.keys)
+        // a call that came without extras goes back without any (what every other provider sees is unchanged)
+        assertEquals(setOf("id", "type", "function"), sent[1].jsonObject.keys)
+    }
+
+    @Test
+    fun `given an extra content that is not an object or is far too big when decoded then it is dropped and the call still works`() {
+        val big = "x".repeat(20_000)
+        val body = """{"choices":[{"message":{"tool_calls":[
+            {"id":"a","type":"function","function":{"name":"t1","arguments":"{}"},"extra_content":"just text"},
+            {"id":"b","type":"function","function":{"name":"t2","arguments":"{}"},"extra_content":{"google":{"thought_signature":"$big"}}}]},"finish_reason":"tool_calls"}]}"""
+        val response = ChatCodec.decodeResponse(body, 1, 1).okOrNull()!!
+        assertEquals(listOf("a", "b"), response.toolCalls.map { it.id })
+        assertNull(response.toolCalls[0].extraContent)
+        assertNull(response.toolCalls[1].extraContent)
+    }
+
     @Test
     fun `given finish_reason length with tool calls when decoded then malformed (truncated arguments)`() {
         val body = """{"choices":[{"message":{"tool_calls":[{"id":"c","type":"function","function":{"name":"t","arguments":"{\"x\":"}}]},"finish_reason":"length"}]}"""

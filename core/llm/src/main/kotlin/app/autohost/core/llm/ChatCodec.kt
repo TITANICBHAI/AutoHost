@@ -23,6 +23,9 @@ object ChatCodec {
 
     private val nameRegex = Regex(LLM_NAME_PATTERN)
 
+    /** INT-A10: the longest `extra_content` (as text) a tool call may bring back; a bigger one is dropped, the call still runs. */
+    private const val MAX_EXTRA_CONTENT_CHARS = 16_384
+
     fun encodeRequest(request: ChatRequest, maxTokensField: String): JsonObject {
         require(request.model.isNotBlank()) { "model id is required" }
         require(maxTokensField == "max_tokens" || maxTokensField == "max_completion_tokens") {
@@ -70,6 +73,8 @@ object ChatCodec {
                             put("name", call.name)
                             put("arguments", call.argumentsJson)
                         })
+                        // INT-A10: the provider's own extras for this call go back as they came (Gemini 3's thought signature)
+                        call.extraContent?.let { put("extra_content", it) }
                     })
                 })
             }
@@ -138,7 +143,9 @@ object ChatCodec {
             } catch (e: Exception) {
                 null // invalid argument JSON is carried through with arguments = null
             }
-            toolCalls.add(ToolCall(id, name, argsJson, args))
+            // INT-A10: kept only when it is an object of a sane size (a signature is a few hundred bytes); never read or edited
+            val extra = (callObj["extra_content"] as? JsonObject)?.takeIf { it.toString().length <= MAX_EXTRA_CONTENT_CHARS }
+            toolCalls.add(ToolCall(id, name, argsJson, args, extra))
         }
         if (finishReason == FinishReason.LENGTH && toolCalls.isNotEmpty()) {
             return LlmResults.err(LlmError.MalformedResponse("finish_reason=length with tool calls (truncated arguments)"))

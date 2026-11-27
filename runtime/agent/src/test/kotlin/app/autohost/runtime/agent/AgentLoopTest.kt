@@ -168,6 +168,22 @@ class AgentLoopTest {
     }
 
     @Test
+    fun `given a tool call that carries the provider's extra content when the loop goes on then the next request sends it back unchanged`() = runBlocking {
+        val extra = buildJsonObject { put("google", buildJsonObject { put("thought_signature", "SIG-A") }) }
+        val llm = FakeLlm(
+            listOf(
+                FakeTurn.Resp(calls = listOf(call("ui_click", id = "a").copy(extraContent = extra))),
+                FakeTurn.Resp(calls = listOf(call("finish", """{"summary":"done"}"""))),
+            ),
+        )
+        val outcome = loop(llm).run("tap the button")
+        assertTrue(outcome is AgentLoop.Outcome.Succeeded)
+        // INT-A10: Gemini 3 and 4 answer HTTP 400 when the signature of the previous step's first call is not returned
+        val assistant = llm.requests[1].messages.filterIsInstance<ChatMessage.Assistant>().single()
+        assertEquals(extra, assistant.toolCalls.single().extraContent)
+    }
+
+    @Test
     fun `given a turn without tool calls when run then the nudge is injected and the second empty turn counts as a failure`() = runBlocking {
         val llm = FakeLlm(
             listOf(
