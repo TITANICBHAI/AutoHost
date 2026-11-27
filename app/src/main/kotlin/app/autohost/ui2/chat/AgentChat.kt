@@ -260,6 +260,7 @@ object ToolPhrases {
         "ask_user" to "Asking you a question",
         "finish" to "Finishing up",
         "run_task" to "Starting one of your saved tasks",
+        "task_status" to "Checking on a saved task",
         "todo_write" to "Planning the next steps",
         "ui_click" to "Tapping something",
         "ui_find" to "Looking for something on the screen",

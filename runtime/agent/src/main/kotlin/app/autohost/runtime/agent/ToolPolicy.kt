@@ -14,7 +14,7 @@ import kotlinx.serialization.json.JsonObject
  * P13-11 (AGENT_RUNTIME §6 policy column, §10): the tool policy. The canonical order:
  *
  *  1. malformed arguments (the validator failed) → Deny — fail closed
- *  2. host tools (finish/todo_write/wait) and ask_user → Allow
+ *  2. host tools (finish/todo_write/wait/task_status) and ask_user → Allow
  *  2b. `run_task` (INT-E1): a blocked app on screen denies; otherwise EVERY start asks (the task acts on its own,
  *      with its own permissions) unless the person chose "Allow for this run" for that ONE task. The list is a
  *      separate subject (`task:<id>`): it never loosens a click ask, and an app's entry never skips a task ask.
@@ -38,6 +38,12 @@ object ToolPolicy {
 
     /** The tool that starts one of the person's saved tasks (INT-E1). */
     const val RUN_TASK = "run_task"
+
+    /** INT-E3c: the host tool that waits for a saved task `run_task` left running (answered by the pipeline, never the broker). */
+    const val TASK_STATUS = "task_status"
+
+    /** INT-E3c: the tools that only make sense with saved tasks; a run with none allowed is not shown them. */
+    val TASK_TOOLS: Set<String> = setOf(RUN_TASK, TASK_STATUS)
 
     /**
      * The session allow-list entry for one saved task. A package name never contains a colon, so a task entry

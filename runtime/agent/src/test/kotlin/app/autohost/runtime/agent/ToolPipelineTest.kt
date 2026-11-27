@@ -519,6 +519,7 @@ class ToolPipelineTest {
         foreground: String? = "com.normal.test",
         tasks: Set<String> = allowedTasks,
         taskInputs: Map<String, Set<String>> = declaredInputs,
+        taskRuns: ToolPipeline.TaskRuns? = null,
     ) = ToolPipeline(
         catalog = catalog,
         transport = transport,
@@ -530,6 +531,7 @@ class ToolPipelineTest {
         tasks = tasks,
         taskNames = taskNames,
         taskInputs = taskInputs,
+        taskRuns = taskRuns,
     )
 
     private fun answer(transport: FakeTransport, button: String) {
@@ -767,5 +769,135 @@ class ToolPipelineTest {
         p.execute(call("run_task", """{"task":"make.video"}"""), ctx)
         p.execute(call("run_task", """{"task":"make.video"}"""), ctx)
         assertEquals(3, taskCalls(transport).size)
+    }
+
+    // --- INT-E3c: task_status (wait for a saved task that run_task left RUNNING) ---------------------
+
+    private class FakeTaskRuns(var outcome: ToolPipeline.TaskRuns.Outcome) : ToolPipeline.TaskRuns {
+        val asked = mutableListOf<Pair<String, Long>>()
+
+        override suspend fun await(runId: String, timeoutMs: Long): ToolPipeline.TaskRuns.Outcome {
+            asked.add(runId to timeoutMs)
+            return outcome
+        }
+    }
+
+    /** A pipeline whose first `run_task` came back RUNNING with run id r1, ready for `task_status` calls. */
+    private suspend fun startedAndRunning(transport: FakeTransport, runs: FakeTaskRuns): ToolPipeline {
+        answer(transport, "Allow once")
+        transport.responses["tasks.run.run"] = buildJsonObject {
+            put("run_id", "r1")
+            put("status", "RUNNING")
+            put("await", "timeout")
+        }
+        val p = taskPipeline(transport, taskRuns = runs)
+        p.execute(call("run_task", """{"task":"daily.upload"}"""), ctx)
+        return p
+    }
+
+    @Test
+    fun `given a task left RUNNING when task_status is called with its run_id then it waits for that run and reports how it ended`() = runBlocking {
+        val transport = FakeTransport()
+        val runs = FakeTaskRuns(ToolPipeline.TaskRuns.Outcome.Ended("SUCCEEDED", """{"code":0,"data":{"title":"Cat"}}"""))
+        val p = startedAndRunning(transport, runs)
+        val callsBefore = transport.calls.size
+        val result = p.execute(call("task_status", """{"run_id":"r1"}"""), ctx)
+        assertEquals("true", (result["ok"] as JsonPrimitive).content)
+        assertEquals("r1", (result["run_id"] as JsonPrimitive).content)
+        assertEquals("SUCCEEDED", (result["status"] as JsonPrimitive).content)
+        assertEquals("""{"code":0,"data":{"title":"Cat"}}""", (result["result"] as JsonPrimitive).content)
+        assertEquals(listOf("r1" to ToolPipeline.DEFAULT_STATUS_WAIT_MS), runs.asked)
+        assertEquals("a host tool: no broker call and no question for the person", callsBefore, transport.calls.size)
+    }
+
+    @Test
+    fun `given a run_id this run never started when task_status is called then INVALID_ARGS and nothing is waited for`() = runBlocking {
+        val transport = FakeTransport()
+        val runs = FakeTaskRuns(ToolPipeline.TaskRuns.Outcome.Ended("SUCCEEDED", "the result of someone else's run"))
+        val p = startedAndRunning(transport, runs)
+        val guessed = p.execute(call("task_status", """{"run_id":"r2"}"""), ctx)
+        assertEquals("INVALID_ARGS", errOf(guessed).first)
+        assertFalse(guessed.toString(), guessed.toString().contains("someone else"))
+        // and a run that never started anything knows no run at all
+        val fresh = taskPipeline(FakeTransport(), taskRuns = runs).execute(call("task_status", """{"run_id":"r1"}"""), ctx)
+        assertEquals("INVALID_ARGS", errOf(fresh).first)
+        assertEquals("nothing was waited for", emptyList<Pair<String, Long>>(), runs.asked)
+    }
+
+    @Test
+    fun `given the wait runs out when task_status is called then it says RUNNING and the task still may not be started twice`() = runBlocking {
+        val transport = FakeTransport()
+        val runs = FakeTaskRuns(ToolPipeline.TaskRuns.Outcome.StillRunning)
+        val p = startedAndRunning(transport, runs)
+        val result = p.execute(call("task_status", """{"run_id":"r1"}"""), ctx)
+        assertEquals("RUNNING", (result["status"] as JsonPrimitive).content)
+        assertEquals("timeout", (result["await"] as JsonPrimitive).content)
+        val again = p.execute(call("run_task", """{"task":"daily.upload"}"""), ctx)
+        assertEquals("CAPABILITY_UNAVAILABLE", errOf(again).first)
+        val message = ((again["error"] as JsonObject)["message"] as JsonPrimitive).content
+        assertTrue(message, message.contains("do not start it again") && message.contains("task_status") && message.contains("r1"))
+        assertEquals("never started a second copy", 1, taskCalls(transport).size)
+    }
+
+    @Test
+    fun `given the task ended when task_status says so then it may be started again, but an old run_id never frees a newer start`() = runBlocking {
+        val transport = FakeTransport()
+        val runs = FakeTaskRuns(ToolPipeline.TaskRuns.Outcome.Ended("SUCCEEDED", null))
+        val p = startedAndRunning(transport, runs)
+        p.execute(call("task_status", """{"run_id":"r1"}"""), ctx)
+        // started again: this time it is run r2 and it is RUNNING
+        transport.responses["tasks.run.run"] = buildJsonObject {
+            put("run_id", "r2")
+            put("status", "RUNNING")
+            put("await", "timeout")
+        }
+        val second = p.execute(call("run_task", """{"task":"daily.upload"}"""), ctx)
+        assertEquals("RUNNING", (second["status"] as JsonPrimitive).content)
+        assertEquals(2, taskCalls(transport).size)
+        // asking about the OLD run again must not free the new one
+        p.execute(call("task_status", """{"run_id":"r1"}"""), ctx)
+        val third = p.execute(call("run_task", """{"task":"daily.upload"}"""), ctx)
+        assertEquals("CAPABILITY_UNAVAILABLE", errOf(third).first)
+        assertEquals(2, taskCalls(transport).size)
+    }
+
+    @Test
+    fun `given a wait chosen by the model when task_status is called then it is used up to 120 s and refused above`() = runBlocking {
+        val runs = FakeTaskRuns(ToolPipeline.TaskRuns.Outcome.StillRunning)
+        val p = startedAndRunning(FakeTransport(), runs)
+        p.execute(call("task_status", """{"run_id":"r1","timeout_ms":30000}"""), ctx)
+        assertEquals(listOf("r1" to 30_000L), runs.asked)
+        val tooLong = p.execute(call("task_status", """{"run_id":"r1","timeout_ms":600000}"""), ctx)
+        assertEquals("INVALID_ARGS", errOf(tooLong).first)
+        assertEquals("the refused call waited for nothing", 1, runs.asked.size)
+    }
+
+    @Test
+    fun `given the app lost the record of the run when task_status is called then NOT_FOUND and the task may be started again`() = runBlocking {
+        val transport = FakeTransport()
+        val runs = FakeTaskRuns(ToolPipeline.TaskRuns.Outcome.Gone)
+        val p = startedAndRunning(transport, runs)
+        val result = p.execute(call("task_status", """{"run_id":"r1"}"""), ctx)
+        assertEquals("NOT_FOUND", errOf(result).first)
+        p.execute(call("run_task", """{"task":"daily.upload"}"""), ctx)
+        assertEquals(2, taskCalls(transport).size)
+    }
+
+    @Test
+    fun `given the app gave the pipeline no way to wait when task_status is called then CAPABILITY_UNAVAILABLE and the old advice stays`() = runBlocking {
+        val transport = FakeTransport()
+        answer(transport, "Allow once")
+        transport.responses["tasks.run.run"] = buildJsonObject {
+            put("run_id", "r1")
+            put("status", "RUNNING")
+            put("await", "timeout")
+        }
+        val p = taskPipeline(transport) // no taskRuns
+        p.execute(call("run_task", """{"task":"daily.upload"}"""), ctx)
+        val result = p.execute(call("task_status", """{"run_id":"r1"}"""), ctx)
+        assertEquals("CAPABILITY_UNAVAILABLE", errOf(result).first)
+        // the refusal to start it twice must not name a tool this run does not have
+        val again = p.execute(call("run_task", """{"task":"daily.upload"}"""), ctx)
+        assertFalse(again.toString(), again.toString().contains("task_status"))
     }
 }

@@ -46,6 +46,10 @@ ALLOWLIST: dict[str, dict] = {
     # INT-E4: `pairs: 8` = up to 8 "name=value" texts the model hands the task. The validator checks their shape, the
     # pipeline checks every name against what that task says it takes, and the broker calls them `args`.
     "run_task":         {"capability": "tasks.run", "method": "run", "permission": "tasks.run", "args": {"task": {"enum_of": "run_tasks"}, "inputs?": {"pairs": 8}, "timeout_ms?": {"max": 120000}}},
+    # INT-E3c: checks on a saved task that run_task left RUNNING. A host tool: no broker call and no question for the
+    # person; the pipeline answers only for a run_id that this same run's run_task handed back. timeout_ms stays under
+    # the agent's 180 s idle budget, like run_task's.
+    "task_status":      {"capability": None, "method": None, "permission": None, "host": True, "args": {"run_id": {}, "timeout_ms?": {"max": 120000}}},
     # INT-A2: `list: 4` = up to 4 short texts, kept as a list (the prompt screen reads a list; a plain text would arrive
     # as "a choice prompt needs choices"). The validator checks their shape; the prompt screen shows one button each.
     "ask_user":         {"capability": "ui.prompt", "method": "ask", "permission": "ui.prompt", "args": {"message": {}, "kind": {"enum": ["text", "choice", "confirm"]}, "choices?": {"list": 4}}},
@@ -70,7 +74,8 @@ DESCRIPTIONS: dict[str, str] = {
     "app_foreground": "Report which app is in the foreground (scope-filtered).",
     "app_query": "Ask whether one of this run's target apps is installed and its state.",
     "app_wait_foreground": "Wait until one of this run's target apps is in the foreground.",
-    "run_task": "Start one of the saved tasks (a macro or a script) the user allowed for this run, by its id, and wait for its result. To give it values, pass inputs as name=value texts, using only the names listed for that task. Status RUNNING means it is still going: never start the same task twice, wait and look at the screen instead.",
+    "run_task": "Start one of the saved tasks (a macro or a script) the user allowed for this run, by its id, and wait for its result. To give it values, pass inputs as name=value texts, using only the names listed for that task. Status RUNNING means it is still going: never start the same task twice; use task_status with the run_id it gave back to wait for it to end.",
+    "task_status": "Check on a saved task that run_task left running: pass the run_id run_task gave back. Waits up to timeout_ms (60 seconds if you give none, at most 120) for the task to end, then gives its status and, once it has ended, its result.",
     "ask_user": "Ask the user a question and wait for the answer. kind is text (they type an answer), confirm (yes or no) or choice (they pick one of choices: a list of 2 to 4 short answers).",
     "finish": "Claim the goal is done, blocked or failed. The host verifies; claiming is not the verdict.",
     "todo_write": "Update your scratchpad todo list (kept in context, no device effect).",

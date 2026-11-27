@@ -21,7 +21,7 @@ class ToolCatalogTest {
             "ui_snapshot", "ui_find", "ui_wait_for", "ui_wait_for_settle",
             "ui_click", "ui_long_click", "ui_set_text", "ui_scroll_until", "ui_press", "ui_hide_keyboard",
             "app_launch", "app_foreground", "app_query", "app_wait_foreground",
-            "run_task",
+            "run_task", "task_status",
             "ask_user", "finish", "todo_write", "wait",
         )
         assertEquals(expected, catalog.names())
@@ -38,6 +38,27 @@ class ToolCatalogTest {
         assertEquals("8", tool.args["inputs?"]!!.jsonObject["pairs"]!!.jsonPrimitive.content)
         // the model never sees the broker's other knobs: no profile, no free-form args object (its values go in `inputs`)
         assertEquals(setOf("task", "inputs?", "timeout_ms?"), tool.args.keys)
+    }
+
+    @Test
+    fun `given task_status when inspected then it is a host tool that takes a run id and a bounded wait`() {
+        val tool = catalog.find("task_status")!!
+        assertNull("a host tool has no broker capability", tool.capability)
+        assertNull(tool.method)
+        assertEquals(setOf("run_id", "timeout_ms?"), tool.args.keys)
+        assertEquals("120000", tool.args["timeout_ms?"]!!.jsonObject["max"]!!.jsonPrimitive.content)
+        // the model is told which name to hand over: the field run_task's own result calls run_id
+        assertTrue(tool.description, tool.description.contains("run_id"))
+        assertTrue(catalog.find("run_task")!!.description.contains("task_status"))
+    }
+
+    @Test
+    fun `given a run with no saved tasks when the task tools are hidden then neither run_task nor task_status is left`() {
+        assertEquals(setOf("run_task", "task_status"), ToolPolicy.TASK_TOOLS)
+        val trimmed = catalog.without(ToolPolicy.TASK_TOOLS)
+        assertEquals(catalog.names() - ToolPolicy.TASK_TOOLS, trimmed.names())
+        assertNull(trimmed.find("task_status"))
+        assertNull(trimmed.find("run_task"))
     }
 
     @Test

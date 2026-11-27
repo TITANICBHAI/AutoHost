@@ -57,6 +57,8 @@ class AgentLoopFactory(
     private val sensitivity: AppSensitivity,
     private val urlEnv: () -> BaseUrlValidator.UrlEnv,
     private val screenMetrics: () -> Pair<Int, Int>,
+    /** INT-E3c: how `task_status` waits for a saved task this run started (the app's run records). */
+    private val taskRuns: ToolPipeline.TaskRuns,
 ) : AgentRuntimeProvider.LoopFactory {
 
     override fun create(spec: RunSpec, sink: AgentLoop.Sink, pauseGate: AgentLoop.PauseGate): AgentLoop {
@@ -77,9 +79,9 @@ class AgentLoopFactory(
             gateway.chat(agentConfig.provider ?: "", request, budget.remainingWallClockMs())
         }
 
-        // INT-E1: with no saved tasks allowed, the model is not even shown run_task
+        // INT-E1: with no saved tasks allowed, the model is not even shown run_task (INT-E3c: nor task_status)
         val catalog = ToolCatalog.load().let { loaded ->
-            if (agentConfig.tasks.isEmpty()) loaded.without(setOf(ToolPolicy.RUN_TASK)) else loaded
+            if (agentConfig.tasks.isEmpty()) loaded.without(ToolPolicy.TASK_TOOLS) else loaded
         }
         val pipeline = ToolPipeline(
             catalog = catalog,
@@ -89,6 +91,7 @@ class AgentLoopFactory(
             tasks = agentConfig.tasks.toSet(),
             taskNames = agentConfig.taskNames,
             taskInputs = agentConfig.taskInputs.mapValues { it.value.toSet() },
+            taskRuns = taskRuns,
             sensitivity = sensitivity,
             foregroundSource = { foregroundOf(transport) },
             revalidator = { _, target ->

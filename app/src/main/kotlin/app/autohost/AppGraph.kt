@@ -271,6 +271,17 @@ class AppGraph(val application: Application) {
                     application.resources.displayMetrics.widthPixels to
                         application.resources.displayMetrics.heightPixels
                 },
+                // INT-E3c: task_status waits on the same run records the chain runner reads for tasks.run
+                taskRuns = { runId, timeoutMs ->
+                    when (val outcome = chainRunner.await(runId, timeoutMs.coerceAtLeast(1_000L))) {
+                        is app.autohost.core.engine.host.TasksRunProvider.ChainRunner.Outcome.Terminal ->
+                            app.autohost.runtime.agent.ToolPipeline.TaskRuns.Outcome.Ended(outcome.status, outcome.result)
+                        is app.autohost.core.engine.host.TasksRunProvider.ChainRunner.Outcome.Timeout ->
+                            app.autohost.runtime.agent.ToolPipeline.TaskRuns.Outcome.StillRunning
+                        is app.autohost.core.engine.host.TasksRunProvider.ChainRunner.Outcome.UnknownRun ->
+                            app.autohost.runtime.agent.ToolPipeline.TaskRuns.Outcome.Gone
+                    }
+                },
             ),
         )
     }

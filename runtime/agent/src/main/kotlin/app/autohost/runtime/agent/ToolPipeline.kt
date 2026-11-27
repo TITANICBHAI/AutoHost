@@ -51,6 +51,8 @@ class ToolPipeline(
     private val taskInputs: Map<String, Set<String>> = emptyMap(),
     /** INT-A7: how a `wait` call really waits (a seam, so tests do not sleep). */
     private val pauser: Pauser = Pauser { ms -> delay(ms) },
+    /** INT-E3c: how the pipeline waits for a saved task this run started; null = the app gave none (`task_status` then says so). */
+    private val taskRuns: TaskRuns? = null,
 ) : AgentLoop.ToolExecutor {
 
     data class Config(
@@ -92,14 +94,34 @@ class ToolPipeline(
         suspend fun pause(ms: Long)
     }
 
+    /** INT-E3c: how `task_status` waits for a saved task this run started (the app maps it onto its run records). */
+    fun interface TaskRuns {
+        suspend fun await(runId: String, timeoutMs: Long): Outcome
+
+        sealed interface Outcome {
+            /** The task is over: its status name and, when it left one, its result text. */
+            data class Ended(val status: String, val result: String?) : Outcome
+
+            /** The wait ran out and the task is still going. */
+            data object StillRunning : Outcome
+
+            /** The app has no record of that run any more (cleaned up, or the app was restarted). */
+            data object Gone : Outcome
+        }
+    }
+
     /** Transient per-run session allow-list ("Allow for this run") — package-scoped. */
     private val sessionAllowed = mutableSetOf<String>()
 
     /**
      * INT-E1: saved tasks whose last start came back still RUNNING (the wait ran out). A task that is still going
-     * is never started a second time in the same run — a second upload would be a second upload.
+     * is never started a second time in the same run — a second upload would be a second upload. The value is the run
+     * id `run_task` gave back (INT-E3c), so the refusal can name it for `task_status`.
      */
-    private val stillRunning = mutableSetOf<String>()
+    private val stillRunning = mutableMapOf<String, String?>()
+
+    /** INT-E3c: every run id `run_task` handed back in this run, with its task. `task_status` answers for these and no others. */
+    private val startedRuns = mutableMapOf<String, String>()
 
     override suspend fun execute(call: ToolCall, ctx: AgentLoop.TurnContext): JsonObject {
         val tool = catalog.find(call.name)
@@ -133,11 +155,18 @@ class ToolPipeline(
                     )
                 }
             }
-            if (taskId != null && taskId in stillRunning) {
+            if (taskId != null && stillRunning.containsKey(taskId)) {
+                val runId = stillRunning[taskId]
+                // INT-E3c: when task_status is there, the model is told how to wait for it (by the run id it was given)
+                val advice = if (taskRuns != null && runId != null) {
+                    "use task_status with run_id '$runId' to wait for it to end"
+                } else {
+                    "wait, then look at the screen"
+                }
                 return errResult(
                     "CAPABILITY_UNAVAILABLE", null,
                     "task '${target.label ?: taskId}' was already started in this run and may still be going — " +
-                        "do not start it again; wait, then look at the screen",
+                        "do not start it again; $advice",
                 )
             }
         }
@@ -220,6 +249,8 @@ class ToolPipeline(
         // host tools (finish/todo_write/wait) have no broker method — the loop handles finish and
         // the host handles the rest; they never touch the transport and never cost an action
         if (tool.capability == null || tool.permission == null || tool.method == null) {
+            // INT-E3c: task_status waits for a saved task this run started; it is answered here, never by the broker
+            if (tool.name == ToolPolicy.TASK_STATUS) return taskStatus(args)
             // INT-A7: `wait` really waits. It used to answer at once, so an agent waiting for a slow screen looked again at
             // an unchanged one and spent its turns doing it
             val waited = if (tool.name == WAIT_TOOL) waitSeconds(args) else null
@@ -253,7 +284,10 @@ class ToolPipeline(
         }
         if (tool.name == ToolPolicy.RUN_TASK) {
             val taskId = args.str("task")
-            if (taskId != null && envelope.str("status") == "RUNNING") stillRunning.add(taskId)
+            val runId = envelope.str("run_id")
+            // INT-E3c: remember the run id, so task_status can answer for it (and for no other)
+            if (taskId != null && runId != null) startedRuns[runId] = taskId
+            if (taskId != null && envelope.str("status") == "RUNNING") stillRunning[taskId] = runId
         }
         log.on("result", buildJsonObject { put("tool", tool.name); put("ok", envelope["ok"]?.let { (it as? JsonPrimitive)?.content } == "true") })
         return cap(envelope, config.resultCharCap)
@@ -320,13 +354,55 @@ class ToolPipeline(
         if (!args.containsKey("timeout_ms")) put("timeout_ms", DEFAULT_TASK_WAIT_MS)
     }
 
-    /** INT-A4: [args] with the model's `id` taken out and the phone service's own handle for that screen item put in. */
+    /**
+     * INT-E3c: waits for a saved task this run started and says how it stands, in the fields `run_task` uses. It answers
+     * only for a `run_id` that this run's `run_task` handed back (a guessed or foreign id is refused the same way), never
+     * touches the broker and never asks the person. A task that ended (or whose record is gone) may be started again.
+     */
+    private suspend fun taskStatus(args: JsonObject): JsonObject {
+        val runId = args.str("run_id").orEmpty().trim()
+        val taskId = startedRuns[runId]
+            ?: return errResult(
+                "INVALID_ARGS", null,
+                "no saved task was started by this run with that run_id: pass the run_id that run_task gave back",
+            )
+        val runs = taskRuns
+            ?: return errResult("CAPABILITY_UNAVAILABLE", null, "checking on a saved task is not available in this run")
+        val waitMs = (args.str("timeout_ms")?.toLongOrNull() ?: DEFAULT_STATUS_WAIT_MS)
+            .coerceIn(MIN_STATUS_WAIT_MS, MAX_STATUS_WAIT_MS)
+        val result = when (val outcome = runs.await(runId, waitMs)) {
+            is TaskRuns.Outcome.Ended -> {
+                // only this run's own lock: an older run_id must never free a newer start of the same task
+                if (stillRunning[taskId] == runId) stillRunning.remove(taskId)
+                buildJsonObject {
+                    put("ok", true)
+                    put("run_id", runId)
+                    put("status", outcome.status)
+                    outcome.result?.let { put("result", it) }
+                }
+            }
+            TaskRuns.Outcome.StillRunning -> buildJsonObject {
+                put("ok", true)
+                put("run_id", runId)
+                put("status", "RUNNING")
+                put("await", "timeout")
+            }
+            TaskRuns.Outcome.Gone -> {
+                if (stillRunning[taskId] == runId) stillRunning.remove(taskId)
+                errResult("NOT_FOUND", null, "that run is gone: the app no longer has a record of it")
+            }
+        }
+        log.on("result", buildJsonObject { put("tool", ToolPolicy.TASK_STATUS); put("ok", (result["ok"] as? JsonPrimitive)?.content == "true") })
+        return cap(result, config.resultCharCap)
+    }
+
     /** INT-A9: [args] with the prompt's answer window set (any `timeout_ms` already there is replaced). */
     private fun withAskWindow(args: JsonObject, ms: Long): JsonObject = buildJsonObject {
         for ((key, value) in args) if (key != "timeout_ms") put(key, value)
         put("timeout_ms", ms)
     }
 
+    /** INT-A4: [args] with the model's `id` taken out and the phone service's own handle for that screen item put in. */
     private fun withRef(args: JsonObject, ref: String): JsonObject = buildJsonObject {
         for ((key, value) in args) if (key != "id") put(key, value)
         put("ref", ref)
@@ -420,6 +496,11 @@ class ToolPipeline(
     companion object {
         /** INT-E1: how long run_task waits when the model gave no timeout (under the agent's 180 s idle budget). */
         const val DEFAULT_TASK_WAIT_MS = 90_000L
+
+        /** INT-E3c: how long task_status waits when the model gave no time, and its bounds (the catalog caps it at 120 s too). */
+        const val DEFAULT_STATUS_WAIT_MS = 60_000L
+        private const val MIN_STATUS_WAIT_MS = 1_000L
+        private const val MAX_STATUS_WAIT_MS = 120_000L
 
         /** INT-A7: the host tool that pauses the run for a moment, and its cap in seconds (the same cap as the catalog's). */
         private const val WAIT_TOOL = "wait"

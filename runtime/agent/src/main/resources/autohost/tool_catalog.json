@@ -104,11 +104,25 @@
     }
    },
    "capability": "tasks.run",
-   "description": "Start one of the saved tasks (a macro or a script) the user allowed for this run, by its id, and wait for its result. To give it values, pass inputs as name=value texts, using only the names listed for that task. Status RUNNING means it is still going: never start the same task twice, wait and look at the screen instead.",
+   "description": "Start one of the saved tasks (a macro or a script) the user allowed for this run, by its id, and wait for its result. To give it values, pass inputs as name=value texts, using only the names listed for that task. Status RUNNING means it is still going: never start the same task twice; use task_status with the run_id it gave back to wait for it to end.",
    "method": "run",
    "name": "run_task",
    "permission": "tasks.run",
    "spec_risk": "medium"
+  },
+  {
+   "args": {
+    "run_id": {},
+    "timeout_ms?": {
+     "max": 120000
+    }
+   },
+   "capability": null,
+   "description": "Check on a saved task that run_task left running: pass the run_id run_task gave back. Waits up to timeout_ms (60 seconds if you give none, at most 120) for the task to end, then gives its status and, once it has ended, its result.",
+   "host": true,
+   "method": null,
+   "name": "task_status",
+   "permission": null
   },
   {
    "args": {
