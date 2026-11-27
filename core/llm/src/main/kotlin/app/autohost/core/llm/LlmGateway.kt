@@ -38,10 +38,11 @@ class LlmGateway(
     )
 
     /**
-     * The chat entry point. [deadlineMs] is the run's remaining wall-clock budget. The model id in [asked] is replaced by
-     * the profile's (INT-A12): the profile is what the person set up, and the callers' own ids are placeholders.
+     * The chat entry point. [budgetMs] is how long this call may take in all, retries included, counted from the moment
+     * it is made: the run's remaining wall-clock budget (INT-A13). The model id in [asked] is replaced by the profile's
+     * (INT-A12): the profile is what the person set up, and the callers' own ids are placeholders.
      */
-    suspend fun chat(profileId: String, asked: ChatRequest, deadlineMs: Long): LlmResult<ChatResponse> {
+    suspend fun chat(profileId: String, asked: ChatRequest, budgetMs: Long): LlmResult<ChatResponse> {
         val profile = profiles.load().firstOrNull { it.id == profileId }
             ?: return LlmResults.err(LlmError.NotConfigured)
         if (profile.egressAcceptedAtMs == null) return LlmResults.err(LlmError.NotConfigured)
@@ -66,17 +67,23 @@ class LlmGateway(
             if (profile.parallelToolCallsParam) put("parallel_tool_calls", "false")
         }
 
+        // INT-A13: [budgetMs] is a DURATION, but this loop used to read it as a point in time and subtract the epoch clock
+        // from it, so every call was refused as "budget exhausted" before it reached the network: the Test-connection
+        // button and every agent turn. The old tests' fake clock (1 000 ms) could not show it.
+        val callStartedMs = nowMs()
+        val deadlineAtMs = if (budgetMs > Long.MAX_VALUE - callStartedMs) Long.MAX_VALUE else callStartedMs + budgetMs
+
         var attempt = 0
         var lastHttpError: LlmError? = null // the decoded error of the last retryable HTTP status, for the give-up
         while (true) {
             attempt += 1
-            val remaining = deadlineMs - nowMs()
+            val remaining = deadlineAtMs - nowMs()
             if (remaining <= 0) {
                 return LlmResults.err(LlmError.Transient("run wall-clock budget exhausted"))
             }
             val started = nowMs()
             val response = try {
-                engine.post(url, headers, wireBytes, timeoutMs = profile.readTimeoutMs.coerceAtMost(remaining.toInt()))
+                engine.post(url, headers, wireBytes, timeoutMs = profile.readTimeoutMs.toLong().coerceAtMost(remaining).toInt())
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: java.io.IOException) {
@@ -123,7 +130,7 @@ class LlmGateway(
                     RetryPolicy.Outcome(RetryPolicy.OutcomeKind.TRANSIENT, attempt)
                 else -> RetryPolicy.Outcome(RetryPolicy.OutcomeKind.INVALID, attempt)
             }
-            when (val decision = RetryPolicy.plan(outcome, deadlineMs - nowMs())) {
+            when (val decision = RetryPolicy.plan(outcome, deadlineAtMs - nowMs())) {
                 is RetryPolicy.Decision.GiveUp -> return LlmResults.err(lastHttpError ?: mapOutcome(outcome))
                 is RetryPolicy.Decision.Retry -> delay(decision.delayMs) // cancellable suspend — Stop cancels it
             }

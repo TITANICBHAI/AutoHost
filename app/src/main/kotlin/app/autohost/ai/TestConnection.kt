@@ -38,7 +38,7 @@ object TestConnection {
                     messages = listOf(ChatMessage.User("ping")),
                     maxOutputTokens = 1,
                 ),
-                deadlineMs = 30_000L,
+                budgetMs = 30_000L,
             )
             when (result) {
                 is LlmResult.Ok -> AiSettingsState.ConnectionTester.Result(

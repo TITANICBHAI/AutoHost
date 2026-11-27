@@ -69,7 +69,7 @@ class LlmGatewayTest {
     @Test
     fun `given a 401 when called then MODEL_AUTH and one audit record with sizes only`() = runBlocking {
         val (gw, audit) = gateway(FakeEngine(status = 401))
-        val result = gw.chat("prov-1", request, deadlineMs = 30_000)
+        val result = gw.chat("prov-1", request, budgetMs = 30_000)
         assertEquals(LlmError.Auth, result.errorOrNull())
         assertEquals(1, audit.events.size)
         val event = audit.events.single()
@@ -98,7 +98,7 @@ class LlmGatewayTest {
         }, RecordingAudit(), nowMs = { 1_000L }, urlEnv = {
             BaseUrlValidator.UrlEnv(cleartextLoopbackEnabled = true, debugBuild = false)
         })
-        val result = gw.chat("prov-1", request, deadlineMs = 60_000)
+        val result = gw.chat("prov-1", request, budgetMs = 60_000)
         assertTrue(result.okOrNull() != null)
         assertEquals(2, calls) // one retry after the 429
     }
@@ -115,10 +115,28 @@ class LlmGatewayTest {
             BaseUrlValidator.UrlEnv(cleartextLoopbackEnabled = true, debugBuild = false)
         })
         val placeholder = ChatRequest("autohost-agent", listOf(ChatMessage.User("goal")), maxOutputTokens = 64)
-        assertTrue(gw.chat("prov-1", placeholder, deadlineMs = 30_000).okOrNull() != null)
+        assertTrue(gw.chat("prov-1", placeholder, budgetMs = 30_000).okOrNull() != null)
         val model = Json.parseToJsonElement(sent!!).jsonObject["model"]!!.jsonPrimitive.content
         assertEquals("test-model", model)
         assertEquals("test-model", audit.events.single().model)
+    }
+
+    @Test
+    fun `given the real clock's epoch-sized readings when called with a 30 second budget then the call is made`() = runBlocking {
+        // INT-A13: the callers hand over a duration. The loop once subtracted the epoch clock from it, so every call was
+        // refused as "budget exhausted" before the network was touched; the other tests' clock (1 000 ms) hid that.
+        val engine = FakeEngine(body = """{"choices":[{"message":{"content":"ok"},"finish_reason":"stop"}]}""")
+        val (gw, _) = gateway(engine, now = 1_760_000_000_000L)
+        assertTrue(gw.chat("prov-1", request, budgetMs = 30_000).okOrNull() != null)
+        assertEquals(1, engine.calls)
+    }
+
+    @Test
+    fun `given a budget of zero when called then it is refused as transient and no network call is made`() = runBlocking {
+        val engine = FakeEngine()
+        val (gw, _) = gateway(engine, now = 1_760_000_000_000L)
+        assertTrue(gw.chat("prov-1", request, budgetMs = 0).errorOrNull() is LlmError.Transient)
+        assertEquals(0, engine.calls)
     }
 
     @Test
