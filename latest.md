@@ -1,7 +1,7 @@
-# CI digest - run 73 - branch work/s02-green - commit 3aeeadf
+# CI digest - run 74 - branch work/s02-green - commit 80a8273
 tests step outcome: success
 
-## Verdict: GREEN - 1859 tests ran, 0 failed, 0 Kotlin compile errors, 0 failed Gradle tasks, 4 modules with no results
+## Verdict: GREEN - 1860 tests ran, 0 failed, 0 Kotlin compile errors, 0 failed Gradle tasks, 4 modules with no results
 
 ## Modules that produced no test results (compile error, timeout, or no tests)
 - runtime/api
@@ -33,7 +33,7 @@ tests step outcome: success
 - core/designsystem: 6 / 0 / 0
 - core/devapi: 26 / 0 / 2
 - core/engine: 305 / 0 / 2
-- core/llm: 39 / 0 / 0
+- core/llm: 40 / 0 / 0
 - core/model: 47 / 0 / 0
 - runtime/agent: 273 / 0 / 0
 - runtime/flow: 117 / 0 / 24
@@ -41,20 +41,20 @@ tests step outcome: success
 
 ## Where the time went (finished tasks only; a task stopped by the timeout leaves no timings)
 - core/llm: 32 s of test time
-- app: 25 s of test time
-- capabilities/browser: 21 s of test time
-- capabilities/shell: 4 s of test time
+- app: 23 s of test time
+- capabilities/browser: 20 s of test time
+- capabilities/shell: 3 s of test time
 - core/engine: 3 s of test time
 - slowest: 30.0 s HttpUrlConnectionEngineTest.given a hung server when the call is cancelled then it returns within about a second [core/llm]
-- slowest: 10.2 s CdpBrowserProviderTest.navigate forwards through the shell then evaluates the page [capabilities/browser]
+- slowest: 10.1 s CdpBrowserProviderTest.navigate forwards through the shell then evaluates the page [capabilities/browser]
 - slowest: 10.0 s CdpBrowserProviderTest.close removes the forward [capabilities/browser]
-- slowest: 7.7 s AddTaskDialogJourneyTest.Add a task opens a pop-up with three ways to add one and Close shuts it [app]
+- slowest: 6.8 s AddTaskDialogJourneyTest.Add a task opens a pop-up with three ways to add one and Close shuts it [app]
 - slowest: 2.0 s SelectorBenchTest.find latency stays in single-digit milliseconds on large trees [core/model]
 - slowest: 1.5 s UiAutomationControllerTest.spawn failure with a dead runner is refused honestly [app]
 - slowest: 1.5 s UiAutomationControllerTest.spawn failure with a dead runner is refused honestly [app]
-- slowest: 1.3 s SettingsWalkJourneyTest.every Settings screen opens and Back returns to the Settings list [app]
+- slowest: 1.1 s SettingsWalkJourneyTest.every Settings screen opens and Back returns to the Settings list [app]
 
-## Style baseline (report only): 22508 ktlint/detekt findings
+## Style baseline (report only): 22511 ktlint/detekt findings
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:14:1 Class body should not start with blank line
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:32 Newline expected after opening parenthesis
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:50 Parameter should start on a newline
