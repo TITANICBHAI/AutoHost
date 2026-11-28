@@ -146,6 +146,7 @@ class AgentWiringEndToEndTest {
             calls.add(Call(runToken, name, args))
             val result: JsonObject = when (name) {
                 "device.app.foreground" -> buildJsonObject { put("package", pkg); put("activity", ".Main") }
+                "device.ui.wait_for_settle" -> buildJsonObject { put("settled", true); put("waited_ms", 0L) }
                 "device.ui.snapshot" -> screen()
                 "device.ui.click" -> buildJsonObject { put("clicked", true) }
                 "ui.prompt.ask" -> when (args["kind"]?.jsonPrimitive?.content) {
@@ -268,6 +269,16 @@ class AgentWiringEndToEndTest {
         assertFalse(why, click.args.containsKey("id"))
         val kinds = phone.calls.filter { it.name == "ui.prompt.ask" }.map { it.args["kind"]!!.jsonPrimitive.content }
         assertEquals(why, listOf("choice", "confirm"), kinds)
+
+        // A15: the host's own reads (each turn's, and the completion check's) wait for the screen to rest first, 3 s at
+        // most, and the wait comes right before the read; the re-check between the approval and the click is a plain read
+        val settles = names.indices.filter { names[it] == "device.ui.wait_for_settle" }
+        assertTrue(why, settles.size >= 2 && settles.all { names.getOrNull(it + 1) == "device.ui.snapshot" })
+        assertTrue(why, names.indexOf("device.ui.wait_for_settle") < names.indexOf("device.ui.snapshot"))
+        assertTrue(why, phone.calls.filter { it.name == "device.ui.wait_for_settle" }
+            .all { it.args["timeout_ms"]?.jsonPrimitive?.content == "3000" })
+        val approvalAt = names.indexOf("ui.prompt.ask")
+        assertFalse(why, "device.ui.wait_for_settle" in names.subList(approvalAt, names.indexOf("device.ui.click")))
 
         // the completion check wrote its evidence, and the key went nowhere but the Authorization header
         assertEquals(why, 1, File(taskDir, "evidence").listFiles().orEmpty().size)

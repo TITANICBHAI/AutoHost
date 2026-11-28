@@ -33,6 +33,9 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.io.File
 
+/** The longest the host waits for a screen to come to rest before it reads it anyway (AGENT_RUNTIME §5.1; INT-A15). */
+private const val SETTLE_TIMEOUT_MS = 3_000L
+
 /**
  * P14-07 (closing P13-12's placeholder): the PRODUCTION loop factory — builds the real chain
  * from a RunSpec:
@@ -116,7 +119,7 @@ class AgentLoopFactory(
 
         val evidenceDir = File(File(spec.taskPath), "evidence").apply { mkdirs() }
         val verifier = CompletionVerifier(
-            observer = { floorFilteredSnapshot(transport, agentConfig) },
+            observer = { settledSnapshot(transport, agentConfig) },
             evidence = { snapshot ->
                 val file = File(evidenceDir, "final-${clock.nowMs()}.json")
                 file.writeText(snapshot.toString())
@@ -132,7 +135,7 @@ class AgentLoopFactory(
             client = modelClient,
             catalog = catalog,
             pipeline = pipeline,
-            observer = { floorFilteredSnapshot(transport, agentConfig) },
+            observer = { settledSnapshot(transport, agentConfig) },
             preflight = { AhResult.ok(Unit) }, // §12 ran at start (AgentRunStarter); budgets re-check per turn
             finishVerifier = verifier,
             budget = budget,
@@ -144,6 +147,18 @@ class AgentLoopFactory(
     /** The REAL foreground package — for POLICY (deny decisions); the model sees the filtered view (§5.2 (4)). */
     private suspend fun foregroundOf(transport: BinderAgentTransport): String? =
         AgentEnvelopes.foregroundPackage(transport.call("device.app", "foreground", JsonObject(emptyMap())))
+
+    /**
+     * The host-initiated observation (the loop's, and the completion check's): let the screen come to rest, then read it.
+     * INT-A15: the design (AGENT_RUNTIME §5.1) and this class's KDoc said so, but only the read was there, so a read right
+     * after a tap could show the screen half-drawn or unchanged and the model would tap again or give up. A wait that runs
+     * out (a video that never stops moving answers `UI_BUSY`) is not a failure: the read goes ahead. The re-check after an
+     * approval stays a plain read: it must be quick and only asks whether the same element is still there.
+     */
+    private suspend fun settledSnapshot(transport: BinderAgentTransport, agentConfig: AgentConfig): JsonObject {
+        transport.call("device.ui", "wait_for_settle", buildJsonObject { put("timeout_ms", SETTLE_TIMEOUT_MS) })
+        return floorFilteredSnapshot(transport, agentConfig)
+    }
 
     /** Snapshot → §8 floor. A withheld observation becomes an honest EMPTY screen with its reason. */
     private suspend fun floorFilteredSnapshot(transport: BinderAgentTransport, agentConfig: AgentConfig): JsonObject {
