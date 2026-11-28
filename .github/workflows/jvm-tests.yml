@@ -121,6 +121,30 @@ jobs:
           done
           echo "::warning::could not push the digest to ci-results (repo Settings > Actions > General > Workflow permissions must allow read and write)"
 
+      # INT-S1: ScreenshotsTest (app/src/testCoreLite) writes PNGs of the real screens to app/build/screenshots. Publish them as
+      # ONE forced commit on the ci-screens branch (no history, so the repository does not grow by a few MB per run) so a
+      # screen can be looked at without a phone. A diagnostic: it never fails the job.
+      - name: Publish the screenshots to the ci-screens branch
+        if: always() && github.event_name == 'push'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -e
+          shopt -s nullglob
+          files=(app/build/screenshots/*)
+          if [ ${#files[@]} -eq 0 ]; then echo "no screenshots this run"; exit 0; fi
+          rm -rf /tmp/screens && mkdir -p /tmp/screens
+          cp "${files[@]}" /tmp/screens/
+          echo "run ${GITHUB_RUN_NUMBER}, commit ${GITHUB_SHA::7}" > /tmp/screens/_commit.txt
+          git config user.name "ci-digest"
+          git config user.email "ci-digest@users.noreply.github.com"
+          git checkout --orphan ci-screens
+          git rm -rf . >/dev/null 2>&1 || true
+          cp /tmp/screens/* .
+          git add -- *.png *.txt
+          git commit -m "screenshots: run ${GITHUB_RUN_NUMBER} (${GITHUB_SHA::7})"
+          git push --force origin ci-screens
+
       - name: Fail the job if the tests failed
         if: steps.tests.outcome == 'failure'
         run: exit 1
