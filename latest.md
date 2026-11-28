@@ -1,7 +1,13 @@
-# CI digest - run 81 - branch work/s02-green - commit 7e9874d
-tests step outcome: success
+# CI digest - run 82 - branch work/s02-green - commit f3903f6
+tests step outcome: failure
 
-## Verdict: GREEN - 1871 tests ran, 0 failed, 0 Kotlin compile errors, 0 failed Gradle tasks, 4 modules with no results
+## Verdict: RED - 1570 tests ran, 0 failed, 1 Kotlin compile errors, 1 failed Gradle tasks, 4 modules with no results
+
+## Kotlin compile errors (first 40 of 1)
+- app/src/testCoreLite/kotlin/app/autohost/ScreenshotsTest.kt:152:1 Syntax error: Unclosed comment.
+
+## Failed Gradle tasks
+- :app:compileCoreLiteDebugUnitTestKotlin
 
 ## Modules that produced no test results (compile error, timeout, or no tests)
 - runtime/api
@@ -10,7 +16,7 @@ tests step outcome: success
 - testing/fixture-app
 
 ## Per module (tests / failed / skipped)
-- app: 568 / 0 / 0
+- app: 267 / 0 / 0
 - capabilities/a11y: 114 / 0 / 0
 - capabilities/app: 32 / 0 / 0
 - capabilities/audio: 8 / 0 / 0
@@ -41,20 +47,24 @@ tests step outcome: success
 
 ## Where the time went (finished tasks only; a task stopped by the timeout leaves no timings)
 - core/llm: 32 s of test time
-- app: 23 s of test time
-- capabilities/browser: 20 s of test time
+- capabilities/browser: 21 s of test time
 - capabilities/shell: 4 s of test time
 - core/model: 3 s of test time
+- core/engine: 2 s of test time
 - slowest: 30.0 s HttpUrlConnectionEngineTest.given a hung server when the call is cancelled then it returns within about a second [core/llm]
 - slowest: 10.2 s CdpBrowserProviderTest.navigate forwards through the shell then evaluates the page [capabilities/browser]
 - slowest: 10.0 s CdpBrowserProviderTest.close removes the forward [capabilities/browser]
-- slowest: 7.3 s AddTaskDialogJourneyTest.Add a task opens a pop-up with three ways to add one and Close shuts it [app]
 - slowest: 2.0 s SelectorBenchTest.find latency stays in single-digit milliseconds on large trees [core/model]
 - slowest: 1.5 s UiAutomationControllerTest.spawn failure with a dead runner is refused honestly [app]
-- slowest: 1.5 s UiAutomationControllerTest.spawn failure with a dead runner is refused honestly [app]
-- slowest: 1.1 s SettingsWalkJourneyTest.every Settings screen opens and Back returns to the Settings list [app]
+- slowest: 1.3 s AdbClientTest.legacy adbd falls back to merged shell output with null exit code [capabilities/shell]
+- slowest: 1.0 s LlmGatewayTest.given a 429 then a success when called then the retry lands and the usage is audited [core/llm]
+- slowest: 0.6 s NotificationsProviderTest.wait_for times out honestly when nothing matches [capabilities/notifications]
 
-## Style baseline (report only): 22690 ktlint/detekt findings
+## Style baseline (report only): 22415 ktlint/detekt findings
+- app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:14:1 Class body should not start with blank line
+- app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:32 Newline expected after opening parenthesis
+- app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:50 Parameter should start on a newline
+- app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:81 Newline expected before closing parenthesis
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:6:1 Unused import
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:11:1 Unused import
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:12:1 Unused import
@@ -71,7 +81,3 @@ tests step outcome: success
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:91:65 Newline expected before expression body
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:93:24 A multiline expression should start on a new line
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:100:1 Exceeded max line length (120) (cannot be auto-corrected)
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:102:22 A multiline expression should start on a new line
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:123:39 Newline expected after opening parenthesis
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:123:56 Parameter should start on a newline
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:123:71 Parameter should start on a newline
