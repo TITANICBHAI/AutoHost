@@ -34,6 +34,18 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.13"
+          # INT-CI1: unless told otherwise a branch other than main only READS the Gradle cache, so every run of this branch
+          # downloaded all its dependencies from Maven Central again, which answers 429 now and then (runs 59 and 80).
+          cache-read-only: false
+      # INT-CI1: Robolectric also downloads its Android jars at test time into ~/.m2 (run 83: "Failed to fetch maven artifact
+      # org.robolectric:android-all-instrumented", seven test classes at once), and no cache covered that.
+      - name: Restore the Robolectric Android jars
+        id: m2
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: m2-robolectric-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: m2-robolectric-
 
       - name: Unit tests - every module, one Gradle run
         id: tests
@@ -71,6 +83,22 @@ jobs:
         run: |
           gradle ktlintCheck detekt --continue --console=plain > /tmp/quality.log 2>&1 || true
           tail -n 5 /tmp/quality.log
+
+      - name: Is there a Robolectric jar worth keeping
+        id: m2have
+        if: always() && steps.m2.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          if ls ~/.m2/repository/org/robolectric/android-all-instrumented/*/*.jar >/dev/null 2>&1; then
+            echo "have=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Keep the Robolectric Android jars for the next run
+        if: always() && steps.m2have.outputs.have == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: m2-robolectric-${{ hashFiles('gradle/libs.versions.toml') }}
 
       - name: Digest
         if: always()
