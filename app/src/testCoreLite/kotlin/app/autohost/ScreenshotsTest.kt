@@ -26,7 +26,7 @@ import java.io.FileOutputStream
  * INT-S1: a screenshot rig. Nobody on this project had ever SEEN the app: the UI was built blind and checked only by tests
  * that look for words. This walks the real app (the welcome, every onboarding step, the five tabs, "What this phone
  * allows") on a phone-sized and on a small (320 dp wide) screen with Robolectric's native graphics and writes each screen
- * to `app/build/screenshots/*.png` plus a short `_report-<size>.txt`. The workflow publishes that folder to the
+ * as a PNG file in `app/build/screenshots`, plus a short `_report-<size>.txt`. The workflow publishes that folder to the
  * `ci-screens` branch (one forced commit, no history), so a screen can be looked at without a phone.
  *
  * It is a diagnostic for hierarchy, fit and colour, NOT a pixel-exact picture of a real phone (fonts, spacing and the
