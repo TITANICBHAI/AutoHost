@@ -161,6 +161,31 @@ class ChatCodecTest {
     }
 
     @Test
+    fun `given tool calls with a blank, missing or null id when decoded then they are kept with a blank id (INT-A16)`() {
+        val body = """{"choices":[{"message":{"tool_calls":[
+            {"id":"","type":"function","function":{"name":"t1","arguments":"{}"}},
+            {"type":"function","function":{"name":"t2","arguments":"{}"}},
+            {"id":null,"type":"function","function":{"name":"t3","arguments":"{}"}},
+            {"id":"real","type":"function","function":{"name":"t4","arguments":"{}"}}]},"finish_reason":"tool_calls"}]}"""
+        val response = ChatCodec.decodeResponse(body, 1, 1).okOrNull()!!
+        assertEquals(listOf("t1", "t2", "t3", "t4"), response.toolCalls.map { it.name })
+        assertEquals(listOf("", "", "", "real"), response.toolCalls.map { it.id })
+    }
+
+    @Test
+    fun `given a tool call that names no tool when decoded then it is malformed`() {
+        for (call in listOf(
+            """{"id":"a","type":"function","function":{"arguments":"{}"}}""",
+            """{"id":"a","type":"function","function":{"name":"","arguments":"{}"}}""",
+            """{"id":"a","type":"function","function":{"name":"  ","arguments":"{}"}}""",
+        )) {
+            val body = """{"choices":[{"message":{"tool_calls":[$call]},"finish_reason":"tool_calls"}]}"""
+            val error = ChatCodec.decodeResponse(body, 1, 1).errorOrNull()
+            assertTrue("a call without a name must be malformed: $call", error is LlmError.MalformedResponse)
+        }
+    }
+
+    @Test
     fun `given finish_reason length with tool calls when decoded then malformed (truncated arguments)`() {
         val body = """{"choices":[{"message":{"tool_calls":[{"id":"c","type":"function","function":{"name":"t","arguments":"{\"x\":"}}]},"finish_reason":"length"}]}"""
         val error = ChatCodec.decodeResponse(body, 1, 1).errorOrNull()!!

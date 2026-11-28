@@ -184,6 +184,67 @@ class AgentLoopTest {
     }
 
     @Test
+    fun `given tool calls with a blank id when the loop goes on then each gets its own id on its call and on its result (INT-A16)`() = runBlocking {
+        val pipeline = FakePipeline()
+        val llm = FakeLlm(
+            listOf(
+                FakeTurn.Resp(calls = listOf(call("ui_click", id = ""), call("ui_set_text", """{"ref":"[1]","text":"x"}""", id = ""))),
+                FakeTurn.Resp(calls = listOf(call("finish", """{"summary":"done"}"""))),
+            ),
+        )
+        val outcome = loop(llm, pipeline = pipeline).run("tap the button")
+        assertTrue(outcome is AgentLoop.Outcome.Succeeded)
+        val sent = llm.requests[1].messages
+        val callIds = sent.filterIsInstance<ChatMessage.Assistant>().single().toolCalls.map { it.id }
+        assertEquals(2, callIds.size)
+        assertTrue(callIds.all { it.isNotBlank() })
+        assertEquals(2, callIds.toSet().size)
+        // every call has exactly one result, matched by the id the call went out with
+        val results = sent.filterIsInstance<ChatMessage.Tool>()
+        assertEquals(callIds.toSet(), results.map { it.toolCallId }.toSet())
+        assertEquals(2, results.size)
+        assertTrue(results.single { it.toolCallId == callIds[1] }.content.contains("ONE_ACTION_PER_TURN"))
+        assertTrue(!results.single { it.toolCallId == callIds[0] }.content.contains("ONE_ACTION_PER_TURN"))
+        // and the call that ran is the first one, under that same id
+        assertEquals(callIds[0], pipeline.calls.single().first.id)
+    }
+
+    @Test
+    fun `given two calls that share one id when the loop goes on then the repeat gets another id and the first is kept (INT-A16)`() = runBlocking {
+        val llm = FakeLlm(
+            listOf(
+                FakeTurn.Resp(calls = listOf(call("ui_click", id = "dup"), call("ui_set_text", """{"ref":"[1]","text":"x"}""", id = "dup"))),
+                FakeTurn.Resp(calls = listOf(call("finish", """{"summary":"done"}"""))),
+            ),
+        )
+        val outcome = loop(llm).run("tap the button")
+        assertTrue(outcome is AgentLoop.Outcome.Succeeded)
+        val sent = llm.requests[1].messages
+        val callIds = sent.filterIsInstance<ChatMessage.Assistant>().single().toolCalls.map { it.id }
+        assertEquals("dup", callIds[0])
+        assertTrue(callIds[1].isNotBlank() && callIds[1] != "dup")
+        assertEquals(callIds.toSet(), sent.filterIsInstance<ChatMessage.Tool>().map { it.toolCallId }.toSet())
+    }
+
+    @Test
+    fun `given a blank id on two different turns when the loop goes on then the two turns never share an id (INT-A16)`() = runBlocking {
+        val llm = FakeLlm(
+            listOf(
+                FakeTurn.Resp(calls = listOf(call("ui_click", id = ""))),
+                FakeTurn.Resp(calls = listOf(call("ui_click", id = ""))),
+                FakeTurn.Resp(calls = listOf(call("finish", """{"summary":"done"}"""))),
+            ),
+        )
+        val outcome = loop(llm).run("tap the button twice")
+        assertTrue(outcome is AgentLoop.Outcome.Succeeded)
+        val ids = llm.requests[2].messages.filterIsInstance<ChatMessage.Assistant>().flatMap { it.toolCalls }.map { it.id }
+        assertEquals(2, ids.size)
+        assertTrue(ids.all { it.isNotBlank() })
+        assertEquals(2, ids.toSet().size)
+        assertEquals(ids.toSet(), llm.requests[2].messages.filterIsInstance<ChatMessage.Tool>().map { it.toolCallId }.toSet())
+    }
+
+    @Test
     fun `given a turn without tool calls when run then the nudge is injected and the second empty turn counts as a failure`() = runBlocking {
         val llm = FakeLlm(
             listOf(

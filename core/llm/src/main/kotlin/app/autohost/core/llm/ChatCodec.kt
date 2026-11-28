@@ -132,10 +132,14 @@ object ChatCodec {
             val callObj = element.jsonObject
             val fn = callObj["function"] as? JsonObject
                 ?: return@forEach
-            val id = (callObj["id"] as? JsonPrimitive)?.content ?: ""
+            // INT-A16: a blank, missing or null id is passed on as blank. Some servers answer `"id": ""` (reported for Gemini 2.5
+            // and 2.0 on the OpenAI-compatible endpoint) and the agent loop gives such a call its own id; only a call that
+            // names no tool is malformed.
+            val idElement = callObj["id"]
+            val id = if (idElement is JsonPrimitive && idElement !is JsonNull) idElement.content else ""
             val name = (fn["name"] as? JsonPrimitive)?.content
-            if (id.isEmpty() || name.isNullOrBlank()) {
-                return LlmResults.err(LlmError.MalformedResponse("tool call without id or name"))
+            if (name.isNullOrBlank()) {
+                return LlmResults.err(LlmError.MalformedResponse("tool call without a name"))
             }
             val argsJson = (fn["arguments"] as? JsonPrimitive)?.content ?: "{}"
             val args = try {

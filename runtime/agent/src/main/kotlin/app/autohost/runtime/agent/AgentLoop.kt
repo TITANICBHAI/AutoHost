@@ -207,8 +207,11 @@ class AgentLoop(
                 },
             )
 
+            // INT-A16: a tool result is matched to its call by id, so every call in the history needs its own non-empty one
+            val toolCalls = withUniqueIds(response.toolCalls, generation)
+
             // the no-tool-call nudge: once is free, a second consecutive time is a failure (§7.1)
-            if (response.toolCalls.isEmpty()) {
+            if (toolCalls.isEmpty()) {
                 if (!response.text.isNullOrEmpty()) {
                     sink.on("agent.thought", buildJsonObject { put("text", response.text!!) })
                     history.add(ChatMessage.Assistant(response.text))
@@ -231,12 +234,12 @@ class AgentLoop(
                 continue
             }
             consecutiveEmpty = 0
-            history.add(ChatMessage.Assistant(response.text, response.toolCalls))
+            history.add(ChatMessage.Assistant(response.text, toolCalls))
 
             // ONE action per turn: the first call executes; every extra gets a typed error result
             // (OpenAI-compatible APIs reject a missing tool result — never silence, §7.1).
-            val call = response.toolCalls.first()
-            for (extra in response.toolCalls.drop(1)) {
+            val call = toolCalls.first()
+            for (extra in toolCalls.drop(1)) {
                 history.add(
                     ChatMessage.Tool(
                         extra.id,
@@ -337,6 +340,26 @@ class AgentLoop(
 
     private fun capToolResult(content: String, cap: Int): String =
         if (content.length <= cap) content else content.take(cap) + "\"...[truncated]\"}"
+
+    /**
+     * INT-A16: the id is how a tool result finds its call, and a provider answers HTTP 400 when it is empty (Gemini on the
+     * OpenAI-compatible endpoint did, in 2025, for `tool_calls[].id == ""`) or when two results claim the same call. A call
+     * that arrives with a blank id, or one already used by an earlier call of the same reply, gets a made-up one that is
+     * unique within the run (the turn's generation and the call's place). Nothing else about the call changes: its
+     * arguments and the provider's `extra_content` (the thought signature) stay as they came.
+     */
+    private fun withUniqueIds(calls: List<ToolCall>, generation: Int): List<ToolCall> {
+        val used = HashSet<String>()
+        return calls.mapIndexed { index, call ->
+            if (call.id.isNotBlank() && used.add(call.id)) {
+                call
+            } else {
+                var made = "ah_call_${generation}_$index"
+                while (!used.add(made)) made += "_" // a provider's own id can never make two calls of one reply share an id
+                call.copy(id = made)
+            }
+        }
+    }
 
     private fun promptChars(system: String, history: List<ChatMessage>): Int =
         system.length + history.sumOf { message ->
