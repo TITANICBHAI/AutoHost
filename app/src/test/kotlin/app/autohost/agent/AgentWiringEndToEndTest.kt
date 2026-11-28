@@ -16,7 +16,6 @@ import app.autohost.core.model.UiNode
 import app.autohost.runtime.agent.AgentLoop
 import app.autohost.runtime.agent.AppSensitivity
 import app.autohost.runtime.agent.ToolPipeline
-import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -34,11 +33,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.IOException
 import java.net.InetAddress
-import java.net.InetSocketAddress
+import java.net.ServerSocket
+import java.net.Socket
 import java.nio.file.Files
 import java.util.concurrent.CopyOnWriteArrayList
+import kotlin.concurrent.thread
 
 /**
  * INT-A11: the agent's REAL wiring, end to end on the JVM.
@@ -48,7 +51,7 @@ import java.util.concurrent.CopyOnWriteArrayList
  * [AgentLoopFactory], [BinderAgentTransport], tool pipeline, completion check, [app.autohost.core.llm.LlmGateway], chat
  * codec, HTTP engine and the production clock. The only things played are the two ends:
  *
- *  - the MODEL: a JDK HTTP server on the loopback address that answers like a Gemini 3 endpoint on its OpenAI-compatible
+ *  - the MODEL: a small HTTP server on the loopback address that answers like a Gemini 3 endpoint on its OpenAI-compatible
  *    path (the first tool call carries `extra_content.google.thought_signature`, which must come back on the next turn);
  *  - the PHONE: a broker that answers with the real node summary and the real answer shapes (`keyboard` a Boolean, the
  *    provider's fields at the top of the result, a choice prompt answering `{answered, choice}`).
@@ -66,32 +69,69 @@ class AgentWiringEndToEndTest {
 
     private val seen = CopyOnWriteArrayList<Seen>()
     private val events = CopyOnWriteArrayList<String>()
-    private var server: HttpServer? = null
+    private var server: ServerSocket? = null
     private val taskDir: File = Files.createTempDirectory("autohost-e2e").toFile()
 
     @After
     fun tearDown() {
-        server?.stop(0)
+        server?.close()
         taskDir.deleteRecursively()
     }
 
     // -- the two played ends ---------------------------------------------------------------------
 
-    /** A model that answers the given bodies in turn (the last one again if asked more often); returns its port. */
+    /**
+     * A model that answers the given bodies in turn (the last one again if asked more often); returns its port. Plain
+     * sockets, one request at a time: the `app` module's test code is compiled against the Android platform, which has
+     * no `com.sun.net.httpserver` (the first try of this test failed to compile for exactly that reason).
+     */
     private fun startModel(vararg replies: String): Int {
-        val s = HttpServer.create(InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0)
-        s.createContext("/") { exchange ->
-            val body = exchange.requestBody.readBytes().decodeToString()
-            seen.add(Seen(exchange.requestHeaders.getFirst("Authorization"), body))
-            val reply = replies[minOf(seen.size, replies.size) - 1].toByteArray()
-            exchange.responseHeaders.add("Content-Type", "application/json")
-            exchange.sendResponseHeaders(200, reply.size.toLong())
-            exchange.responseBody.write(reply)
-            exchange.close()
+        val listener = ServerSocket(0, 8, InetAddress.getLoopbackAddress())
+        server = listener
+        thread(isDaemon = true, name = "fake-model") {
+            while (!listener.isClosed) {
+                try {
+                    listener.accept().use { answer(it, replies) }
+                } catch (e: IOException) {
+                    // the test closed the listener, or a client went away: nothing left to serve
+                }
+            }
         }
-        s.start()
-        server = s
-        return s.address.port
+        return listener.localPort
+    }
+
+    /** One HTTP/1.1 exchange: read the request head and its Content-Length body, record both, send the next reply, close. */
+    private fun answer(client: Socket, replies: Array<out String>) {
+        client.soTimeout = 15_000
+        val input = client.getInputStream()
+        val head = ByteArrayOutputStream()
+        var lastFour = 0
+        while (lastFour != END_OF_HEAD) {
+            val b = input.read()
+            if (b < 0) return
+            head.write(b)
+            lastFour = (lastFour shl 8) or b
+        }
+        val lines = head.toString("UTF-8").split("\r\n")
+        fun header(name: String): String? =
+            lines.firstOrNull { it.startsWith("$name:", ignoreCase = true) }?.substringAfter(':')?.trim()
+        val length = header("Content-Length")?.toIntOrNull() ?: 0
+        val body = ByteArray(length)
+        var got = 0
+        while (got < length) {
+            val n = input.read(body, got, length - got)
+            if (n < 0) return
+            got += n
+        }
+        seen.add(Seen(header("Authorization"), String(body, Charsets.UTF_8)))
+        val reply = replies[minOf(seen.size, replies.size) - 1].toByteArray()
+        val out = client.getOutputStream()
+        out.write(
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: ${reply.size}\r\nConnection: close\r\n\r\n"
+                .toByteArray(),
+        )
+        out.write(reply)
+        out.flush()
     }
 
     /** The phone service: [approval] is the button the person presses on the approval question. */
@@ -250,6 +290,9 @@ class AgentWiringEndToEndTest {
     }
 
     private companion object {
+        /** The bytes `\r\n\r\n` that end an HTTP request head, as the last four bytes read. */
+        const val END_OF_HEAD = 0x0D0A0D0A
+
         /** Turn 1: a Gemini 3 style tool call; the signature sits on the call, under `extra_content.google`. */
         val CLICK_REPLY = """{"choices":[{"index":0,"message":{"role":"assistant","content":null,"tool_calls":[{"id":"call-1","type":"function","extra_content":{"google":{"thought_signature":"SIG-ONE"}},"function":{"name":"ui_click","arguments":"{\"id\":\"1\"}"}}]},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":120,"completion_tokens":8,"total_tokens":128}}"""
 
