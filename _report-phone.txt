@@ -1,0 +1,14 @@
+FAIL phone-01-welcome: ComposeTimeoutException: Condition still not satisfied after 2000 ms
+FAIL phone-02-step-1: ComposeTimeoutException: Condition still not satisfied after 2000 ms
+FAIL phone-03-step-2: ComposeTimeoutException: Condition still not satisfied after 2000 ms
+FAIL phone-04-step-3: ComposeTimeoutException: Condition still not satisfied after 2000 ms
+FAIL phone-05-step-4: ComposeTimeoutException: Condition still not satisfied after 2000 ms
+FAIL phone-06-step-5: ComposeTimeoutException: Condition still not satisfied after 2000 ms
+FAIL phone-07-step-6: ComposeTimeoutException: Condition still not satisfied after 2000 ms
+FAIL phone-08-almost-there: ComposeTimeoutException: Condition still not satisfied after 2000 ms
+FAIL phone-09-tab-tasks: ComposeTimeoutException: Condition still not satisfied after 2000 ms
+FAIL phone-10-tab-agent: ComposeTimeoutException: Condition still not satisfied after 2000 ms
+FAIL phone-11-tab-build: ComposeTimeoutException: Condition still not satisfied after 2000 ms
+FAIL phone-12-tab-activity: ComposeTimeoutException: Condition still not satisfied after 2000 ms
+FAIL phone-13-tab-settings: ComposeTimeoutException: Condition still not satisfied after 2000 ms
+FAIL phone-14-phone-allows: ComposeTimeoutException: Condition still not satisfied after 2000 ms
