@@ -1,4 +1,4 @@
-# CI digest - run 78 - branch work/s02-green - commit 2827344
+# CI digest - run 79 - branch work/s02-green - commit b5b4aca
 tests step outcome: success
 
 ## Verdict: GREEN - 1866 tests ran, 0 failed, 0 Kotlin compile errors, 0 failed Gradle tasks, 4 modules with no results
@@ -41,20 +41,20 @@ tests step outcome: success
 
 ## Where the time went (finished tasks only; a task stopped by the timeout leaves no timings)
 - core/llm: 32 s of test time
+- app: 23 s of test time
 - capabilities/browser: 20 s of test time
-- app: 18 s of test time
 - capabilities/shell: 3 s of test time
-- core/engine: 3 s of test time
+- core/model: 3 s of test time
 - slowest: 30.0 s HttpUrlConnectionEngineTest.given a hung server when the call is cancelled then it returns within about a second [core/llm]
-- slowest: 10.1 s CdpBrowserProviderTest.navigate forwards through the shell then evaluates the page [capabilities/browser]
+- slowest: 10.2 s CdpBrowserProviderTest.navigate forwards through the shell then evaluates the page [capabilities/browser]
 - slowest: 10.0 s CdpBrowserProviderTest.close removes the forward [capabilities/browser]
-- slowest: 5.2 s AddTaskDialogJourneyTest.Add a task opens a pop-up with three ways to add one and Close shuts it [app]
+- slowest: 6.5 s AddTaskDialogJourneyTest.Add a task opens a pop-up with three ways to add one and Close shuts it [app]
 - slowest: 2.0 s SelectorBenchTest.find latency stays in single-digit milliseconds on large trees [core/model]
 - slowest: 1.5 s UiAutomationControllerTest.spawn failure with a dead runner is refused honestly [app]
 - slowest: 1.5 s UiAutomationControllerTest.spawn failure with a dead runner is refused honestly [app]
 - slowest: 1.0 s LlmGatewayTest.given a 429 then a success when called then the retry lands and the usage is audited [core/llm]
 
-## Style baseline (report only): 22617 ktlint/detekt findings
+## Style baseline (report only): 22630 ktlint/detekt findings
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:6:1 Unused import
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:11:1 Unused import
 - app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:12:1 Unused import
