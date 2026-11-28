@@ -1,19 +1,14 @@
-# CI digest - run 83 - branch work/s02-green - commit d0d3f15
+# CI digest - run 84 - branch work/s02-green - commit 4c57c06
 tests step outcome: failure
 
-## Verdict: RED - 1844 tests ran, 7 failed, 0 Kotlin compile errors, 1 failed Gradle tasks, 4 modules with no results
+## Verdict: RED - 1873 tests ran, 2 failed, 0 Kotlin compile errors, 1 failed Gradle tasks, 4 modules with no results
 
 ## Failed Gradle tasks
 - :app:testCoreLiteDebugUnitTest
 
-## Failing tests (first 40 of 7)
-- [app] AddTaskDialogJourneyTest.classMethod - java.lang.AssertionError: Failed to fetch maven artifact org.robolectric:android-all-instrumented:15-robolectric-13954326-i7
-- [app] AgentChatJourneyTest.classMethod - java.lang.AssertionError: Failed to fetch maven artifact org.robolectric:android-all-instrumented:15-robolectric-13954326-i7
-- [app] LaunchSmokeTest.classMethod - java.lang.AssertionError: Failed to fetch maven artifact org.robolectric:android-all-instrumented:15-robolectric-13954326-i7
-- [app] MacroEditorJourneyTest.classMethod - java.lang.AssertionError: Failed to fetch maven artifact org.robolectric:android-all-instrumented:15-robolectric-13954326-i7
-- [app] ScreenshotsTest.classMethod - java.lang.AssertionError: Failed to fetch maven artifact org.robolectric:android-all-instrumented:15-robolectric-13954326-i7
-- [app] SettingsWalkJourneyTest.classMethod - java.lang.AssertionError: Failed to fetch maven artifact org.robolectric:android-all-instrumented:15-robolectric-13954326-i7
-- [app] UiJourneyTest.classMethod - java.lang.AssertionError: Failed to fetch maven artifact org.robolectric:android-all-instrumented:15-robolectric-13954326-i7
+## Failing tests (first 40 of 2)
+- [app] ScreenshotsTest.the app walked on a small screen is photographed - java.lang.AssertionError: no screen drew, see the report: [FAIL small-01-welcome: ComposeTimeoutException: Condition still not satisfied after 2000 ms, FAIL small-02-step-1: ComposeTimeoutException: Condition still not …
+- [app] ScreenshotsTest.the app walked on a phone sized screen is photographed - java.lang.AssertionError: no screen drew, see the report: [FAIL phone-01-welcome: ComposeTimeoutException: Condition still not satisfied after 2000 ms, FAIL phone-02-step-1: ComposeTimeoutException: Condition still not …
 
 ## Modules that produced no test results (compile error, timeout, or no tests)
 - runtime/api
@@ -22,7 +17,7 @@ tests step outcome: failure
 - testing/fixture-app
 
 ## Per module (tests / failed / skipped)
-- app: 541 / 7 / 0
+- app: 570 / 2 / 0
 - capabilities/a11y: 114 / 0 / 0
 - capabilities/app: 32 / 0 / 0
 - capabilities/audio: 8 / 0 / 0
@@ -52,38 +47,38 @@ tests step outcome: failure
 - runtime/js: 41 / 0 / 0
 
 ## Where the time went (finished tasks only; a task stopped by the timeout leaves no timings)
+- app: 88 s of test time
 - core/llm: 32 s of test time
-- capabilities/browser: 20 s of test time
-- app: 5 s of test time
-- capabilities/shell: 4 s of test time
-- core/model: 3 s of test time
+- capabilities/browser: 21 s of test time
+- capabilities/shell: 5 s of test time
+- core/engine: 3 s of test time
+- slowest: 33.6 s ScreenshotsTest.the app walked on a small screen is photographed [app]
 - slowest: 30.0 s HttpUrlConnectionEngineTest.given a hung server when the call is cancelled then it returns within about a second [core/llm]
-- slowest: 10.1 s CdpBrowserProviderTest.navigate forwards through the shell then evaluates the page [capabilities/browser]
+- slowest: 28.8 s ScreenshotsTest.the app walked on a phone sized screen is photographed [app]
+- slowest: 10.3 s CdpBrowserProviderTest.navigate forwards through the shell then evaluates the page [capabilities/browser]
 - slowest: 10.0 s CdpBrowserProviderTest.close removes the forward [capabilities/browser]
+- slowest: 7.7 s AddTaskDialogJourneyTest.Add a task opens a pop-up with three ways to add one and Close shuts it [app]
 - slowest: 2.0 s SelectorBenchTest.find latency stays in single-digit milliseconds on large trees [core/model]
 - slowest: 1.5 s UiAutomationControllerTest.spawn failure with a dead runner is refused honestly [app]
-- slowest: 1.5 s UiAutomationControllerTest.spawn failure with a dead runner is refused honestly [app]
-- slowest: 1.0 s LlmGatewayTest.given a 429 then a success when called then the retry lands and the usage is audited [core/llm]
-- slowest: 0.8 s AdbClientTest.handshake then shell v2 round-trip with separated streams and exit code [capabilities/shell]
 
 ## Style baseline (report only): 22709 ktlint/detekt findings
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:14:1 Class body should not start with blank line
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:32 Newline expected after opening parenthesis
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:50 Parameter should start on a newline
 - app/src/lite/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:15:81 Newline expected before closing parenthesis
-- app/src/py/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:12:1 Class body should not start with blank line
-- app/src/py/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:13:32 Newline expected after opening parenthesis
-- app/src/py/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:13:50 Parameter should start on a newline
-- app/src/py/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:13:81 Newline expected before closing parenthesis
-- app/src/py/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:13:101 First line of body expression fits on same line as function signature
-- app/src/py/kotlin/app/autohost/runtime/ActualRuntimeContributions.kt:16:68 First line of body expression fits on same line as function signature
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:6:1 Unused import
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:11:1 Unused import
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:12:1 Unused import
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:32:1 Class body should not start with blank line
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:35:32 Newline expected after opening parenthesis
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:35:48 Parameter should start on a newline
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:35:62 Newline expected before closing parenthesis
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:54:61 A multiline expression should start on a new line
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:54:61 Newline expected before expression body
-- app/src/androidTest/kotlin/app/autohost/PythonRunEndToEndTest.kt:56:24 A multiline expression should start on a new line
+- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:37:1 Class body should not start with blank line
+- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:47:27 Newline expected after opening parenthesis
+- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:47:47 Parameter should start on a newline
+- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:47:70 Parameter should start on a newline
+- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:47:91 Parameter should start on a newline
+- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:47:118 Newline expected before closing parenthesis
+- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:48:21 A multiline expression should start on a new line
+- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:69:26 A multiline expression should start on a new line
+- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:71:9 Expected a blank line for this declaration
+- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:72:9 Expected a blank line for this declaration
+- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:73:9 Expected a blank line for this declaration
+- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:83:57 A multiline expression should start on a new line
+- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:83:57 Newline expected before expression body
+- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:91:63 First line of body expression fits on same line as function signature
+- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:95:31 Newline expected after opening parenthesis
+- plugin-sdk/src/main/java/app/autohost/plugin/PluginCapabilityService.kt:95:45 Parameter should start on a newline
